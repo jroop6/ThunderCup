@@ -12,6 +12,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 
 import java.util.*;
@@ -79,6 +80,13 @@ public class PlayPanel extends Pane {
         orbDrawer = orbCanvas.getGraphicsContext2D();
         getChildren().add(orbCanvas);
 
+        // A simple line shows the limit of the orbArray. If any orb is placed below this line, the player loses.
+        double deathLineY = ROW_HEIGHT*(ARRAY_HEIGHT-1)+2*ORB_RADIUS;
+        Line deathLine = new Line(0.0, deathLineY, liveBoundary.getWidth(), deathLineY);
+        deathLine.setStroke(Color.PINK);
+        deathLine.setStrokeWidth(2.0);
+        getChildren().add(deathLine);
+
         // Add and initialize players to the PlayPanel:
         addPlayers(players);
 
@@ -87,6 +95,10 @@ public class PlayPanel extends Pane {
 
         // Add initial Orbs:
         initializePuzzle();
+
+        // Todo: temporary. Remove this eventually:
+        // add a transfer orb for testing
+        playPanelData.getTransferOrbs().add(new Orb(OrbImages.RED_ORB,2, 0, Orb.BubbleAnimationType.TRANSFERRING));
     }
 
     PlayPanel(int team, List<Player> players, LocationType locationType, int seed){
@@ -123,6 +135,17 @@ public class PlayPanel extends Pane {
             // Inform the player where they are located in the playpanel and initialize the positions of the 1st two shooting orbs:
             player.getPlayerData().initializePlayerPos(i);
         }
+
+        // todo: temporary. Delete this eventually.
+        // Add a keylistener for testing transferOrbs.
+        setOnKeyPressed(event -> {
+            switch(event.getCode()){
+                case T:
+                    System.out.println("Testing Transfer Orb...");
+
+                    break;
+            }
+        });
     }
 
     private void initializePuzzle(){
@@ -139,7 +162,7 @@ public class PlayPanel extends Pane {
                     if(j%2==i%2){
                         int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
                         OrbImages orbImage = orbImages[randomOrdinal];
-                        orbArray[i][j] = new Orb(orbImage,i,j);
+                        orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
                     }
                     else orbArray[i][j] = NULL;
                 }
@@ -211,6 +234,9 @@ public class PlayPanel extends Pane {
 
         // Advance the animation frame of electrified orbs:
         advanceElectrifyingOrbs();
+
+        // Advance animation frame of transfer orbs:
+        advanceTransferringOrbs();
 
         // Advance existing dropping orbs:
         advanceDroppingOrbs();
@@ -575,9 +601,7 @@ public class PlayPanel extends Pane {
                             }
                             break;
                         case ELECTRIFYING:
-                            if(orb.animationTick()){
-                                orb.setAnimationEnum(Orb.BubbleAnimationType.STATIC);
-                            }
+                            orb.animationTick();
                             break;
                     }
                 }
@@ -585,6 +609,27 @@ public class PlayPanel extends Pane {
         }
     }
 
+    private void advanceTransferringOrbs(){
+        List<Orb> transferOrbs = playPanelData.getTransferOrbs();
+        List<Orb> transferOrbsToRemove = new LinkedList<>();
+        for(Orb orb : transferOrbs){
+            if (orb.animationTick()){
+                transferOrbsToRemove.add(orb);
+            }
+        }
+        transferOrbs.removeAll(transferOrbsToRemove);
+
+        // snap the transferringOrbs to the array
+        Orb[][] orbArray = playPanelData.getOrbArray();
+        for(Orb orb : transferOrbsToRemove){
+            Point2D arrayOrbLoc = orb.xyToIj();
+            int iPos = (int)Math.round(arrayOrbLoc.getX());
+            int jPos = (int)Math.round(arrayOrbLoc.getY());
+            if(orbArray[iPos][jPos] == NULL) {
+                orbArray[iPos][jPos] = orb;
+            }
+        }
+    }
 
     private void advanceDroppingOrbs(){
         List<Orb> orbsToRemove = new LinkedList<>();
@@ -635,7 +680,7 @@ public class PlayPanel extends Pane {
             if(j%2==newRowOffset){
                 int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
                 OrbImages orbImage = orbImages[randomOrdinal];
-                orbArray[i][j] = new Orb(orbImage,i,j);
+                orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
             }
             else orbArray[i][j] = NULL;
         }
@@ -659,6 +704,9 @@ public class PlayPanel extends Pane {
                 }
             }
         }
+
+        // paint transferring orbs:
+        for(Orb orb: playPanelData.getTransferOrbs()) orb.drawSelf(orbDrawer);
 
         // Paint bursting orbs:
         for(Orb orb: playPanelData.getBurstingOrbs()) orb.drawSelf(orbDrawer);

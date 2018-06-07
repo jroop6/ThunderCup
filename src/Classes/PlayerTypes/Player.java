@@ -277,7 +277,7 @@ public abstract class Player {
             while(ammunitionScanner.hasNext()){
                 char nextOrbSymbol = ammunitionScanner.next().charAt(0);
                 OrbImages orbImage = OrbImages.lookupOrbImageBySymbol(nextOrbSymbol);
-                ammunitionOrbs.add(new Orb(orbImage,0,0)); // Updates model
+                ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
                 // Note: view gets updated 24 times per second in the repaint() method of the PlaypPanel.
             }
         }
@@ -286,7 +286,7 @@ public abstract class Player {
             System.out.println();
             int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
             OrbImages orbImage = OrbImages.values()[randomOrdinal];
-            ammunitionOrbs.add(new Orb(orbImage,0,0)); // Updates model
+            ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
             // Note: view gets updated 24 times per second in the repaint() method of the PlaypPanel.
         }
     }

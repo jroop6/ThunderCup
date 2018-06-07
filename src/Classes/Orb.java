@@ -5,10 +5,16 @@ import Classes.Images.OrbExplosion;
 import Classes.Images.OrbImages;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
 
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+
+import static Classes.GameScene.ANIMATION_FRAME_RATE;
 
 /**
  * Created by HydrusBeta on 8/16/2017.
@@ -19,15 +25,16 @@ public class Orb implements Serializable{
     private OrbExplosion orbExplosion; // enum used for displaying burst animation.
     private BubbleAnimationType animationEnum;
     public static final double ORB_RADIUS = 23.0;
+    public static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
-    public static final Orb WALL = new Orb(OrbImages.BLACK_ORB,0,0);
-    public static final Orb CEILING = new Orb(OrbImages.BLACK_ORB,0,0);
+    public static final Orb WALL = new Orb(OrbImages.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
+    public static final Orb CEILING = new Orb(OrbImages.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbImage because we only have 1 instance of this orb instead of literally hundreds.
-    public static final Orb NULL = new Orb(OrbImages.BLACK_ORB, 0, 0);
+    public static final Orb NULL = new Orb(OrbImages.BLACK_ORB, 0, 0, BubbleAnimationType.STATIC);
 
     // Cached constant for better performance:
     private static final double ROOT3 = Math.sqrt(3.0);
@@ -50,22 +57,14 @@ public class Orb implements Serializable{
     private long rawTimestamp; // simply the client's System.nanotime()
     private long timeStamp; // how many nanoseconds have passed since the previous packet was sent from the client.
 
-    // Used for shooting Orbs and ammunition Orbs:
-    public Orb(OrbImages orbEnum, double xPos, double yPos){
-        this.orbEnum = orbEnum;
-        animationEnum = BubbleAnimationType.STATIC;
-        this.xPos = xPos;
-        this.yPos = yPos;
-    }
 
-    // Used for array Orbs:
-    public Orb(OrbImages orbEnum, int iPos, int jPos){
+    public Orb(OrbImages orbEnum, int iPos, int jPos, BubbleAnimationType animationEnum){
         this.orbEnum = orbEnum;
         this.iPos = iPos;
         this.jPos = jPos;
         xPos = ORB_RADIUS + ORB_RADIUS *(jPos);
         yPos = ORB_RADIUS + iPos*PlayPanel.ROW_HEIGHT;
-        animationEnum = BubbleAnimationType.STATIC;
+        setAnimationEnum(animationEnum);
     }
 
     public void setXPos(double xPos){
@@ -165,14 +164,18 @@ public class Orb implements Serializable{
             case ELECTRIFYING:
                 electrificationAnimationFrame++;
                 if(electrificationAnimationFrame>orbElectrification.getSpriteSheet().getMaxFrameIndex()){
-                    animationEnum = BubbleAnimationType.STATIC;
+                    setAnimationEnum(BubbleAnimationType.STATIC);
+                    return true;
+                }
+                break;
+            case TRANSFERRING:
+                burstAnimationFrame++;
+                if(burstAnimationFrame>TIME_TO_TRANSFER*ANIMATION_FRAME_RATE){
+                    setAnimationEnum(BubbleAnimationType.STATIC);
                     return true;
                 }
                 break;
         }
-
-
-        // If animation sequence is over, do an appropriate transition
 
         return false;
     }
@@ -191,6 +194,15 @@ public class Orb implements Serializable{
                 orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, burstAnimationFrame);
                 orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, electrificationAnimationFrame);
                 break;
+            case TRANSFERRING:
+                // draw the orb at 50% transparency:
+                orbDrawer.setGlobalAlpha(0.5);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, 0);
+                orbDrawer.setGlobalAlpha(1.0);
+                // draw an outline that shows how much time is left before the transfer is complete:
+                orbDrawer.setStroke(Color.rgb(0,255,255));
+                orbDrawer.setLineWidth(2.0);
+                orbDrawer.strokeArc(xPos-ORB_RADIUS,yPos-ORB_RADIUS,ORB_RADIUS*2,ORB_RADIUS*2,90,-360*burstAnimationFrame/(TIME_TO_TRANSFER*ANIMATION_FRAME_RATE),ArcType.OPEN);
         }
     }
 
@@ -283,7 +295,8 @@ public class Orb implements Serializable{
         ELECTRIFYING,
         IMPLODING,
         BURSTING,
-        DROPPING
+        DROPPING,
+        TRANSFERRING
     }
 }
 

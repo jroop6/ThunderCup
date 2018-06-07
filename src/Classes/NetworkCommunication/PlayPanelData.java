@@ -2,6 +2,7 @@ package Classes.NetworkCommunication;
 
 import Classes.Orb;
 import Classes.PointInt;
+import javafx.scene.shape.Arc;
 
 import java.io.Serializable;
 import java.util.*;
@@ -23,6 +24,7 @@ public class PlayPanelData implements Serializable {
     private List<Orb> shootingOrbs = new LinkedList<>();
     private List<Orb> burstingOrbs = new LinkedList<>();
     private List<Orb> droppingOrbs = new LinkedList<>();
+    private List<Orb> transferOrbs = new LinkedList<>();
 
     // Flags indicating a change in the data:
     private boolean orbArrayChanged = false;
@@ -162,6 +164,9 @@ public class PlayPanelData implements Serializable {
     }
     public List<Orb> getDroppingOrbs(){
         return droppingOrbs;
+    }
+    public List<Orb> getTransferOrbs(){
+        return transferOrbs;
     }
     public int getShotsUntilNewRow(){
         return shotsUntilNewRow;

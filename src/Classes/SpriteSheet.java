@@ -4,10 +4,15 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.Shape;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import static Classes.PlayPanel.ROW_HEIGHT;
 
 /**
  * A class for handling spritesheets. Includes methods for reading spritesheets and their metadata from disk and drawing

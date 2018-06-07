@@ -156,7 +156,7 @@ public class PlayerData implements Serializable {
 
         // Add a new ammunition orb to the end of the list
         OrbImages orbImage = OrbImages.values()[newOrdinal];
-        ammunitionOrbs.add(new Orb(orbImage,-ORB_RADIUS,-ORB_RADIUS)); // Updates model
+        ammunitionOrbs.add(new Orb(orbImage,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
 
         return firedOrb;
     }
@@ -179,7 +179,7 @@ public class PlayerData implements Serializable {
 
         // Add a new ammunition orb to the end of the list
         OrbImages orbImage = OrbImages.values()[newOrdinal];
-        ammunitionOrbs.add(new Orb(orbImage,-ORB_RADIUS,-ORB_RADIUS)); // Updates model
+        ammunitionOrbs.add(new Orb(orbImage,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
     }
 
     /* Setters: These are called when a client simply wants to update locally-stored player information without
