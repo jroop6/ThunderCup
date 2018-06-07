@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="ThunderCup:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/ThunderCup_jar</output-path>
+    <root id="archive" name="ThunderCup.jar">
+      <element id="module-output" name="ThunderCup" />
+    </root>
+  </artifact>
+</component>
