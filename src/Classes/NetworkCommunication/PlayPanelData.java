@@ -14,7 +14,7 @@ import java.util.*;
 public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
-    private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
+    private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
     public static final int SHOTS_BETWEEN_DROPS = 25; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private int team;
@@ -163,9 +163,11 @@ public class PlayPanelData implements Serializable {
     }
     public void setOrbArray(Orb[][] newOrbArray){
         for (int i=0; i<ARRAY_HEIGHT; i++){
-            System.arraycopy(newOrbArray[i],0,orbArray[i],0,orbArray[i].length);
+            //System.arraycopy(newOrbArray[i],0,orbArray[i],0,orbArray[i].length); // System.arraycopy is faster, but it might cost more memory because it causes the game to retain a reference to the packet from the host. I'm not sure which option is better... Either way, I'd have to replace all the NULL orbs with references to the local NULL orb anyways.
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                if(orbArray[i][j].equals(Orb.NULL)) orbArray[i][j] = Orb.NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
+                Orb otherOrb = newOrbArray[i][j];
+                if(otherOrb.equals(Orb.NULL)) orbArray[i][j] = Orb.NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
+                else orbArray[i][j] = new Orb(otherOrb.getOrbEnum(),otherOrb.getI(),otherOrb.getJ(),otherOrb.getAnimationEnum());
             }
         }
     }
@@ -380,24 +382,31 @@ public class PlayPanelData implements Serializable {
         }
 
         // Check that the transferInOrbs list is consistent:
-        for(Orb transferInOrb : other.getTransferInOrbs()){
-            boolean matchFound = false;
-            for(Orb transferInOrb2 : transferInOrbs){
-                if(transferInOrb.equals(transferInOrb2)){
-                    matchFound = true;
-                    break;
+        if(other.getTransferInOrbs().size() != transferInOrbs.size()) inconsistent=true;
+        else{
+            for(Orb transferInOrb : other.getTransferInOrbs()){
+                boolean matchFound = false;
+                for(Orb transferInOrb2 : transferInOrbs){
+                    if(transferInOrb.equals(transferInOrb2)){
+                        matchFound = true;
+                        break;
+                    }
+                }
+                if(!matchFound){
+                    inconsistent = true;
+                    System.out.println("the transferInOrbs lists are inconsistent");
                 }
             }
-            if(!matchFound) inconsistent = true;
         }
 
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE){
-            System.err.println("Client orbArray is inconsistent with the host! overriding orbArray...");
+            System.err.println("Client data is inconsistent with the host! overriding orbArray, shotsUntilNewRow, and transferInOrbs...");
             setOrbArray(other.getOrbArray());
             setShotsUntilNewRow(other.getShotsUntilNewRow());
+            setTransferInOrbs(other.transferInOrbs);
             inconsistencyCounter = 0;
         }
     }

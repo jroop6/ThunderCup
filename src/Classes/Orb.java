@@ -131,7 +131,7 @@ public class Orb implements Serializable{
     long getTimestamp(){
         return timeStamp;
     }
-    BubbleAnimationType getAnimationEnum(){
+    public BubbleAnimationType getAnimationEnum(){
         return animationEnum;
     }
     public int getI(){
@@ -143,6 +143,7 @@ public class Orb implements Serializable{
     public OrbImages getOrbEnum(){
         return orbEnum;
     }
+
 
 
     // called 24 times per second.

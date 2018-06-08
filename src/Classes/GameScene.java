@@ -185,11 +185,10 @@ public class GameScene extends Scene {
 
                 // Character and Orb animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
-                    long prevAnimationFrameInstance = nextAnimationFrameInstance-1000000000L/ANIMATION_FRAME_RATE;
-                    // process inter-PlayPanel events (namely, transferring orbs):
-                    tick();
                     // update each PlayPanel:
                     for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
+                    // process inter-PlayPanel events (namely, transferring orbs):
+                    tick();
                     nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
                 }
 
@@ -259,7 +258,7 @@ public class GameScene extends Scene {
         // Process Packets one at a time:
         while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER*numPlayers){
 
-            // Pop the PlayerData and the PlayPanelData from the packet:
+            // Pop the PlayerData from the packet:
             PlayerData playerData = packet.popPlayerData();
 
             // Find the PlayPanel associated with the player. Update the PlayPanelData and the PlayerData:
@@ -612,8 +611,8 @@ public class GameScene extends Scene {
                         toPlayPanel.changeAddTransferInOrbs(transferOutOrbs);
                     }
                 }
+                transferOutOrbs.clear();
             }
-            transferOutOrbs.clear();
         }
     }
 

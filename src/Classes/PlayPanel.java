@@ -178,18 +178,6 @@ public class PlayPanel extends Pane {
     }
 
     // Called from GameScene only
-    /*void updatePlayPanel(PlayPanelData newPlayPanelData, boolean isHost){
-        if(isHost) updateWithChangers(newPlayPanelData);
-        else updateWithSetters(newPlayPanelData);
-    }
-
-    private void updateWithChangers(PlayPanelData newPlayPanelData){
-        if(newPlayPanelData.isTransferOutOrbsChanged()){
-
-        }
-    }*/
-
-    // Called from GameScene only
     void updatePlayer(PlayerData playerData, boolean isHost){
         //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
         //Todo: note: simply adding a getPlayer() method to PlayerData won't work (the reference has been lost over transmission).
@@ -234,7 +222,7 @@ public class PlayPanel extends Pane {
         List<Collision> orbsToSnap = advanceShootingOrbs(1/(double)ANIMATION_FRAME_RATE); // Updates model
         List<Orb> shootingOrbsToBurst = snapOrbs(orbsToSnap);
         List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, shootingOrbsToBurst);
-        shootingOrbsToBurst.addAll(checkOverlaps(orbsToSnap));
+        //shootingOrbsToBurst.addAll(checkOverlaps(orbsToSnap)); // Todo: I'm pretty sure this line is completely superfluous now. Delete this eventually if there are no problems.
 
         // Advance the animation frame of existing bursting orbs, then burst new orbs:
         advanceBurstingOrbs();
@@ -262,8 +250,9 @@ public class PlayPanel extends Pane {
 //        if(playPanelData.getShotsUntilNewRow()==1) System.out.println("1");
         if(playPanelData.getShotsUntilNewRow()<=0) addNewRow();
 
-        // Advance animation frame of transfer orbs:
-        advanceTransferringOrbs();
+        // Advance the transfer orbs:
+        List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
+        snapTransferOrbs(transferOrbsToSnap);
 
         removeStrayOrbs();
         repaint(); // Updates view
@@ -507,6 +496,7 @@ public class PlayPanel extends Pane {
 
             // If the i coordinate is below the bottom of the array, then this team has lost.
             if(iSnap == PlayPanelData.ARRAY_HEIGHT){
+                // Todo: put the orb in a deathOrbs list
                 // Todo: declare defeat here.
                 System.out.println("we're dead!");
             }
@@ -622,16 +612,18 @@ public class PlayPanel extends Pane {
         }
     }
 
-    private void advanceTransferringOrbs(){
+    private List<Orb> advanceTransferringOrbs(){
         List<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
-        List<Orb> transferOrbsToRemove = new LinkedList<>();
+        List<Orb> transferOrbsToSnap = new LinkedList<>();
         for(Orb orb : transferInOrbs){
             if (orb.animationTick()){
-                transferOrbsToRemove.add(orb);
+                transferOrbsToSnap.add(orb);
             }
         }
-        transferInOrbs.removeAll(transferOrbsToRemove);
+        return transferOrbsToSnap;
+    }
 
+    private void snapTransferOrbs(List<Orb> transferOrbsToSnap){
         // Find all array points that are connected to the ceiling
         Orb[][] orbArray = playPanelData.getOrbArray();
         List<PointInt> connectedOrbs = new LinkedList<>();
@@ -642,18 +634,16 @@ public class PlayPanel extends Pane {
         }
 
         // snap the transferringOrbs to the array
-        for(Orb orb : transferOrbsToRemove){
+        for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
             List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()));
-            if(Collections.disjoint(neighbors,connectedOrbs)) continue;
-
-            Point2D arrayOrbLoc = orb.xyToIj();
-            int iPos = (int)Math.round(arrayOrbLoc.getX());
-            int jPos = (int)Math.round(arrayOrbLoc.getY());
-            if(orbArray[iPos][jPos] == NULL) {
-                orbArray[iPos][jPos] = orb;
+            if(!Collections.disjoint(neighbors,connectedOrbs) && orbArray[orb.getI()][orb.getJ()] == NULL){
+                orbArray[orb.getI()][orb.getJ()] = orb;
             }
         }
+
+        // remove the snapped transfer orbs from the inbound transfer orbs list
+        playPanelData.getTransferInOrbs().removeAll(transferOrbsToSnap);
     }
 
     private List<Orb> advanceDroppingOrbs(){
