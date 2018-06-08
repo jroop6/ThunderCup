@@ -90,7 +90,9 @@ public class Orb implements Serializable{
                 orbExplosion = OrbExplosion.EXPLOSION_1;
                 burstAnimationFrame = 0;
             case IMPLODING:
+                burstAnimationFrame = 0;
             case DROPPING:
+                burstAnimationFrame = 0;
             case STATIC:
                 burstAnimationFrame = 0;
                 break;
@@ -99,6 +101,9 @@ public class Orb implements Serializable{
                 orbElectrification = OrbElectrification.ELECTRIFICATION_1;
                 electrificationAnimationFrame = 0;
                 break;
+            case TRANSFERRING:
+                speed = 0.0;
+                burstAnimationFrame = 0;
         }
     }
     public void setIJ(int i, int j){

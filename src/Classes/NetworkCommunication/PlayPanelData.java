@@ -15,7 +15,7 @@ public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
-    public static final int SHOTS_BETWEEN_DROPS = 5; // After the player shoots this many times, a new row of orbs appears at the top.
+    public static final int SHOTS_BETWEEN_DROPS = 25; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private int team;
     private int numPlayers;
@@ -24,13 +24,16 @@ public class PlayPanelData implements Serializable {
     private List<Orb> shootingOrbs = new LinkedList<>();
     private List<Orb> burstingOrbs = new LinkedList<>();
     private List<Orb> droppingOrbs = new LinkedList<>();
-    private List<Orb> transferOrbs = new LinkedList<>();
+    private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
+    private List<Orb> transferInOrbs = new LinkedList<>(); // orbs to be transferred from other players
 
     // Flags indicating a change in the data:
     private boolean orbArrayChanged = false;
     private boolean shootingOrbsChanged = false;
     private boolean burstingOrbsChanged = false;
     private boolean droppingOrbsChanged = false;
+    private boolean transferOutOrbsChanged = false;
+    private boolean transferInOrbsChanged = false;
 
     // Counter for how many frames the local orbArray data has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -59,11 +62,15 @@ public class PlayPanelData implements Serializable {
         shootingOrbs.addAll(other.getShootingOrbs());
         burstingOrbs.addAll(other.getBurstingOrbs());
         droppingOrbs.addAll(other.getDroppingOrbs());
+        transferInOrbs.addAll(other.getTransferInOrbs());
+        transferOutOrbs.addAll(other.getTransferOutOrbs());
 
         orbArrayChanged = other.isOrbArrayChanged();
         shootingOrbsChanged = other.isShootingOrbsChanged();
         burstingOrbsChanged = other.isBurstingOrbsChanged();
         droppingOrbsChanged = other.isDroppingOrbsChanged();
+        transferInOrbsChanged = other.isTransferInOrbsChanged();
+        transferOutOrbsChanged = other.isTransferOutOrbsChanged();
     }
 
     /* Changers: These are called when the host wants to notify the client that something has changed in the official
@@ -73,6 +80,42 @@ public class PlayPanelData implements Serializable {
     public void changeAddShootingOrbs(Queue<Orb> newShootingOrbs){
         shootingOrbs.addAll(newShootingOrbs);
         shootingOrbsChanged = true;
+    }
+    public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
+        transferOutOrbs.addAll(newTransferOrbs);
+        transferOutOrbsChanged = true;
+    }
+    public void changeAddTransferInOrbs(List<Orb> newTransferOrbs, Random miscRandomGenerator){
+        // The new transfer orbs need to be placed appropriately. Find open, connected spots:
+        int offset = 0;
+        for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+            if(orbArray[0][j]!=Orb.NULL){
+                offset = j%2;
+                break;
+            }
+        }
+        List<PointInt> openSpots = new LinkedList<>();
+        for(int i=0; i<ARRAY_HEIGHT; i++){
+            for(int j=offset + i%2 - 2*offset*i%2; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j+=2){
+                if(orbArray[i][j]==Orb.NULL && !getNeighbors(new PointInt(i,j)).isEmpty()){
+                    openSpots.add(new PointInt(i,j));
+                }
+            }
+        }
+
+        // Now pick one spot for each orb:
+        //todo: if there are not enough open spots, put one in deathOrbs
+        for(Orb orb : newTransferOrbs){
+            int index = miscRandomGenerator.nextInt(openSpots.size());
+            PointInt openSpot = openSpots.get(index);
+            orb.setIJ(openSpot.i,openSpot.j);
+            orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
+            openSpots.remove(index);
+        }
+
+        // now, finally add them to the appropriate Orb list:
+        transferInOrbs.addAll(newTransferOrbs);
+        transferInOrbsChanged = true;
     }
     public void changeBurstShootingOrbs(List<Orb> newBurstingOrbs){
         shootingOrbs.removeAll(newBurstingOrbs);
@@ -107,7 +150,7 @@ public class PlayPanelData implements Serializable {
         shotsUntilNewRow-=amountToDecrement;
     }
 
-    /* Setters: These are called by clients, who do not set change flags for Orb data. */
+    /* Setters: These are called by clients when they are updating their data according to data from the host*/
     //ToDo: Do I really need these, or should I just use the copy constructor?
     public void setAddShootingOrb(Orb newOrb){
         shootingOrbs.add(newOrb);
@@ -129,6 +172,15 @@ public class PlayPanelData implements Serializable {
     public void setShotsUntilNewRow(int newVal){
         shotsUntilNewRow = newVal;
     }
+    public void setTransferOutOrbs(List<Orb> transferOutOrbs){
+        this.transferOutOrbs.clear();
+        this.transferOutOrbs.addAll(transferOutOrbs);
+    }
+    public void setTransferInOrbs(List<Orb> transferInOrbs){
+        this.transferInOrbs.clear();
+        this.transferInOrbs.addAll(transferInOrbs);
+    }
+
 
     /* Change Getters: These are called to see whether the host has changed the data. They are always
      * called before retrieving their corresponding, actual Orb data. */
@@ -144,6 +196,12 @@ public class PlayPanelData implements Serializable {
     }
     public boolean isDroppingOrbsChanged(){
         return droppingOrbsChanged;
+    }
+    public boolean isTransferOutOrbsChanged(){
+        return transferOutOrbsChanged;
+    }
+    public boolean isTransferInOrbsChanged(){
+        return transferInOrbsChanged;
     }
 
     /* Direct Getters: These are called to get the actual player data*/
@@ -165,8 +223,11 @@ public class PlayPanelData implements Serializable {
     public List<Orb> getDroppingOrbs(){
         return droppingOrbs;
     }
-    public List<Orb> getTransferOrbs(){
-        return transferOrbs;
+    public List<Orb> getTransferOutOrbs(){
+        return transferOutOrbs;
+    }
+    public List<Orb> getTransferInOrbs(){
+        return transferInOrbs;
     }
     public int getShotsUntilNewRow(){
         return shotsUntilNewRow;
@@ -318,6 +379,17 @@ public class PlayPanelData implements Serializable {
             System.out.println("number of shots until new row appears is inconsistent between host and client");
         }
 
+        // Check that the transferInOrbs list is consistent:
+        for(Orb transferInOrb : other.getTransferInOrbs()){
+            boolean matchFound = false;
+            for(Orb transferInOrb2 : transferInOrbs){
+                if(transferInOrb.equals(transferInOrb2)){
+                    matchFound = true;
+                    break;
+                }
+            }
+            if(!matchFound) inconsistent = true;
+        }
 
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;

@@ -186,9 +186,10 @@ public class GameScene extends Scene {
                 // Character and Orb animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
                     long prevAnimationFrameInstance = nextAnimationFrameInstance-1000000000L/ANIMATION_FRAME_RATE;
-                    for(PlayPanel playPanel: playPanelMap.values()){
-                        playPanel.tick();
-                    }
+                    // process inter-PlayPanel events (namely, transferring orbs):
+                    tick();
+                    // update each PlayPanel:
+                    for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
                     nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
                 }
 
@@ -260,7 +261,6 @@ public class GameScene extends Scene {
 
             // Pop the PlayerData and the PlayPanelData from the packet:
             PlayerData playerData = packet.popPlayerData();
-            // Note to self: playerData.getFiredOrbs() is correct at this point.
 
             // Find the PlayPanel associated with the player. Update the PlayPanelData and the PlayerData:
             PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
@@ -375,14 +375,14 @@ public class GameScene extends Scene {
             // Most of the time, this loop won't actually change anything. If desynchronization is detected between host
             // and client, however, then the client's playpanel data will be discarded and replaced with the host's.
             PlayPanelData playPanelData = packet.popPlayPanelData();
-            do{
+            while(playPanelData !=null){
                 // update the PlayPanel with the new playPanelData:
                 PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
                 playPanel.getPlayPanelData().checkForConsistency(playPanelData);
 
                 // Prepare for next iteration:
                 playPanelData = packet.popPlayPanelData();
-            } while(playPanelData !=null);
+            }
 
             // Now process the GameData:
             GameData hostGameData = packet.getGameData();
@@ -600,6 +600,21 @@ public class GameScene extends Scene {
         btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> btn.setGraphic(unselectedImage));
 
         return btn;
+    }
+
+    private void tick(){
+        // transfer the transferOrbs
+        for(PlayPanel fromPlayPanel : playPanelMap.values()){
+            List<Orb> transferOutOrbs = fromPlayPanel.getPlayPanelData().getTransferOutOrbs();
+            if(!transferOutOrbs.isEmpty()){
+                for(PlayPanel toPlayPanel : playPanelMap.values()){
+                    if(fromPlayPanel!=toPlayPanel){
+                        toPlayPanel.changeAddTransferInOrbs(transferOutOrbs);
+                    }
+                }
+            }
+            transferOutOrbs.clear();
+        }
     }
 
 }

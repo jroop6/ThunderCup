@@ -58,11 +58,13 @@ public class PlayPanel extends Pane {
     String ammunitionUrl;
     int seed;
     private Random randomPuzzleGenerator;
+    private Random randomTransferOrbGenerator;
     private Random miscRandomGenerator = new Random();
 
     PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl, String ammunitionUrl){
         this.numPlayers = players.size();
         this.randomPuzzleGenerator = new Random(seed);
+        this.randomTransferOrbGenerator = new Random(seed);
         this.puzzleUrl = puzzleUrl;
         this.ammunitionUrl = ammunitionUrl;
 
@@ -95,10 +97,6 @@ public class PlayPanel extends Pane {
 
         // Add initial Orbs:
         initializePuzzle();
-
-        // Todo: temporary. Remove this eventually:
-        // add a transfer orb for testing
-        playPanelData.getTransferOrbs().add(new Orb(OrbImages.RED_ORB,2, 0, Orb.BubbleAnimationType.TRANSFERRING));
     }
 
     PlayPanel(int team, List<Player> players, LocationType locationType, int seed){
@@ -180,6 +178,18 @@ public class PlayPanel extends Pane {
     }
 
     // Called from GameScene only
+    /*void updatePlayPanel(PlayPanelData newPlayPanelData, boolean isHost){
+        if(isHost) updateWithChangers(newPlayPanelData);
+        else updateWithSetters(newPlayPanelData);
+    }
+
+    private void updateWithChangers(PlayPanelData newPlayPanelData){
+        if(newPlayPanelData.isTransferOutOrbsChanged()){
+
+        }
+    }*/
+
+    // Called from GameScene only
     void updatePlayer(PlayerData playerData, boolean isHost){
         //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
         //Todo: note: simply adding a getPlayer() method to PlayerData won't work (the reference has been lost over transmission).
@@ -198,7 +208,6 @@ public class PlayPanel extends Pane {
             player.updateWithChangers(playerData, null); // Relevant changes to playerData include: cannonAngle, defeated status, whether he/she is firing his/her cannon, and changes in BubbleData
         }
         else{
-            if(playerData.isFiring()) System.out.println("CLIENT: Another player has fired.");
             if(playerData.isFiring() && !(player instanceof LocalPlayer)){
                 System.out.println("CLIENT: Another player has fired. Adding their obs to the playpanel");
                 playPanelData.setAddShootingOrbs(playerData.getFiredOrbs()); // updates model
@@ -235,11 +244,11 @@ public class PlayPanel extends Pane {
         // Advance the animation frame of electrified orbs:
         advanceElectrifyingOrbs();
 
-        // Advance animation frame of transfer orbs:
-        advanceTransferringOrbs();
-
         // Advance existing dropping orbs:
-        advanceDroppingOrbs();
+        List<Orb> orbsToTransfer = advanceDroppingOrbs();
+        playPanelData.getDroppingOrbs().removeAll(orbsToTransfer);
+        //Todo: also add the Orbs in orbsToTransfer to thunderOrbs
+        playPanelData.changeAddTransferOutOrbs(orbsToTransfer);
 
         // Find floating orbs and drop them. Advance other dropping orbs:
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs();
@@ -247,10 +256,14 @@ public class PlayPanel extends Pane {
 
         // If the player has fired a sufficient number of times, then add a new row of orbs:
         playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
-        if(playPanelData.getShotsUntilNewRow()==3) System.out.println("3");
-        if(playPanelData.getShotsUntilNewRow()==2) System.out.println("2");
-        if(playPanelData.getShotsUntilNewRow()==1) System.out.println("1");
+        // todo: give some visual feedback to indicate that a new row is coming
+//        if(playPanelData.getShotsUntilNewRow()==3) System.out.println("3");
+//        if(playPanelData.getShotsUntilNewRow()==2) System.out.println("2");
+//        if(playPanelData.getShotsUntilNewRow()==1) System.out.println("1");
         if(playPanelData.getShotsUntilNewRow()<=0) addNewRow();
+
+        // Advance animation frame of transfer orbs:
+        advanceTransferringOrbs();
 
         removeStrayOrbs();
         repaint(); // Updates view
@@ -610,18 +623,30 @@ public class PlayPanel extends Pane {
     }
 
     private void advanceTransferringOrbs(){
-        List<Orb> transferOrbs = playPanelData.getTransferOrbs();
+        List<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
         List<Orb> transferOrbsToRemove = new LinkedList<>();
-        for(Orb orb : transferOrbs){
+        for(Orb orb : transferInOrbs){
             if (orb.animationTick()){
                 transferOrbsToRemove.add(orb);
             }
         }
-        transferOrbs.removeAll(transferOrbsToRemove);
+        transferInOrbs.removeAll(transferOrbsToRemove);
+
+        // Find all array points that are connected to the ceiling
+        Orb[][] orbArray = playPanelData.getOrbArray();
+        List<PointInt> connectedOrbs = new LinkedList<>();
+        for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+            PointInt sourcePoint = new PointInt(0, j);
+            if(orbArray[0][j]==Orb.NULL) continue;
+            connectedOrbs.addAll(playPanelData.depthFirstSearch(sourcePoint, PlayPanelData.FilterOption.ALL));
+        }
 
         // snap the transferringOrbs to the array
-        Orb[][] orbArray = playPanelData.getOrbArray();
         for(Orb orb : transferOrbsToRemove){
+            // only those orbs that would be connected to the ceiling should materialize:
+            List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()));
+            if(Collections.disjoint(neighbors,connectedOrbs)) continue;
+
             Point2D arrayOrbLoc = orb.xyToIj();
             int iPos = (int)Math.round(arrayOrbLoc.getX());
             int jPos = (int)Math.round(arrayOrbLoc.getY());
@@ -631,16 +656,16 @@ public class PlayPanel extends Pane {
         }
     }
 
-    private void advanceDroppingOrbs(){
-        List<Orb> orbsToRemove = new LinkedList<>();
+    private List<Orb> advanceDroppingOrbs(){
+        List<Orb> orbsToTransfer = new LinkedList<>();
         for(Orb orb : playPanelData.getDroppingOrbs()){
             orb.setSpeed(orb.getSpeed() + GameScene.GRAVITY/ANIMATION_FRAME_RATE);
             orb.setYPos(orb.getYPos() + orb.getSpeed()/ANIMATION_FRAME_RATE);
             if(orb.getYPos() > PLAYPANEL_HEIGHT){
-                orbsToRemove.add(orb);
+                orbsToTransfer.add(orb);
             }
         }
-        playPanelData.getDroppingOrbs().removeAll(orbsToRemove); // Todo: add these orbs to a "thunderOrbs" list
+        return orbsToTransfer;
     }
 
     private void addNewRow(){
@@ -660,6 +685,11 @@ public class PlayPanel extends Pane {
                 if(orbArray[i][j]!=NULL) orbArray[i][j].setIJ(i+1, j);
                 orbArray[i+1][j] = orbArray[i][j];
             }
+        }
+
+        // Move all transferring orbs down 1 index:
+        for(Orb transferOrb : playPanelData.getTransferInOrbs()){
+            transferOrb.setIJ(transferOrb.getI()+1,transferOrb.getJ());
         }
 
         // Determine whether the new row has "odd" or "even" placement:
@@ -706,7 +736,7 @@ public class PlayPanel extends Pane {
         }
 
         // paint transferring orbs:
-        for(Orb orb: playPanelData.getTransferOrbs()) orb.drawSelf(orbDrawer);
+        for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer);
 
         // Paint bursting orbs:
         for(Orb orb: playPanelData.getBurstingOrbs()) orb.drawSelf(orbDrawer);
@@ -724,6 +754,10 @@ public class PlayPanel extends Pane {
 
     public PlayPanelData getPlayPanelData(){
         return playPanelData;
+    }
+
+    public void changeAddTransferInOrbs(List<Orb> transferInOrbs){
+        playPanelData.changeAddTransferInOrbs(transferInOrbs,randomTransferOrbGenerator);
     }
 
     private class Collision{

@@ -95,11 +95,12 @@ public class ClientConnectionManager extends ConnectionManager{
     private void displayUknownHostNotice(){
         Alert unknownHostNotice = new Alert(Alert.AlertType.CONFIRMATION);
         unknownHostNotice.setTitle("Host not found.");
-        unknownHostNotice.setHeaderText("The host name you entered could not be recognized on the network. Please ask the " +
-                "host of the game to tell you his/her computer name. If you are sure you've entered the name correctly " +
-                "and this error message persists, then it is possible that the host's computer is blocking inbound " +
-                "connections. Make sure that the host's firewall is allowing Java connections through and that Network " +
-                "Discovery is turned on for that machine.");
+        unknownHostNotice.setHeaderText(
+                "The host name you entered could not be recognized on the network. Please ask the host of the game \n" +
+                "to tell you his/her computer name. If you are sure you've entered the name correctly and this \n" +
+                "error message persists, then it is possible that the host's computer is blocking inbound \n" +
+                "connections. Make sure that the host's firewall is allowing Java connections through and that \n" +
+                "Network Discovery is turned on for that machine.");
         ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         unknownHostNotice.getButtonTypes().setAll(returnBtn);
         unknownHostNotice.setGraphic(null);
