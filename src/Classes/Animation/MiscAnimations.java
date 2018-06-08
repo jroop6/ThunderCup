@@ -1,4 +1,7 @@
-package Classes;
+package Classes.Animation;
+
+import Classes.GameSettings;
+import Classes.SpriteSheet;
 
 /**
  * An enumeration containing all miscellaneous animations, in the form of png spritesheets. Numerous instances of

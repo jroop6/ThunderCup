@@ -1,5 +1,4 @@
 package Classes.Animation;
-import Classes.MiscAnimations;
 import Classes.Sprite;
 
 public class PngSequencePlayer extends Sprite {

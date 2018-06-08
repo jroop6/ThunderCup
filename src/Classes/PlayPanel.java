@@ -544,6 +544,7 @@ public class PlayPanel extends Pane {
     private List<PointInt> findPatternCompletions(List<Collision> orbsToSnap, List<Orb> shootingOrbsToBurst){
 
         List<PointInt> arrayOrbsToBurst = new LinkedList<>();
+        List<Orb> transferOutOrbs = playPanelData.getTransferOutOrbs();
 
         for(Collision collision : orbsToSnap){
             Orb sourceOrb = collision.shooterOrb;
@@ -558,6 +559,16 @@ public class PlayPanel extends Pane {
             // find all connected orbs of the same color
             List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), PlayPanelData.FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
+
+            // If there are more than 3 grouped together, then add a transfer out orb of the same color:
+            if(connectedOrbs.size() > 3) {
+                int numTransferOrbs = (connectedOrbs.size()-3)/2;
+                OrbImages orbEnum = sourceOrb.getOrbEnum();
+                for(int k=0; k<numTransferOrbs; k++){
+                    //transferOutOrbs.add(new Orb(orbEnum,miscRandomGenerator.nextInt(),miscRandomGenerator.nextInt(),Orb.BubbleAnimationType.TRANSFERRING));
+                    transferOutOrbs.add(new Orb(orbEnum,0,0,Orb.BubbleAnimationType.STATIC));
+                }
+            }
         }
 
         return arrayOrbsToBurst;

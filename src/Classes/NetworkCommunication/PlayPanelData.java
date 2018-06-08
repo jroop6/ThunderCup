@@ -97,7 +97,7 @@ public class PlayPanelData implements Serializable {
         List<PointInt> openSpots = new LinkedList<>();
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=offset + i%2 - 2*offset*i%2; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j+=2){
-                if(orbArray[i][j]==Orb.NULL && !getNeighbors(new PointInt(i,j)).isEmpty()){
+                if(orbArray[i][j]==Orb.NULL && !getNeighbors(new PointInt(i,j)).isEmpty() && !isTransferInOrbOccupyingPosition(i,j)){
                     openSpots.add(new PointInt(i,j));
                 }
             }
@@ -110,6 +110,7 @@ public class PlayPanelData implements Serializable {
             PointInt openSpot = openSpots.get(index);
             orb.setIJ(openSpot.i,openSpot.j);
             orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
+            System.out.println("size of openSpots is " + openSpots.size());
             openSpots.remove(index);
         }
 
@@ -409,5 +410,12 @@ public class PlayPanelData implements Serializable {
             setTransferInOrbs(other.transferInOrbs);
             inconsistencyCounter = 0;
         }
+    }
+
+    private boolean isTransferInOrbOccupyingPosition(int i, int j){
+        for(Orb orb : transferInOrbs){
+            if(orb.getI()==i && orb.getJ()==j) return true;
+        }
+        return false;
     }
 }

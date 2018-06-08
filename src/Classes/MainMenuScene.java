@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Animation.MiscAnimations;
 import Classes.Animation.PngSequencePlayer;
 import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
