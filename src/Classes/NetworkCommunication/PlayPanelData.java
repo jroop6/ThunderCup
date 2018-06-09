@@ -168,7 +168,7 @@ public class PlayPanelData implements Serializable {
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                 Orb otherOrb = newOrbArray[i][j];
                 if(otherOrb.equals(Orb.NULL)) orbArray[i][j] = Orb.NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
-                else orbArray[i][j] = new Orb(otherOrb.getOrbEnum(),otherOrb.getI(),otherOrb.getJ(),otherOrb.getAnimationEnum());
+                else orbArray[i][j] = new Orb(otherOrb.getOrbEnum(),i,j,otherOrb.getAnimationEnum());
             }
         }
     }
@@ -181,7 +181,10 @@ public class PlayPanelData implements Serializable {
     }
     public void setTransferInOrbs(List<Orb> transferInOrbs){
         this.transferInOrbs.clear();
-        this.transferInOrbs.addAll(transferInOrbs);
+        //this.transferInOrbs.addAll(transferInOrbs); // Using addAll() would be faster and cleaner, but may use more memory because the game would have to keep a reference to the entire PlayPanelData from the host.
+        for(Orb orb : transferInOrbs){
+            this.transferInOrbs.add(new Orb(orb.getOrbEnum(), orb.getI(), orb.getJ(), orb.getAnimationEnum()));
+        }
     }
 
 
@@ -361,17 +364,13 @@ public class PlayPanelData implements Serializable {
         Orb[][] otherArray = other.getOrbArray();
         for(int i=0; i<ARRAY_HEIGHT; i++) {
             for (int j=0; j < ARRAY_WIDTH_PER_CHARACTER * numPlayers; j++) {
-                if (orbArray[i][j] == Orb.NULL) {
-                    if (!otherArray[i][j].equals(Orb.NULL)){ // note: cannot use == here because the host has a different instance of Orb.NULL than we do.
-                        inconsistent = true;
-                        System.out.println("orbArray["+i+"]["+j+"] is null but otherArray[i][j] is not null");
-                    }
+                if (otherArray[i][j].equals(Orb.NULL) && !(orbArray[i][j] == Orb.NULL)){ // note: cannot use == in the first clause because the host has a different instance of Orb.NULL than we do.
+                    inconsistent = true;
+                    System.out.println("orbArray["+i+"]["+j+"] is null but otherArray[i][j] is not null");
                 }
-                else{
-                    if (orbArray[i][j].getOrbEnum() != otherArray[i][j].getOrbEnum()){
-                        inconsistent = true;
-                        System.out.println("array enums at ["+i+"]["+j+"] do not match");
-                    }
+                else if (orbArray[i][j].getOrbEnum() != otherArray[i][j].getOrbEnum()){
+                    inconsistent = true;
+                    System.out.println("array enums at ["+i+"]["+j+"] do not match");
                 }
             }
         }

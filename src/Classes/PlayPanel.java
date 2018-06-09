@@ -452,9 +452,17 @@ public class PlayPanel extends Pane {
 
             // Compute snap coordinates for orbs that collided with the ceiling
             if(snap.arrayOrb==Orb.CEILING){
+                int offset = 0;
+                Orb[][] orbArray = playPanelData.getOrbArray();
+                for(int j=0; j<orbArray[0].length; j++){
+                    if(orbArray[0][j] != NULL){
+                        offset = j%2;
+                        break;
+                    }
+                }
                 double xPos = snap.shooterOrb.getXPos();
                 iSnap = 0;
-                jSnap = 2*((int) Math.round((xPos - ORB_RADIUS)/(2*ORB_RADIUS)));
+                jSnap = 2*((int) Math.round((xPos - ORB_RADIUS)/(2*ORB_RADIUS))) + offset;
             }
 
             // Compute snap coordinates for orbs that collided with an array orb
