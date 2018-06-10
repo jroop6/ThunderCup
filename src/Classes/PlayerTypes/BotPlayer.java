@@ -6,18 +6,11 @@ import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.Orb;
-import Classes.PlayPanel;
 
 import java.util.Random;
 
-/**
- * Created by HydrusBeta on 8/6/2017.
- */
 public class BotPlayer extends Player {
 
-    PlayPanel playPanel;
-
-    //
     public BotPlayer(){
         // create a (probably) unique player ID:
         long playerID;
@@ -40,13 +33,6 @@ public class BotPlayer extends Player {
 
     }
 
-
-    /* Implementing abstract methods from Player class: */
-
-    public void registerToPlayPanel(PlayPanel playPanel){
-        this.playPanel = playPanel;
-    }
-
     private long nextTime = 0;
     public void tick(){
         //Todo: implement this.
@@ -54,13 +40,9 @@ public class BotPlayer extends Player {
 
         if(System.nanoTime() > nextTime){
             double newAngleDeg = 180.0*(new Random().nextDouble()) - 90.0; // degrees
-            //double newAngleRad = (newAngleDeg - 90.0)*(Math.PI/180.0); // radians
-            playerData.changeCannonAngle(newAngleDeg); // radians
-            cannon.setAngle(newAngleDeg); //updates view
-
+            pointCannon(newAngleDeg);
+            changeFireCannon();
             nextTime = System.nanoTime() + 2000000000;
-            Orb firedOrb = changeFireCannon(); // This will update the playerData model
-            playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates playPanelData model
         }
     }
 

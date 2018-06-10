@@ -7,6 +7,7 @@ import Classes.Images.CharacterImages;
 import Classes.Images.OrbImages;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -19,7 +20,7 @@ import java.util.*;
 
 
 /**
- * Think of this as the controller in an MVC model. Player has a PlayerData (model) as well as a Cannon, Character,
+ * Think of this as the controller in an MVC pattern. Player has a PlayerData (model) as well as a Cannon, Character,
  * Label, and ComboBox to display that data (view).
  */
 public abstract class Player {
@@ -33,14 +34,17 @@ public abstract class Player {
     protected ComboBox<String> teamChoice = new ComboBox<>();
     protected Label latencyLabel = new Label("Latency: 0 milliseconds");
 
+    // The PlayPanel associated with this player (needed for firing new shootingOrbs):
+    PlayPanel playPanel;
+
     // EventHandlers:
     private EventHandler<MouseEvent> cannonChangeEventHandler;
     private EventHandler<MouseEvent> characterChangeEventHandler;
 
     // Data needed for constructing the shooter Orbs. These values are determined *once* by the host at the start
     // of the game and are never changed. Host and client maintain their own copies separately.
-    int seed;
-    Random ammunitionGenerator;
+    private int seed;
+    private Random ammunitionGenerator;
 
     // instance initializer to create the username Button, latency Label, ComboBox, and eventHandlers for changing cannon/character:
     {
@@ -64,11 +68,12 @@ public abstract class Player {
     }
 
     /* Abstract Methods: */
-    public abstract void registerToPlayPanel(PlayPanel playPanel);
     public abstract double computeInitialDistance(Orb orb);
 
     /* Concrete methods: */
-
+    public void registerToPlayPanel(PlayPanel playPanel){
+        this.playPanel = playPanel;
+    }
     public PlayerData getPlayerData(){
         return playerData;
     }
@@ -135,16 +140,34 @@ public abstract class Player {
         // serves as the view itself.
     }
 
-    // For now, this only modifies the ammunition orbs. The shooter orbs have already been placed via the updatePlayer() method in the PlayPanel class
-    // I might change this later.
-    public void setFireCannon(){
-        int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        playerData.setFire(randomOrdinal);
+    // Points the cannon at a position given in scene coordinates.
+    public void pointCannon(double sceneX, double sceneY){
+        Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
+        double mouseRelativeX = localLoc.getX() - cannon.getPosX();
+        double mouseRelativeY = localLoc.getY() - cannon.getPosY();
+        double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
+        double newAngleDeg = newAngleRad*180.0/Math.PI + 90.0;
+        pointCannon(newAngleDeg); // updates model and view.
     }
 
-    public Orb changeFireCannon(){
+    // Points the cannon at a given angle, in degrees (0 degrees points straight up)
+    public void pointCannon(double angle){
+        playerData.changeCannonAngle(angle); // updates model
+        cannon.setAngle(angle); // updates view
+    }
+
+    private void setFireCannon(){
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        return playerData.changeFire((cannon.getAngle()-90)*(Math.PI/180), randomOrdinal); // updates model
+        playerData.setFire(randomOrdinal); // updates Player model
+        // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
+        // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
+    }
+
+    public void changeFireCannon(){
+        int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
+        Orb firedOrb = playerData.changeFire((cannon.getAngle()-90)*(Math.PI/180), randomOrdinal); // updates Player model
+        playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates PlayPanel model
+        // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
     }
 
     public void relocateCannon(double x, double y){
