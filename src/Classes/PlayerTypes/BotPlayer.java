@@ -53,13 +53,14 @@ public class BotPlayer extends Player {
         // temporary implementation, just to see if the framework is working:
 
         if(System.nanoTime() > nextTime){
-            double newAngle = 180.0*(new Random().nextDouble()) - 90.0; // degrees
-            System.out.println("new angle is " + newAngle);
-            playerData.changeCannonAngle(newAngle); // degrees
-            cannon.setAngle(newAngle); //updates view
+            double newAngleDeg = 180.0*(new Random().nextDouble()) - 90.0; // degrees
+            //double newAngleRad = (newAngleDeg - 90.0)*(Math.PI/180.0); // radians
+            playerData.changeCannonAngle(newAngleDeg); // radians
+            cannon.setAngle(newAngleDeg); //updates view
 
             nextTime = System.nanoTime() + 2000000000;
-            playPanel.fireCannon(this, (newAngle - 90.0)*Math.PI/180.0); // radians
+            Orb firedOrb = changeFireCannon(); // This will update the playerData model
+            playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates playPanelData model
         }
     }
 

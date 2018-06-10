@@ -88,7 +88,8 @@ public class GameScene extends Scene {
                 teams.put(team,newTeam);
             }
 
-            // while we're here, check to see if this is the LocalPlayer and also initialize missedPacketsCount:
+            // while we're here, check to see if this is the LocalPlayer. If so, initialize missedPacketsCount and add
+            // the mouseListener:
             if(player instanceof LocalPlayer) localPlayer = (LocalPlayer) player;
             missedPacketsCount.put(player.getPlayerData().getPlayerID(),0);
         }
@@ -122,6 +123,19 @@ public class GameScene extends Scene {
         // Get the pause menu ready, but don't add it to the scene yet:
         pauseOverlay = createPauseOverlay();
         pauseMenu = createPauseMenu();
+
+        // Add mouse listeners for the local player:
+        addEventHandler(MouseEvent.MOUSE_MOVED,(event)->{
+            localPlayer.pointCannon(event.getX(), event.getY());
+        });
+        addEventHandler(MouseEvent.MOUSE_PRESSED, (event) ->{
+            localPlayer.pointCannon(event.getX(), event.getY());
+            localPlayer.fireCannon();
+            System.out.println("cannon fired!");
+        });
+        addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)->{
+            localPlayer.pointCannon(event.getX(), event.getY());
+        });
 
         // Make everything scale correctly when the window is resized:
         rootNode.heightProperty().addListener((observable, oldValue, newValue) -> {

@@ -207,11 +207,11 @@ public class PlayPanel extends Pane {
         //ToDo: check for team victory/defeat conditions, here.
     }
 
-    public void fireCannon(Player player, double angle){
+    /*public void fireCannon(Player player, double angle){
         Orb firedOrb = player.changeFireCannon(angle); // This will update the playerData model
         playPanelData.getShootingOrbs().add(firedOrb); // updates playPanelData model
         // Note: the view gets updated during the repaint() method, which is called 24 frames/sec.
-    }
+    }*/
 
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
     void tick(){

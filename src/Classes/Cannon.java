@@ -79,6 +79,9 @@ public class Cannon {
     public double getPosY(){
         return posY;
     }
+    public double getAngle(){
+        return rotater.getAngle();
+    }
 
     public void freeze(){
         ColorAdjust desaturator = new ColorAdjust(0,-1,0,0);

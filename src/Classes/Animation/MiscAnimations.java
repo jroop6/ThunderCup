@@ -4,8 +4,7 @@ import Classes.GameSettings;
 import Classes.SpriteSheet;
 
 /**
- * An enumeration containing all miscellaneous animations, in the form of png spritesheets. Numerous instances of
- * Sprite can be created by calling getSpriteSheet.
+ * An enumeration containing all miscellaneous animations, in the form of png spritesheets.
  */
 public enum MiscAnimations {
     TITLE("res/animations/misc/highRes/title_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png");

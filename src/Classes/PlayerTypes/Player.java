@@ -142,9 +142,9 @@ public abstract class Player {
         playerData.setFire(randomOrdinal);
     }
 
-    public Orb changeFireCannon(double angle){
+    public Orb changeFireCannon(){
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        return playerData.changeFire(angle, randomOrdinal); // updates model
+        return playerData.changeFire((cannon.getAngle()-90)*(Math.PI/180), randomOrdinal); // updates model
     }
 
     public void relocateCannon(double x, double y){

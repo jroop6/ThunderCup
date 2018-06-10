@@ -5,6 +5,7 @@ import Classes.Character;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.Orb;
 import Classes.PlayPanel;
+import javafx.geometry.Point2D;
 import javafx.scene.input.MouseEvent;
 
 import java.util.Random;
@@ -13,6 +14,8 @@ import java.util.Random;
  * Created by HydrusBeta on 7/26/2017.
  */
 public class LocalPlayer extends Player {
+
+    PlayPanel playPanel;
 
     public LocalPlayer(String username, boolean isHost){
         // create a (probably) unique player ID:
@@ -39,7 +42,8 @@ public class LocalPlayer extends Player {
     /* Implementing abstract methods from Player class: */
 
     public void registerToPlayPanel(PlayPanel playPanel){
-        playPanel.addEventHandler(MouseEvent.MOUSE_MOVED,(event)->{
+        this.playPanel = playPanel;
+        /*playPanel.addEventHandler(MouseEvent.MOUSE_MOVED,(event)->{
             double mouseRelativeX = event.getX() - cannon.getPosX();
             double mouseRelativeY = event.getY() - cannon.getPosY();
             double newAngle = Math.atan2(mouseRelativeY,mouseRelativeX)*180.0/Math.PI + 90.0;
@@ -53,7 +57,7 @@ public class LocalPlayer extends Player {
             double mouseRelativeY = event.getY() - cannon.getPosY();
             double newAngle = Math.atan2(mouseRelativeY,mouseRelativeX);
             System.out.println("cannon fired!: (" + mouseRelativeX + ", " + mouseRelativeY + "). Angle = " + newAngle);
-            playPanel.fireCannon(this, newAngle); // The orb needs to be fired from the PlayPanel in order to obtain the Orb's starting position (The LocalPlayer has no idea where it's cannon is located on the PlayPanel)
+            playPanel.fireCannon(this, newAngle); // The orb needs to be fired from the PlayPanel in order to add the fired orb to the playPanelData.
         });
 
         // The angle of the cannon should still be controllable while the mouse button is pressed down:
@@ -63,7 +67,23 @@ public class LocalPlayer extends Player {
             double newAngle = Math.atan2(mouseRelativeY,mouseRelativeX)*180.0/Math.PI + 90.0;
             playerData.changeCannonAngle(newAngle); // updates model
             cannon.setAngle(newAngle); // updates view
-        });
+        });*/
+    }
+
+    // Points the cannon at a position given in scene coordinates.
+    public void pointCannon(double sceneX, double sceneY){
+        Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
+        double mouseRelativeX = localLoc.getX() - cannon.getPosX();
+        double mouseRelativeY = localLoc.getY() - cannon.getPosY();
+        double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
+        double newAngleDeg = newAngleRad*180.0/Math.PI + 90.0;
+        cannon.setAngle(newAngleDeg); // updates view
+        playerData.changeCannonAngle(newAngleDeg); // updates model
+    }
+
+    public void fireCannon(){
+        Orb firedOrb = changeFireCannon(); // This will update the playerData model
+        playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates playPanelData model
     }
 
     public void rotateCannon(PlayerData playerData){
