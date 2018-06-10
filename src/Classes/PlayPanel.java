@@ -42,7 +42,7 @@ public class PlayPanel extends Pane {
     public static final double ROW_HEIGHT = Math.sqrt(Math.pow(2* ORB_RADIUS,2) - Math.pow(ORB_RADIUS,2)); // Vertical distance between Orb rows.
 
     // Misc constants:
-    private static final double ELECTIRIFCATION_PROBABILITY = .004;
+    private static final double ELECTRIFCATION_PROBABILITY = .004;
 
     private List<Player> playerList = new LinkedList<>();
     private Rectangle liveBoundary;
@@ -82,13 +82,6 @@ public class PlayPanel extends Pane {
         orbDrawer = orbCanvas.getGraphicsContext2D();
         getChildren().add(orbCanvas);
 
-        // A simple line shows the limit of the orbArray. If any orb is placed below this line, the player loses.
-        double deathLineY = ROW_HEIGHT*(ARRAY_HEIGHT-1)+2*ORB_RADIUS;
-        Line deathLine = new Line(0.0, deathLineY, liveBoundary.getWidth(), deathLineY);
-        deathLine.setStroke(Color.PINK);
-        deathLine.setStrokeWidth(2.0);
-        getChildren().add(deathLine);
-
         // Add and initialize players to the PlayPanel:
         addPlayers(players);
 
@@ -115,8 +108,6 @@ public class PlayPanel extends Pane {
             getChildren().add(player.getCannonMovingPart());
             getChildren().add(player.getCannonStaticForeground());
             player.relocateCannon(CANNON_X_POS + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
-            /*player.relocateCharacter(player.getPlayerData().getCannonEnum().getCharacterX()-player.getPlayerData().getCharacterEnum().getHoovesX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
-                    player.getPlayerData().getCannonEnum().getCharacterY() - player.getPlayerData().getCharacterEnum().getHoovesY());*/
             player.relocateCharacter(player.getPlayerData().getCannonEnum().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
                     player.getPlayerData().getCannonEnum().getCharacterY());
             getChildren().add(player.getCharacterSprite());
@@ -618,7 +609,7 @@ public class PlayPanel extends Pane {
                 if(orb!=NULL){
                     switch(orb.getAnimationEnum()){
                         case STATIC:
-                            if(miscRandomGenerator.nextDouble()<ELECTIRIFCATION_PROBABILITY){
+                            if(miscRandomGenerator.nextDouble()< ELECTRIFCATION_PROBABILITY){
                                 orb.setAnimationEnum(Orb.BubbleAnimationType.ELECTRIFYING);
                             }
                             break;
@@ -729,6 +720,12 @@ public class PlayPanel extends Pane {
     private void repaint(){
         // Clear the canvas
         orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
+
+        // A simple line shows the limit of the orbArray. If any orb is placed below this line, the player loses.
+        double deathLineY = ROW_HEIGHT*(ARRAY_HEIGHT-1)+2*ORB_RADIUS;
+        orbDrawer.setStroke(Color.PINK);
+        orbDrawer.setLineWidth(2.0);
+        orbDrawer.strokeLine(0,deathLineY,liveBoundary.getWidth(),deathLineY);
 
         // Paint dropping Orbs:
         for(Orb orb: playPanelData.getDroppingOrbs()) orb.drawSelf(orbDrawer);

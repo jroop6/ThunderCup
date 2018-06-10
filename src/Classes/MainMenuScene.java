@@ -90,12 +90,12 @@ public class MainMenuScene extends Scene {
         ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         Character character = new Character(new PlayerData("temp",0));
-        character.getSprite().relocate(550,850);
+        character.getSprite().relocate(550,850,0);
         scaledRoot.getChildren().addAll(nearCloud,character.getSprite());
 
         // Add the animated title:
         PngSequencePlayer title = new PngSequencePlayer(MiscAnimations.TITLE);
-        title.relocate(1920/2,550/2);
+        title.relocate(1920/2,550/2,0);
         scaledRoot.getChildren().add(title);
 
         // Create buttons and add them to the scene:

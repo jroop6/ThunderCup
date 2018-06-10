@@ -41,9 +41,9 @@ public class Cannon {
     }
 
     public void relocate(double x, double y){
-        staticBackground.relocate(x,y);
-        movingPart.relocate(x,y);
-        staticForeground.relocate(x,y);
+        staticBackground.relocate(x,y,currentFrame);
+        movingPart.relocate(x,y,currentFrame);
+        staticForeground.relocate(x,y,currentFrame);
     }
 
     public void setAngle(double angle){
@@ -57,10 +57,10 @@ public class Cannon {
     }
 
     public double getPosX(){
-        return movingPart.getLayoutX();
+        return movingPart.getxPos();
     }
     public double getPosY(){
-        return movingPart.getLayoutY();
+        return movingPart.getyPos();
     }
     public double getAngle(){
         return movingPart.getAngle();

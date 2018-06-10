@@ -17,24 +17,23 @@ public class Sprite extends ImageView{
     // into those classes. Also, objects might have multiple animations that will be easier to manage from those higher-
     // level classes.
     private SpriteSheet spriteSheet;
-    private Translate anchorPointCorrector = new Translate();
     private Rotate rotater = new Rotate();
     private Scale scaler = new Scale();
+    private double xPos;
+    private double yPos;
 
     public Sprite(SpriteSheet spriteSheet){
         this.spriteSheet = spriteSheet;
-        getTransforms().add(anchorPointCorrector);
         getTransforms().add(rotater);
         getTransforms().add(scaler);
         setImage(spriteSheet);
         setFrame(0);
     }
 
-    public void setFrame(int index){
-        SpriteSheet.FrameBound frameBound = spriteSheet.getFrameBound(index);
+    public void setFrame(int frameIndex){
+        SpriteSheet.FrameBound frameBound = spriteSheet.getFrameBound(frameIndex);
         setViewport(frameBound.getPosAndDim());
-        anchorPointCorrector.setX(-frameBound.getAnchorPoint().getX());
-        anchorPointCorrector.setY(-frameBound.getAnchorPoint().getY());
+        centerTheAnchorPoint(frameIndex);
 
         //Todo: take into account rotation and scaling. This will only become important once I start animating the cannons.
     }
@@ -59,6 +58,26 @@ public class Sprite extends ImageView{
         scaler.setPivotY(frameBound.getAnchorPoint().getY());
         scaler.setX(scaleFactor);
         scaler.setY(scaleFactor);
+    }
+
+    public void relocate(double x, double y, int frameIndex){
+        xPos = x;
+        yPos = y;
+        centerTheAnchorPoint(frameIndex);
+    }
+
+    private void centerTheAnchorPoint(int frameIndex){
+        SpriteSheet.FrameBound frameBound = spriteSheet.getFrameBound(frameIndex);
+        double layoutX = xPos-frameBound.getAnchorPoint().getX();
+        double layoutY = yPos-frameBound.getAnchorPoint().getY();
+        relocate(layoutX,layoutY);
+    }
+
+    public double getxPos(){
+        return xPos;
+    }
+    public double getyPos() {
+        return yPos;
     }
 
     public double getAngle(){

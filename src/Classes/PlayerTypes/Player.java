@@ -147,7 +147,6 @@ public abstract class Player {
         double mouseRelativeY = -(localLoc.getY() - cannon.getPosY()); // recall that the y-axis points down.
         double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
         double newAngleDeg = newAngleRad*180.0/Math.PI; // 0 degrees points to the right, 90 degrees points straight up.
-        System.out.println("mouseX = " + localLoc.getX() + " cannonX = " + cannon.getPosX() + " mouseY = " + localLoc.getY() + " cannonY = " + cannon.getPosY() + " angle: " + newAngleDeg);
         pointCannon(newAngleDeg); // updates model and view.
     }
 

@@ -13,7 +13,7 @@ public class Character {
     private CharacterImages characterEnum;
     private Sprite sprite;
     private AnimationType animationType;
-    private int animationIndex = 0;
+    private int currentFrame = 0;
     private Scale scaler = new Scale();
 
     // Initialize with a static display of the character:
@@ -25,11 +25,11 @@ public class Character {
     }
 
     public void relocate(double x, double y){
-        sprite.relocate(x,y);
+        sprite.relocate(x,y,currentFrame);
     }
 
     public void setScale(double scaleFactor){
-        Point2D anchorPoint = characterEnum.getSpriteSheet().getFrameBound(animationIndex).getAnchorPoint();
+        Point2D anchorPoint = characterEnum.getSpriteSheet().getFrameBound(currentFrame).getAnchorPoint();
         scaler.setPivotX(anchorPoint.getX());
         scaler.setPivotY(anchorPoint.getY());
         scaler.setX(scaleFactor);
