@@ -50,7 +50,7 @@ public class PlayerData implements Serializable {
     // default values for everything else.
     public PlayerData(String username, long playerID){
         //BubbleData = new BubbleData();
-        cannonAngle = 20.0;
+        cannonAngle = 80.0;
         this.username = username;
         this.playerID = playerID;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
@@ -60,7 +60,7 @@ public class PlayerData implements Serializable {
         }
         else{ // Otherwise, assign the player the default character and cannon:
             characterEnum = CharacterImages.PINK_FILLY;
-            cannonEnum = CannonImages.STANDARD_CANNON;
+            cannonEnum = CannonImages.BASIC_CANNON;
             team = 1;
         }
         defeated = false;

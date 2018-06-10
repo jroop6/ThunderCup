@@ -144,9 +144,10 @@ public abstract class Player {
     public void pointCannon(double sceneX, double sceneY){
         Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
         double mouseRelativeX = localLoc.getX() - cannon.getPosX();
-        double mouseRelativeY = localLoc.getY() - cannon.getPosY();
+        double mouseRelativeY = -(localLoc.getY() - cannon.getPosY()); // recall that the y-axis points down.
         double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
-        double newAngleDeg = newAngleRad*180.0/Math.PI + 90.0;
+        double newAngleDeg = newAngleRad*180.0/Math.PI; // 0 degrees points to the right, 90 degrees points straight up.
+        System.out.println("mouseX = " + localLoc.getX() + " cannonX = " + cannon.getPosX() + " mouseY = " + localLoc.getY() + " cannonY = " + cannon.getPosY() + " angle: " + newAngleDeg);
         pointCannon(newAngleDeg); // updates model and view.
     }
 
@@ -165,7 +166,7 @@ public abstract class Player {
 
     public void changeFireCannon(){
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        Orb firedOrb = playerData.changeFire((cannon.getAngle()-90)*(Math.PI/180), randomOrdinal); // updates Player model
+        Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), randomOrdinal); // updates Player model
         playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates PlayPanel model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
     }

@@ -30,7 +30,6 @@ public class BotPlayer extends Player {
         character.setCharacterEnum(CharacterImages.FILLY_BOT); // character initializes with a default player, so change it to a bot, here.
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
-
     }
 
     private long nextTime = 0;
@@ -39,7 +38,7 @@ public class BotPlayer extends Player {
         // temporary implementation, just to see if the framework is working:
 
         if(System.nanoTime() > nextTime){
-            double newAngleDeg = 180.0*(new Random().nextDouble()) - 90.0; // degrees
+            double newAngleDeg = 180.0*(new Random().nextDouble()); // degrees
             pointCannon(newAngleDeg);
             changeFireCannon();
             nextTime = System.nanoTime() + 2000000000;
