@@ -221,14 +221,23 @@ public class PlayPanel extends Pane {
         playPanelData.changeBurstShootingOrbs(shootingOrbsToBurst);
         playPanelData.changeBurstArrayOrbs(arrayOrbsToBurst);
 
-        // Advance the animation frame of electrified orbs:
+        // Advance the animation frame of the electrified orbs:
         advanceElectrifyingOrbs();
+
+        // Advance the animation and audio of the thunder orbs:
+        List<Orb> orbsToRemove = advanceThunderOrbs();
+        playPanelData.getThunderOrbs().removeAll(orbsToRemove);
 
         // Advance existing dropping orbs:
         List<Orb> orbsToTransfer = advanceDroppingOrbs();
         playPanelData.getDroppingOrbs().removeAll(orbsToTransfer);
-        //Todo: also add the Orbs in orbsToTransfer to thunderOrbs
-        playPanelData.changeAddTransferOutOrbs(orbsToTransfer);
+        playPanelData.changeAddTransferOutOrbs(orbsToTransfer); // Note: the transferOutOrbs list will get cleared before the end of this frame.
+        List<Orb> orbsToTransferCopy = new LinkedList<>();
+        for(Orb orb : orbsToTransfer){ // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
+            Orb orbCopy = new Orb(orb.getOrbEnum(), 0,0, Orb.BubbleAnimationType.THUNDERING);
+            orbsToTransferCopy.add(orbCopy);
+        }
+        playPanelData.setAddThunderOrbs(orbsToTransferCopy); // Note: the thunderOrbs list is persistent.
 
         // Find floating orbs and drop them. Advance other dropping orbs:
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs();
@@ -667,6 +676,17 @@ public class PlayPanel extends Pane {
             }
         }
         return orbsToTransfer;
+    }
+
+    private List<Orb> advanceThunderOrbs(){
+        List<Orb> orbsToRemove = new LinkedList<>();
+        for(Orb orb : playPanelData.getThunderOrbs()){
+            if(orb.animationTick()){
+                orbsToRemove.add(orb);
+                System.out.println("REMOVING THUNDER ORB");
+            }
+        }
+        return orbsToRemove;
     }
 
     private void addNewRow(){

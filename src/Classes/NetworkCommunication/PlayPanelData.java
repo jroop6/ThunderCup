@@ -26,6 +26,7 @@ public class PlayPanelData implements Serializable {
     private List<Orb> droppingOrbs = new LinkedList<>();
     private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
     private List<Orb> transferInOrbs = new LinkedList<>(); // orbs to be transferred from other players
+    private List<Orb> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
 
     // Flags indicating a change in the data:
     private boolean orbArrayChanged = false;
@@ -162,6 +163,9 @@ public class PlayPanelData implements Serializable {
     public void setAddDroppingOrb(Orb newOrb){
         droppingOrbs.add(newOrb);
     }
+    public void setAddThunderOrbs(List<Orb> newThunderOrbs){
+        thunderOrbs.addAll(newThunderOrbs);
+    }
     public void setOrbArray(Orb[][] newOrbArray){
         for (int i=0; i<ARRAY_HEIGHT; i++){
             //System.arraycopy(newOrbArray[i],0,orbArray[i],0,orbArray[i].length); // System.arraycopy is faster, but it might cost more memory because it causes the game to retain a reference to the packet from the host. I'm not sure which option is better... Either way, I'd have to replace all the NULL orbs with references to the local NULL orb anyways.
@@ -234,6 +238,9 @@ public class PlayPanelData implements Serializable {
     }
     public List<Orb> getTransferInOrbs(){
         return transferInOrbs;
+    }
+    public List<Orb> getThunderOrbs(){
+        return thunderOrbs;
     }
     public int getShotsUntilNewRow(){
         return shotsUntilNewRow;

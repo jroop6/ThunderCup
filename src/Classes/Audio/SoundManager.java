@@ -1,5 +1,9 @@
 package Classes.Audio;
 
+import javafx.scene.media.MediaPlayer;
+
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -21,6 +25,7 @@ public class SoundManager {
     // variables used in muting and resuming sound:
     private static boolean muted = false;
     private static Music currentMusic;
+    private static List<MediaPlayer> currentSoundEffects = new LinkedList<>();
 
     //TODO: actually, this should play a random next song when one ends.
     //TODO: handle audio files that did not load for some reason
@@ -39,6 +44,18 @@ public class SoundManager {
         stopMusic(); // stop any music that's already playing
         currentMusic = song;
         if(!muted) currentMusic.getMediaPlayer().play();
+    }
+
+    public static void playSoundEffect(SoundEffect soundEffect){
+        MediaPlayer newSoundEffect = soundEffect.getMediaPlayer();
+        if(newSoundEffect==null) return; // avoid null pointer exception if media couldn't be loaded.
+        currentSoundEffects.add(newSoundEffect);
+        newSoundEffect.setOnStopped(()->{
+            currentSoundEffects.remove(newSoundEffect);
+            System.out.println("removing sound effect");
+        });
+        System.out.println("playing sound effect");
+        newSoundEffect.play();
     }
 
     public static void stopMusic(){

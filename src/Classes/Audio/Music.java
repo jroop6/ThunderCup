@@ -16,17 +16,16 @@ public enum Music {
     GO_TAKE_FLIGHT("res/sound/music/Go Take Flight.mp3",false),
     CHANGELING("res/sound/music/Changeling (Instrumental).mp3",true);
 
-    private String url;
     private boolean randomBgMusic; // indicates whether the song is OK to play as random background music during a game.
     private MediaPlayer mediaPlayer;
 
     Music(String url, boolean randomBgMusic){
-        this.url = url;
         this.randomBgMusic = randomBgMusic;
 
         try {
             String path = getClass().getClassLoader().getResource(url).toURI().toString();
             mediaPlayer = new MediaPlayer(new Media(path));
+            mediaPlayer.setVolume(0.50); //Todo: temporary.
         } catch(URISyntaxException e){
             e.printStackTrace();
         }
