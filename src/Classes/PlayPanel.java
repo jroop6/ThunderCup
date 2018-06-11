@@ -12,7 +12,6 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 
 import java.util.*;
@@ -40,6 +39,8 @@ public class PlayPanel extends Pane {
     public static final double CANNON_X_POS = ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2.0; // The x-position of the cannon's axis of rotation in a 1-player playpanel.
     public static final double CANNON_Y_POS = 975; // The y-position of the cannon's axis of rotation in a 1-player playpanel.
     public static final double ROW_HEIGHT = Math.sqrt(Math.pow(2* ORB_RADIUS,2) - Math.pow(ORB_RADIUS,2)); // Vertical distance between Orb rows.
+    private static final double[] VIBRATION_OFFSETS = {2.5, 1.5, 1}; // How much the array orbs vibrate before they drop 1 level.
+    private static final double[] VIBRATION_FREQUENCIES = {15.2, 10.7, 5.3}; // cycles per second
 
     // Misc constants:
     private static final double ELECTRIFCATION_PROBABILITY = .004;
@@ -720,6 +721,7 @@ public class PlayPanel extends Pane {
     private void repaint(){
         // Clear the canvas
         orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
+        double vibrationOffset = 0.0;
 
         // A simple line shows the limit of the orbArray. If any orb is placed below this line, the player loses.
         double deathLineY = ROW_HEIGHT*(ARRAY_HEIGHT-1)+2*ORB_RADIUS;
@@ -728,7 +730,23 @@ public class PlayPanel extends Pane {
         orbDrawer.strokeLine(0,deathLineY,liveBoundary.getWidth(),deathLineY);
 
         // Paint dropping Orbs:
-        for(Orb orb: playPanelData.getDroppingOrbs()) orb.drawSelf(orbDrawer);
+        for(Orb orb: playPanelData.getDroppingOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
+
+        // If we are close to adding 1 more level to the orbArray, apply a vibration effect to the array orbs:
+        if(playPanelData.getShotsUntilNewRow()<=VIBRATION_FREQUENCIES.length && playPanelData.getShotsUntilNewRow()>0){
+            vibrationOffset = Math.sin(2*Math.PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000)*VIBRATION_OFFSETS[playPanelData.getShotsUntilNewRow()-1];
+        }
+
+        // An earlier approach where I intended to use a Displacement map. But I realized that this would take lots of
+        // memory really quickly, especially if I cached the FloatMaps and had ~ 3 of them for each PlayPanel.
+        /*FloatMap floatMap = new FloatMap();
+        floatMap.setWidth((int)Math.round(liveBoundary.getWidth()));
+        floatMap.setHeight((int)Math.round(PLAYPANEL_HEIGHT));
+        for(int j=0; j<floatMap.getHeight(); j++){
+            for(int i=0; i<floatMap.getWidth(); i++){
+                floatMap.setSamples(i,j,VIBRATION_OFFSETS[2],0.0f);
+            }
+        }*/
 
         // paint Array orbs:
         Orb[][] orbArray = playPanelData.getOrbArray();
@@ -736,26 +754,29 @@ public class PlayPanel extends Pane {
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                 Orb orb = orbArray[i][j];
                 if(orb != NULL){
-                    orb.drawSelf(orbDrawer); // updates view
+                    orb.drawSelf(orbDrawer, vibrationOffset); // updates view
                 }
             }
         }
 
         // paint transferring orbs:
-        for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer);
+        for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
+
+        // remaining orbs should not vibrate:
+        vibrationOffset = 0.0;
 
         // Paint bursting orbs:
-        for(Orb orb: playPanelData.getBurstingOrbs()) orb.drawSelf(orbDrawer);
+        for(Orb orb: playPanelData.getBurstingOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
 
         // Paint ammunition orbs:
         for(Player player : playerList){
             List<Orb> ammunitionOrbs = player.getPlayerData().getAmmunition();
-            ammunitionOrbs.get(0).drawSelf(orbDrawer);
-            ammunitionOrbs.get(1).drawSelf(orbDrawer);
+            ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
+            ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
         }
 
         // Paint shooting orbs:
-        for(Orb orb : playPanelData.getShootingOrbs()) orb.drawSelf(orbDrawer);
+        for(Orb orb : playPanelData.getShootingOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
     }
 
     public PlayPanelData getPlayPanelData(){

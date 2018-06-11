@@ -186,29 +186,29 @@ public class Orb implements Serializable{
         return false;
     }
 
-    public void drawSelf(GraphicsContext orbDrawer){
+    public void drawSelf(GraphicsContext orbDrawer, double vibrationOffset){
         switch(animationEnum){
             case STATIC:
             case DROPPING:
             case IMPLODING:
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, burstAnimationFrame);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, burstAnimationFrame);
                 break;
             case BURSTING:
-                orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, burstAnimationFrame);
+                orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, burstAnimationFrame);
                 break;
             case ELECTRIFYING:
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, burstAnimationFrame);
-                orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, electrificationAnimationFrame);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, burstAnimationFrame);
+                orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, electrificationAnimationFrame);
                 break;
             case TRANSFERRING:
                 // draw the orb at 50% transparency:
                 orbDrawer.setGlobalAlpha(0.5);
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, 0);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, 0);
                 orbDrawer.setGlobalAlpha(1.0);
                 // draw an outline that shows how much time is left before the transfer is complete:
                 orbDrawer.setStroke(Color.rgb(0,255,255));
                 orbDrawer.setLineWidth(2.0);
-                orbDrawer.strokeArc(xPos-ORB_RADIUS,yPos-ORB_RADIUS,ORB_RADIUS*2,ORB_RADIUS*2,90,-360*burstAnimationFrame/(TIME_TO_TRANSFER*ANIMATION_FRAME_RATE),ArcType.OPEN);
+                orbDrawer.strokeArc(xPos-ORB_RADIUS + vibrationOffset,yPos-ORB_RADIUS,ORB_RADIUS*2,ORB_RADIUS*2,90,-360*burstAnimationFrame/(TIME_TO_TRANSFER*ANIMATION_FRAME_RATE),ArcType.OPEN);
         }
     }
 
