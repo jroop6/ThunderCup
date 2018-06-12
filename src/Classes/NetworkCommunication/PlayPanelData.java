@@ -15,7 +15,7 @@ public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
-    public static final int SHOTS_BETWEEN_DROPS = 15; // After the player shoots this many times, a new row of orbs appears at the top.
+    public static final int SHOTS_BETWEEN_DROPS = 20; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private int team;
     private int numPlayers;

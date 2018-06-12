@@ -1,6 +1,5 @@
 package Classes;
 
-import Classes.Audio.SoundManager;
 import Classes.Images.OrbElectrification;
 import Classes.Images.OrbExplosion;
 import Classes.Images.OrbImages;
@@ -189,9 +188,9 @@ public class Orb implements Serializable{
                 break;
             case THUNDERING:
                 currentFrame++;
-                System.out.println("current frame: " + currentFrame);
                 if(currentFrame > TIME_TO_THUNDER*ANIMATION_FRAME_RATE){
-                    SoundManager.playSoundEffect(orbThunder);
+                    // Todo: maybe play a more subtle sound effect or show some visual effect???
+                    //SoundManager.playSoundEffect(orbThunder);
                     return true;
                 }
         }
@@ -207,21 +206,21 @@ public class Orb implements Serializable{
                 orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 break;
             case BURSTING:
-                orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, currentFrame);
+                orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 break;
             case ELECTRIFYING:
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, currentFrame);
-                orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, electrificationAnimationFrame);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
                 break;
             case TRANSFERRING:
                 // draw the orb at 50% transparency:
                 orbDrawer.setGlobalAlpha(0.5);
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos + vibrationOffset, yPos, 0);
+                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, 0);
                 orbDrawer.setGlobalAlpha(1.0);
                 // draw an outline that shows how much time is left before the transfer is complete:
                 orbDrawer.setStroke(Color.rgb(0,255,255));
                 orbDrawer.setLineWidth(2.0);
-                orbDrawer.strokeArc(xPos-ORB_RADIUS + vibrationOffset,yPos-ORB_RADIUS,ORB_RADIUS*2,ORB_RADIUS*2,90,-360* currentFrame /(TIME_TO_TRANSFER*ANIMATION_FRAME_RATE),ArcType.OPEN);
+                orbDrawer.strokeArc(xPos-ORB_RADIUS,yPos-ORB_RADIUS + vibrationOffset,ORB_RADIUS*2,ORB_RADIUS*2,90,-360* currentFrame /(TIME_TO_TRANSFER*ANIMATION_FRAME_RATE),ArcType.OPEN);
         }
     }
 
