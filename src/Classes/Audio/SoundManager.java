@@ -27,17 +27,23 @@ public class SoundManager {
     private static Music currentMusic;
     private static List<MediaPlayer> currentSoundEffects = new LinkedList<>();
 
-    //TODO: actually, this should play a random next song when one ends.
     //TODO: handle audio files that did not load for some reason
-    public static void playRandomSongs(){
+    // Play any random background music except the one specified in the argument.
+    public static void playRandomSongs(Music notThisSong){
         if(muted) return;
         stopMusic(); // stop any music that's already playing
         Music randomSong;
         do{
             randomSong = Music.values()[rand.nextInt(Music.values().length)];
-        } while (!randomSong.isRandomBgMusic());
+        } while (!randomSong.isRandomBgMusic() && randomSong!=notThisSong);
         currentMusic = randomSong;
+        currentMusic.getMediaPlayer().setOnEndOfMedia(()-> SoundManager.playRandomSongs(currentMusic));
         currentMusic.getMediaPlayer().play();
+    }
+
+    // Overloaded method for playing any random song:
+    public static void playRandomSongs(){
+        playRandomSongs(null);
     }
 
     public static void playSong(Music song){
@@ -50,7 +56,7 @@ public class SoundManager {
         MediaPlayer newSoundEffect = soundEffect.getMediaPlayer();
         if(newSoundEffect==null) return; // avoid null pointer exception if media couldn't be loaded.
         currentSoundEffects.add(newSoundEffect);
-        newSoundEffect.setOnStopped(()->{
+        newSoundEffect.setOnEndOfMedia(()->{
             currentSoundEffects.remove(newSoundEffect);
             System.out.println("removing sound effect");
         });
@@ -60,6 +66,7 @@ public class SoundManager {
 
     public static void stopMusic(){
         if(currentMusic != null){
+            currentMusic.getMediaPlayer().setOnEndOfMedia(null); // remove any eventHandler
             currentMusic.getMediaPlayer().stop();
         }
     }

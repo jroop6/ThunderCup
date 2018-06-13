@@ -4,6 +4,7 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 
 import java.net.URISyntaxException;
+import java.net.URL;
 
 /**
  * Holds the url of music files and some information about them.
@@ -19,13 +20,20 @@ public enum Music {
     private boolean randomBgMusic; // indicates whether the song is OK to play as random background music during a game.
     private MediaPlayer mediaPlayer;
 
-    Music(String url, boolean randomBgMusic){
+    Music(String name, boolean randomBgMusic){
         this.randomBgMusic = randomBgMusic;
 
+        // one mediaPlayer is constructed per music track.
         try {
-            String path = getClass().getClassLoader().getResource(url).toURI().toString();
-            mediaPlayer = new MediaPlayer(new Media(path));
-            mediaPlayer.setVolume(0.50); //Todo: temporary.
+            URL url = getClass().getClassLoader().getResource(name);
+            if(url==null){
+                System.err.println("Could not locate music resource: " + name);
+            }
+            else{
+                String path = url.toURI().toString();
+                mediaPlayer = new MediaPlayer(new Media(path));
+                mediaPlayer.setVolume(0.50); //Todo: temporary.
+            }
         } catch(URISyntaxException e){
             e.printStackTrace();
         }

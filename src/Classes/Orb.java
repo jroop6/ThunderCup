@@ -1,9 +1,9 @@
 package Classes;
 
+import Classes.Audio.SoundEffect;
 import Classes.Images.OrbElectrification;
 import Classes.Images.OrbExplosion;
 import Classes.Images.OrbImages;
-import Classes.Audio.OrbThunder;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -22,7 +22,7 @@ public class Orb implements Serializable{
     private OrbImages orbEnum;
     private OrbElectrification orbElectrification; // enum used for displaying electrification animation.
     private OrbExplosion orbExplosion; // enum used for displaying burst animation.
-    private OrbThunder orbThunder; // enum used for displaying thunder animation.
+    private SoundEffect orbThunder; // enum used for displaying thunder animation.
     private BubbleAnimationType animationEnum;
     public static final double ORB_RADIUS = 23.0;
     public static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
@@ -107,7 +107,7 @@ public class Orb implements Serializable{
                 currentFrame = 0;
             case THUNDERING:
                 // Get a thunder enumeration todo: randomize this onece I have more than 1 type of animation/sound effect
-                orbThunder = OrbThunder.THUNDER_1;
+                orbThunder = SoundEffect.THUNDER_1;
                 currentFrame = 0;
         }
     }

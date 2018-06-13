@@ -1,5 +1,7 @@
 package Classes;
 
+import Classes.Audio.SoundEffect;
+import Classes.Audio.SoundManager;
 import Classes.Images.OrbImages;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
@@ -388,6 +390,7 @@ public class PlayPanel extends Pane {
 
             // If there was a collision with a wall, then just reflect the shooter orb's angle. Recursively call this function.
             if (soonestCollision.arrayOrb == Orb.WALL) {
+                SoundManager.playSoundEffect(SoundEffect.CHINK);
                 Orb shooterOrb = soonestCollision.shooterOrb;
                 shooterOrb.setAngle(Math.PI - shooterOrb.getAngle());
                 List<Collision> moreOrbsToSnap = advanceShootingOrbs(timeRemainingInFrame - soonestCollisionTime);
@@ -504,7 +507,7 @@ public class PlayPanel extends Pane {
             }
 
             // If the i coordinate is below the bottom of the array, then this team has lost.
-            if(iSnap == PlayPanelData.ARRAY_HEIGHT){
+            if(iSnap >= PlayPanelData.ARRAY_HEIGHT){
                 // Todo: put the orb in a deathOrbs list
                 // Todo: declare defeat here.
                 System.out.println("we're dead!");
@@ -525,6 +528,7 @@ public class PlayPanel extends Pane {
                 playPanelData.getOrbArray()[iSnap][jSnap] = snap.shooterOrb;
                 snap.shooterOrb.setYPos(ORB_RADIUS + iSnap*ROW_HEIGHT);
                 snap.shooterOrb.setXPos(ORB_RADIUS + jSnap*ORB_RADIUS);
+                SoundManager.playSoundEffect(SoundEffect.PLACEMENT);
             }
 
             // Remove the shooting orb from the shootingOrbs list
