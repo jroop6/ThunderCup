@@ -43,7 +43,7 @@ public class MainMenuScene extends Scene {
     private final int BUTTONS_HORIZONTAL_STARTING_POSITION = 1560;
     private final int BUTTON_HEIGHT = 82;
     private final int EXIT_BUTTON_SEPARATION_DISTANCE = 30;
-    private final String PROGRAMMER_WEBSITE_URL = "<website url not yet available>";
+    private final String PROGRAMMER_WEBSITE_URL = "jonathanroop.wordpress.com";
     private final String COMPOSER_WEBSITE_URL = "https://alllevelsatonce.com";
 
     private Pane scaledRoot;
@@ -383,6 +383,7 @@ public class MainMenuScene extends Scene {
         return username;
     }
 
+    // Todo: Some of the sound effects were uploaded with an attribution license which requires me to link to a copy of the license. Others are published under CC0. Figure out a good way to handle these different cases without being too wordy. For now, people can look up the individual users and probably find the sounds I used.
     private void showCreditsDialog(){
         Alert creditsDialog = new Alert(Alert.AlertType.CONFIRMATION);
         creditsDialog.setTitle("Credits");
@@ -390,11 +391,14 @@ public class MainMenuScene extends Scene {
                 "Thunder Cup is a bubble breaker-style game programmed by Jonathan Roop as part of \n" +
                 "his 2018 portfolio. All art and animation used in the game were also created by \n" +
                 "him. Character styles were inspired by the television series My Little Pony: \n" +
-                "Friendship is Magic. To check out Jonathan's other works, please visit: \n" +
+                "Friendship is Magic. To check out Jonathan's other works, please visit \n" +
                 PROGRAMMER_WEBSITE_URL + ". \n\n" +
                 "The music used in the game was created by AllLevelsAtOnce. Many of the tracks were \n" +
                 "based on songs from the My Little Pony: Friendship is Magic television series. \n" +
                 "For more works by AllLevelsAtOnce, please visit " + COMPOSER_WEBSITE_URL + "\n\n" +
+                "Sound effects were downloaded from freeSound.org and then modified. Many thanks \n" +
+                "to the original uploaders: Arctura, Figowitz, LittleRobotSoundFactory, Timbre,\n" +
+                "suntemple, and Bykgames. \n\n" +
                 "Disclaimer: Thunder Cup and its contributors are not affiliated with Hasbro or \n" +
                 "the My Little Pony brand. This game was created for the purpose of showcasing the \n" +
                 "programmer's Java coding ability and also as a labor of love for the incredible \n" +
