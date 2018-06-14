@@ -32,7 +32,6 @@ public enum Music {
             else{
                 String path = url.toURI().toString();
                 mediaPlayer = new MediaPlayer(new Media(path));
-                mediaPlayer.setVolume(0.50); //Todo: temporary.
             }
         } catch(URISyntaxException e){
             e.printStackTrace();

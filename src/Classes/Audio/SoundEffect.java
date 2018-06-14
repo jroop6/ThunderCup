@@ -7,9 +7,14 @@ import java.net.URL;
 
 public enum SoundEffect{
 
-    THUNDER_1("res/sound/soundEffects/RollingThunder1.aiff"),
+    ROLLING_THUNDER_1("res/sound/soundEffects/RollingThunder1.aiff"),
+    ROLLING_THUNDER_2("res/sound/soundEffects/RollingThunder2.wav"),
+    THUNDERCLAP("res/sound/soundEffects/ThunderClap.wav"),
     CHINK("res/sound/soundEffects/chink.wav"),
-    PLACEMENT("res/sound/soundEffects/placement.wav");
+    MAGIC_TINKLE("res/sound/soundEffects/magicTinkle.wav"),
+    PLACEMENT("res/sound/soundEffects/placement.wav"),
+    DROP("res/sound/soundEffects/drop.wav"),
+    EXPLOSION("res/sound/soundEffects/explosion.wav");
 
     private String name;
 

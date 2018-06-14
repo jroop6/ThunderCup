@@ -13,6 +13,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
@@ -63,6 +64,9 @@ public class PlayPanel extends Pane {
     private Random randomPuzzleGenerator;
     private Random randomTransferOrbGenerator;
     private Random miscRandomGenerator = new Random();
+
+    // Audio
+    MediaPlayer rumbleSoundEffect;
 
     PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl, String ammunitionUrl){
         this.numPlayers = players.size();
@@ -220,8 +224,11 @@ public class PlayPanel extends Pane {
 
         // Advance the animation frame of existing bursting orbs, then burst new orbs:
         advanceBurstingOrbs();
-        playPanelData.changeBurstShootingOrbs(shootingOrbsToBurst);
-        playPanelData.changeBurstArrayOrbs(arrayOrbsToBurst);
+        if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
+            SoundManager.playSoundEffect(SoundEffect.EXPLOSION);
+            playPanelData.changeBurstShootingOrbs(shootingOrbsToBurst);
+            playPanelData.changeBurstArrayOrbs(arrayOrbsToBurst);
+        }
 
         // Advance the animation frame of the electrified orbs:
         advanceElectrifyingOrbs();
@@ -243,14 +250,16 @@ public class PlayPanel extends Pane {
 
         // Find floating orbs and drop them. Advance other dropping orbs:
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs();
-        playPanelData.changeDropArrayOrbs(orbsToDrop);
+        if(!orbsToDrop.isEmpty()){
+            SoundManager.playSoundEffect(SoundEffect.DROP);
+            playPanelData.changeDropArrayOrbs(orbsToDrop);
+        }
 
         // If the player has fired a sufficient number of times, then add a new row of orbs:
         playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
-        // todo: give some visual feedback to indicate that a new row is coming
-//        if(playPanelData.getShotsUntilNewRow()==3) System.out.println("3");
-//        if(playPanelData.getShotsUntilNewRow()==2) System.out.println("2");
-//        if(playPanelData.getShotsUntilNewRow()==1) System.out.println("1");
+        if(playPanelData.getShotsUntilNewRow()==1){
+            if(rumbleSoundEffect==null) rumbleSoundEffect = SoundManager.loopSoundEffect(SoundEffect.ROLLING_THUNDER_2);
+        }
         if(playPanelData.getShotsUntilNewRow()<=0) addNewRow();
 
         // Advance the transfer orbs:
@@ -649,6 +658,7 @@ public class PlayPanel extends Pane {
 
     private void snapTransferOrbs(List<Orb> transferOrbsToSnap){
         // Find all array points that are connected to the ceiling
+        boolean playSoundEffect = false;
         Orb[][] orbArray = playPanelData.getOrbArray();
         List<PointInt> connectedOrbs = new LinkedList<>();
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
@@ -663,11 +673,15 @@ public class PlayPanel extends Pane {
             List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()));
             if(!Collections.disjoint(neighbors,connectedOrbs) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
+                playSoundEffect = true;
             }
         }
 
         // remove the snapped transfer orbs from the inbound transfer orbs list
         playPanelData.getTransferInOrbs().removeAll(transferOrbsToSnap);
+
+        // play a sound effect, if appropriate:
+        if(playSoundEffect) SoundManager.playSoundEffect(SoundEffect.MAGIC_TINKLE);
     }
 
     private List<Orb> advanceDroppingOrbs(){
@@ -739,6 +753,11 @@ public class PlayPanel extends Pane {
             }
             else orbArray[i][j] = NULL;
         }
+
+        // stop the rumble sound effect and play a thunderclap:
+        SoundManager.stopLoopingSoundEffect(rumbleSoundEffect);
+        rumbleSoundEffect = null;
+        SoundManager.playSoundEffect(SoundEffect.THUNDERCLAP);
     }
 
     // repaints all orbs and Character animations on the PlayPanel.

@@ -106,8 +106,8 @@ public class Orb implements Serializable{
                 speed = 0.0;
                 currentFrame = 0;
             case THUNDERING:
-                // Get a thunder enumeration todo: randomize this onece I have more than 1 type of animation/sound effect
-                orbThunder = SoundEffect.THUNDER_1;
+                // Get a thunder enumeration todo: randomize this once I have more than 1 type of animation/sound effect
+                // orbThunder = SoundEffect.THUNDER_1;
                 currentFrame = 0;
         }
     }

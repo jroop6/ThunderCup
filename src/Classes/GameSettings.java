@@ -17,6 +17,7 @@ public class GameSettings {
     public enum ImageResolution {
         LOW, HIGH
     }
+
 }
 
 
