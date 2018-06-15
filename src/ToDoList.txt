@@ -1,0 +1,39 @@
+-------Bugs-------
+fix multiplayer de-synch problems
+when in fullscreen mode, displaying a modal window causes the main window to hide behind all other windows (including other programs).
+it's too easy to accidentally click "resign" if someone else pauses the game. Consider a confirmation dialog.
+chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
+
+-------important features-------
+load manual puzzles
+implement the Vs Computer game mode
+when a game begins, the program should move the camera and indicate which playpanel is yours
+Add a pause button. And make pausing actually work.
+character animations
+
+-------moderate refactoring-------
+The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
+	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
+combine animation enums into 1 file instead of 3 (exception for orbImages)
+There are 2 copies of numPlayers - one in PlayPanel and one in PlayPanelData. Reduce it to just 1 instance.
+
+-------polish-------
+implement a visual effect for thunder orbs
+reduce volume of music, and normalize all tracks
+cannon moving parts have too small a hole - it is only 45 px wide instead of 46. Why I made it that way is beyond me. It even messes up the symmetry of the stationary parts. It's a lot of work for very little benefit, so this is low priority.
+add a progress bar at the top, indicating how many shots the player has left until a new row appears.
+
+-------cleanup and loose ends-------
+replace i++ with ++i in for-loops (does this even make a difference in Java?)
+add links to CC licenses in credits
+redo all spritesheets to make sure that transparent pixels are actually cropped out.
+	It will also change _metadata.csv to spritesheet_metadata.csv, which is better.
+make sure all array traversals traverse j first then i, for memory performance reasons.
+make sure I'm not using PointInt or Point.Double more often than I need to (you only need to when a function needs to return both an x-value and a y-value, such as with IJtoXY())
+remove low-res spritesheets; they're not necessary any more.
+remove thunder orbs if I decide not to use them after all
+
+-------misc-------
+If memory becomes a problem again, consider other ways to reduce memory usage:
+	use an in-memory compression scheme. Look at 3rd party libraries if you have to.
+	return to the idea of low-res spritesheets

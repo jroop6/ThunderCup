@@ -186,33 +186,27 @@ public class GameScene extends Scene {
                 // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
                 // suppose I could just make sure they use the same random number generator, but having the host do it
                 // is also just easier and prevents clients from cheating by coding their own robot).
-                if(isHost) processBots();
-
-                int[] packetsProcessingInfo;
+                if(!gameData.getPause() && isHost) processBots();
 
                 // Incoming packets are processed every frame, if there are any:
-                if(isHost) packetsProcessingInfo = processPacketsAsHost();
-                else packetsProcessingInfo = processPacketsAsClient();
+                int[] packetsProcessingInfo;
+                if(isHost) packetsProcessingInfo = processPacketsAsHost(gameData.getPause());
+                else packetsProcessingInfo = processPacketsAsClient(gameData.getPause());
                 numberOfPacketsProcessed += packetsProcessingInfo[0];
                 numberOfPacketsRemaining += packetsProcessingInfo[1];
                 ++MSSCalls;
 
                 // Character and Orb animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
-                    // update each PlayPanel:
-                    for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
-                    // process inter-PlayPanel events (namely, transferring orbs):
-                    tick();
+                    if(!gameData.getPause()){
+                        // update each PlayPanel:
+                        for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
+                        // process inter-PlayPanel events (namely, transferring orbs):
+                        tick();
+                    }
                     nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
                 }
 
-                // Latency probes are sent by the host 3 times per second:
-                if(isHost){
-                    if(now>nextLatencyTest) {
-                        nextLatencyTest += 1000000000L/connectionManager.getLatencyTestsPerSecond();
-                        connectionManager.send(new LatencyPacket());
-                    }
-                }
 
                 // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this time:
                 if(now>nextSendInstance){
@@ -230,15 +224,23 @@ public class GameScene extends Scene {
                     checkForDisconnectedPlayers();
                 }
 
+                // pause the game if doing so is indicated:
+                if(gameData.getPause()) displayPauseMenu();
+                else removePauseMenu();
+
+                // Latency probes are sent by the host 3 times per second:
+                if(isHost){
+                    if(now>nextLatencyTest) {
+                        nextLatencyTest += 1000000000L/connectionManager.getLatencyTestsPerSecond();
+                        connectionManager.send(new LatencyPacket());
+                    }
+                }
+
                 // A debugging message is displayed once per second:
                 if(now> nextReport) {
                     nextReport += 1000000000L;
                     report(packetsProcessingInfo);
                 }
-
-                // pause the game if doing so is indicated:
-                if(gameData.getPause()) displayPauseMenu();
-                else removePauseMenu();
             }
         };
         animationTimer.start();
@@ -264,21 +266,23 @@ public class GameScene extends Scene {
         MSSCalls = 0;
     }
 
-    private int[] processPacketsAsHost(){
+    private int[] processPacketsAsHost(boolean isPaused){
         int[] packetsProcessingInfo = {0,0,0}; // {number of packets processed, number remaining, 0=host 1=client}.
         int packetsProcessed = 0;
         Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
 
         // Process Packets one at a time:
         while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER*numPlayers){
-
             // Pop the PlayerData from the packet:
             PlayerData playerData = packet.popPlayerData();
-
-            // Find the PlayPanel associated with the player. Update the PlayPanelData and the PlayerData:
-            PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
-            playPanel.updatePlayer(playerData, isHost);
-            missedPacketsCount.replace(playerData.getPlayerID(),0); // reset the missed packets counter
+            if(!isPaused){
+                // Find the PlayPanel associated with the player:
+                PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
+                // Update the PlayPanelData and the PlayerData:
+                playPanel.updatePlayer(playerData, isHost);
+            }
+            // Reset the missed packets counter
+            missedPacketsCount.replace(playerData.getPlayerID(),0);
 
             // Then process the GameData:
             GameData clientGameData = packet.getGameData();
@@ -292,14 +296,6 @@ public class GameScene extends Scene {
         // For debugging:
         packetsProcessingInfo[0] = packetsProcessed;
         return packetsProcessingInfo;
-    }
-
-    private void updateLocalAndBotPlayers(){
-        for(Player player: players){
-            if (player instanceof RemotePlayer) continue; // Remote players have already been processed in processPacketsAsHost();
-            PlayPanel playPanel = playPanelMap.get(player.getPlayerData().getTeam());
-            playPanel.updatePlayer(player.getPlayerData(), isHost);
-        }
     }
 
     private void prepareAndSendServerPacket(int[] packetsProcessingInfo){
@@ -364,7 +360,7 @@ public class GameScene extends Scene {
         }
     }
 
-    private int[] processPacketsAsClient(){
+    private int[] processPacketsAsClient(boolean isPaused){
         int packetsProcessed = 0;
         int[] packetsProcessingInfo = {0,0,1};
 
@@ -372,17 +368,22 @@ public class GameScene extends Scene {
         Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
         while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER){
 
-            // Within each Packet, process PlayerData one at a time in order:
-            PlayerData playerData = packet.popPlayerData();
-            do{
-                // update the Player and his/her PlayPanel with the new playerData:
-                PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
-                playPanel.updatePlayer(playerData, isHost);
-                if(playerData.getPlayerID()==0) missedPacketsCount.replace(playerData.getPlayerID(), 0);
+            if(!isPaused){
+                // Within each Packet, process PlayerData one at a time in order:
+                PlayerData playerData = packet.popPlayerData();
+                do{
+                    if(!gameData.getPause()){
+                        // update the Player and his/her PlayPanel with the new playerData:
+                        PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
+                        playPanel.updatePlayer(playerData, isHost);
+                    }
+                    // Reset the missed packets counter:
+                    if(playerData.getPlayerID()==0) missedPacketsCount.replace(playerData.getPlayerID(), 0);
 
-                // Prepare for next iteration:
-                playerData = packet.popPlayerData();
-            } while(playerData!=null);
+                    // Prepare for next iteration:
+                    playerData = packet.popPlayerData();
+                } while(playerData!=null);
+            }
 
             // Now process the PlayPanelData one at a time in order. Note: this is mostly just a check for consistency.
             // Most of the time, this loop won't actually change anything. If desynchronization is detected between host
@@ -515,7 +516,6 @@ public class GameScene extends Scene {
     }
 
     private void displayPauseMenu(){
-        //ToDo: check that the game isn't already paused before adding a duplicate node.
         if(rootNode.getChildren().contains(pauseOverlay)); // game is already paused, so do nothing.
         else rootNode.getChildren().addAll(pauseOverlay, pauseMenu);
     }
