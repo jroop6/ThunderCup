@@ -4,7 +4,7 @@ import Classes.*;
 import Classes.Character;
 import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
-import Classes.Images.OrbImages;
+import Classes.Animation.OrbImages;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;

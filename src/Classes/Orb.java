@@ -1,9 +1,9 @@
 package Classes;
 
 import Classes.Audio.SoundEffect;
-import Classes.Images.OrbElectrification;
-import Classes.Images.OrbExplosion;
-import Classes.Images.OrbImages;
+import Classes.Animation.OrbElectrification;
+import Classes.Animation.OrbExplosion;
+import Classes.Animation.OrbImages;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -121,10 +121,10 @@ public class Orb implements Serializable{
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
 
-    double getXPos(){
+    public double getXPos(){
         return xPos;
     }
-    double getYPos(){
+    public double getYPos(){
         return yPos;
     }
     double getAngle(){
@@ -226,19 +226,12 @@ public class Orb implements Serializable{
 
     // Convert Orb coordinates from (x, y) space (position on canvas in pixels) to (i, j) space (indices in orb array)
     // results will be doubles, not round integers.
+    // Todo: Uh... why did I do this way, again? Seems like this should take 2 doubles as arguments and arrayOrbs should already be keeping track of their (i,j) coordinates. Consider a refactor.
     public Point2D xyToIj() {
         double iCoordinate = (yPos-ORB_RADIUS)/(ORB_RADIUS*ROOT3);
         double jCoordinate = (xPos-ORB_RADIUS)/(ORB_RADIUS);
         Point2D ijCoordinates = new Point2D(iCoordinate, jCoordinate);
         return ijCoordinates;
-    }
-
-    // input: (i,j) coordinates of an orb. Must be integers.
-    public Point2D ijToXy() {
-        double y = xPos*ROOT3*ORB_RADIUS + ORB_RADIUS;
-        double x = yPos*ORB_RADIUS + ORB_RADIUS;
-        return new Point2D(x,y);
-
     }
 
     // returns the four closest Orb snap locations centers in (i, j) space. The coordinates returned are NOT guaranteed to be valid!

@@ -7,7 +7,9 @@ import Classes.SpriteSheet;
  * An enumeration containing all miscellaneous animations, in the form of png spritesheets.
  */
 public enum MiscAnimations {
-    TITLE("res/animations/misc/highRes/title_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png");
+    TITLE("res/animations/misc/highRes/title_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
+    EXCLAMATION_MARK("res/animations/misc/highRes/exclamationMark_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
+    MAGIC_TELEPORTATION("res/animations/misc/highRes/magicTeleportation_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png");
 
     private SpriteSheet spriteSheet;
 

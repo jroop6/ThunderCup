@@ -1,4 +1,4 @@
-package Classes.Images;
+package Classes.Animation;
 
 import Classes.SpriteSheet;
 

@@ -1,8 +1,9 @@
 package Classes;
 
+import Classes.Animation.MiscAnimations;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
-import Classes.Images.OrbImages;
+import Classes.Animation.OrbImages;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
@@ -56,6 +57,7 @@ public class PlayPanel extends Pane {
     private int numPlayers;
     private Canvas orbCanvas;
     private GraphicsContext orbDrawer;
+    private List<VisualFlourish> visualFlourishes = new LinkedList<>();
 
     // For generating the puzzle and ammunition:
     String puzzleUrl;
@@ -172,7 +174,7 @@ public class PlayPanel extends Pane {
         else{
             // Todo: read the appropriate puzzle
         }
-        repaint(); // updates view
+        //repaint(); // updates view
     }
 
     // Called from GameScene only
@@ -216,6 +218,11 @@ public class PlayPanel extends Pane {
         // reset shotsUntilNewRow
         if(playPanelData.getShotsUntilNewRow()<=0) playPanelData.setShotsUntilNewRow(SHOTS_BETWEEN_DROPS*numPlayers + playPanelData.getShotsUntilNewRow());
 
+        // Advance visual flourishes
+        List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes();
+        visualFlourishes.removeAll(flourishesToRemove);
+        System.out.println("size of visual Flourishes: " + visualFlourishes.size());
+
         // Advance shooting orbs deal with all their collisions:
         List<Collision> orbsToSnap = advanceShootingOrbs(1/(double)ANIMATION_FRAME_RATE); // Updates model
         List<Orb> shootingOrbsToBurst = snapOrbs(orbsToSnap);
@@ -248,21 +255,25 @@ public class PlayPanel extends Pane {
         }
         playPanelData.setAddThunderOrbs(orbsToTransferCopy); // Note: the thunderOrbs list is persistent.
 
-        // Find floating orbs and drop them. Advance other dropping orbs:
+        // Find floating orbs and drop them, adding visual flourishes.
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs();
         if(!orbsToDrop.isEmpty()){
             SoundManager.playSoundEffect(SoundEffect.DROP);
+            for(PointInt orbToDrop : orbsToDrop){
+                Orb orb = playPanelData.getOrbArray()[orbToDrop.i][orbToDrop.j];
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos()));
+            }
             playPanelData.changeDropArrayOrbs(orbsToDrop);
         }
 
         // If the player has fired a sufficient number of times, then add a new row of orbs:
         playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
         if(playPanelData.getShotsUntilNewRow()==1){
-            if(rumbleSoundEffect==null) rumbleSoundEffect = SoundManager.loopSoundEffect(SoundEffect.ROLLING_THUNDER_2);
+            if(rumbleSoundEffect==null) rumbleSoundEffect = SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
         }
         if(playPanelData.getShotsUntilNewRow()<=0) addNewRow();
 
-        // Advance the transfer orbs:
+        // Advance the transfer orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
         snapTransferOrbs(transferOrbsToSnap);
 
@@ -582,13 +593,20 @@ public class PlayPanel extends Pane {
             List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), PlayPanelData.FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
 
-            // If there are more than 3 grouped together, then add a transfer out orb of the same color:
+            // If there are more than 3 grouped together, then add a transfer out orb of the same color, as well as a visual flourish:
             if(connectedOrbs.size() > 3) {
                 int numTransferOrbs = (connectedOrbs.size()-3)/2;
                 OrbImages orbEnum = sourceOrb.getOrbEnum();
                 for(int k=0; k<numTransferOrbs; k++){
                     //transferOutOrbs.add(new Orb(orbEnum,miscRandomGenerator.nextInt(),miscRandomGenerator.nextInt(),Orb.BubbleAnimationType.TRANSFERRING));
                     transferOutOrbs.add(new Orb(orbEnum,0,0,Orb.BubbleAnimationType.STATIC));
+                }
+                Orb[][] orbArray = playPanelData.getOrbArray();
+                for(int k=0; k<numTransferOrbs; k++){
+                    PointInt point = connectedOrbs.get(k);
+                    Orb orb = orbArray[point.i][point.j];
+                    visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos()));
+                    SoundManager.playSoundEffect(SoundEffect.DROP);
                 }
             }
         }
@@ -656,6 +674,19 @@ public class PlayPanel extends Pane {
         return transferOrbsToSnap;
     }
 
+    // Todo: there are several methods exactly like this one. Can it be reduced to one using generics? Actually, it might require casting outside this method call, so think about it carefully.
+    /*private List<T> advanceAnimationController<T>(List<T>){
+    }*/
+    private List<VisualFlourish> advanceVisualFlourishes(){
+        List<VisualFlourish> visualFlourishesToRemove = new LinkedList<>();
+        for(VisualFlourish visualFlourish : visualFlourishes){
+            if(visualFlourish.animationTick()) visualFlourishesToRemove.add(visualFlourish);
+        }
+        return visualFlourishesToRemove;
+    }
+
+
+
     private void snapTransferOrbs(List<Orb> transferOrbsToSnap){
         // Find all array points that are connected to the ceiling
         boolean playSoundEffect = false;
@@ -674,6 +705,7 @@ public class PlayPanel extends Pane {
             if(!Collections.disjoint(neighbors,connectedOrbs) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
                 playSoundEffect = true;
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos()));
             }
         }
 
@@ -701,7 +733,6 @@ public class PlayPanel extends Pane {
         for(Orb orb : playPanelData.getThunderOrbs()){
             if(orb.animationTick()){
                 orbsToRemove.add(orb);
-                System.out.println("REMOVING THUNDER ORB");
             }
         }
         return orbsToRemove;
@@ -780,17 +811,6 @@ public class PlayPanel extends Pane {
             vibrationOffset = Math.sin(2*Math.PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000)*VIBRATION_OFFSETS[playPanelData.getShotsUntilNewRow()-1];
         }
 
-        // An earlier approach where I intended to use a Displacement map. But I realized that this would take lots of
-        // memory really quickly, especially if I cached the FloatMaps and had ~ 3 of them for each PlayPanel.
-        /*FloatMap floatMap = new FloatMap();
-        floatMap.setWidth((int)Math.round(liveBoundary.getWidth()));
-        floatMap.setHeight((int)Math.round(PLAYPANEL_HEIGHT));
-        for(int j=0; j<floatMap.getHeight(); j++){
-            for(int i=0; i<floatMap.getWidth(); i++){
-                floatMap.setSamples(i,j,VIBRATION_OFFSETS[2],0.0f);
-            }
-        }*/
-
         // paint Array orbs:
         Orb[][] orbArray = playPanelData.getOrbArray();
         for(int i=0; i<ARRAY_HEIGHT; ++i){
@@ -801,6 +821,9 @@ public class PlayPanel extends Pane {
                 }
             }
         }
+
+        // paint VisualFlourishes:
+        for(VisualFlourish visualFlourish : visualFlourishes) visualFlourish.drawSelf(orbDrawer);
 
         // paint transferring orbs:
         for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);

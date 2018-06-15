@@ -2,7 +2,7 @@ package Classes.NetworkCommunication;
 
 import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
-import Classes.Images.OrbImages;
+import Classes.Animation.OrbImages;
 import Classes.Orb;
 
 import java.io.Serializable;

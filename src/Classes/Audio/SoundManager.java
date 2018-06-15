@@ -59,7 +59,7 @@ public class SoundManager {
 
     public static MediaPlayer playSoundEffect(SoundEffect soundEffect){
         MediaPlayer newSoundEffect = soundEffect.getMediaPlayer();
-        if(newSoundEffect==null) return null; // avoid null pointer exception if media couldn't be loaded.
+        if(muted) return null;
         currentSoundEffects.add(newSoundEffect);
         newSoundEffect.setOnEndOfMedia(()->{
             currentSoundEffects.remove(newSoundEffect);
@@ -76,6 +76,7 @@ public class SoundManager {
     public static MediaPlayer loopSoundEffect(SoundEffect soundEffect, boolean loopForever){
         long startTime = System.currentTimeMillis();
         MediaPlayer mediaPlayer = playSoundEffect(soundEffect);
+        if(mediaPlayer == null) return null;
         mediaPlayer.setOnEndOfMedia(()-> {
             System.out.println("media has ended. loopForever = " + loopForever + " passed time(millis) = " +  (System.currentTimeMillis()-startTime));
             if(!loopForever && System.currentTimeMillis()-startTime > 60000){
@@ -93,6 +94,7 @@ public class SoundManager {
     }
 
     public static void stopLoopingSoundEffect(MediaPlayer mediaPlayerToStop){
+        if(mediaPlayerToStop==null) return;
         mediaPlayerToStop.stop();
         currentSoundEffects.remove(mediaPlayerToStop);
         System.out.println("removing looping sound effect");
