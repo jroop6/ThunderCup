@@ -398,7 +398,7 @@ public class MainMenuScene extends Scene {
                 "For more works by AllLevelsAtOnce, please visit " + COMPOSER_WEBSITE_URL + "\n\n" +
                 "Sound effects were downloaded from freeSound.org and then modified. Many thanks \n" +
                 "to the original uploaders: Arctura, Figowitz, LittleRobotSoundFactory, Timbre,\n" +
-                "suntemple, and Bykgames. \n\n" +
+                "suntemple, Bykgames, suonho, and Benboncan. \n\n" +
                 "Disclaimer: Thunder Cup and its contributors are not affiliated with Hasbro or \n" +
                 "the My Little Pony brand. This game was created for the purpose of showcasing the \n" +
                 "programmer's Java coding ability and also as a labor of love for the incredible \n" +

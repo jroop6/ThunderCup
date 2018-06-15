@@ -13,7 +13,8 @@ public enum SoundEffect{
     PLACEMENT("res/sound/soundEffects/placement.wav"),
     DROP("res/sound/soundEffects/drop.wav"),
     EXPLOSION("res/sound/soundEffects/explosion.wav"),
-    ALMOST_NEW_ROW("res/sound/soundEffects/AlmostNewRow.wav");
+    ALMOST_NEW_ROW("res/sound/soundEffects/AlmostNewRow.wav"),
+    NEW_ROW("res/sound/soundEffects/NewRow.wav");
 
     private String name;
 

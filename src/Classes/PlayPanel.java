@@ -221,7 +221,6 @@ public class PlayPanel extends Pane {
         // Advance visual flourishes
         List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes();
         visualFlourishes.removeAll(flourishesToRemove);
-        System.out.println("size of visual Flourishes: " + visualFlourishes.size());
 
         // Advance shooting orbs deal with all their collisions:
         List<Collision> orbsToSnap = advanceShootingOrbs(1/(double)ANIMATION_FRAME_RATE); // Updates model
@@ -788,7 +787,7 @@ public class PlayPanel extends Pane {
         // stop the rumble sound effect and play a thunderclap:
         SoundManager.stopLoopingSoundEffect(rumbleSoundEffect);
         rumbleSoundEffect = null;
-        SoundManager.playSoundEffect(SoundEffect.THUNDERCLAP);
+        SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
     }
 
     // repaints all orbs and Character animations on the PlayPanel.
