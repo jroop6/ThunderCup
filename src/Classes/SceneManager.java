@@ -23,7 +23,11 @@ import java.util.*;
  */
 public class SceneManager extends Application {
 
-    static Stage primaryStage;
+    private static Stage primaryStage;
+
+    public static Stage getPrimaryStage(){
+        return primaryStage;
+    }
 
     public static void main(String[] args) {
         launch(args);
@@ -41,21 +45,22 @@ public class SceneManager extends Application {
         if(max < GameSettings.HIGHRES_MEMORY_CUTOFF) GameSettings.setImageResolution(GameSettings.ImageResolution.LOW);
         else GameSettings.setImageResolution(GameSettings.ImageResolution.HIGH);
 
-        // Perform a graceful shutdown if the X button is pressed:
+        // Perform a graceful shutdown if the X button is pressed (or the player hits ALT+f4):
         applicationStage.setOnCloseRequest((event)-> {
                 if(!confirmClose()) event.consume();
         });
 
         //Adjust the stage size to fit the computer's primary screen nicely:
+        /* Fullscreen mode is annoying for development, so use these settings for now*/
         Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
-        //primaryStage.setX(primaryScreenBounds.getMinX());
-        //primaryStage.setY(primaryScreenBounds.getMinY());
         primaryStage.setHeight(primaryScreenBounds.getHeight()*0.666);
         primaryStage.setWidth((primaryScreenBounds.getWidth())*0.666);
-        //primaryStage.setHeight(primaryScreenBounds.getHeight());
-        //primaryStage.setWidth((primaryScreenBounds.getWidth()));
+
+        /* Use these settings for the final release */
+        /*primaryStage.setHeight(primaryScreenBounds.getHeight());
+        primaryStage.setWidth((primaryScreenBounds.getWidth()));
         primaryStage.setMaximized(true);
-        //primaryStage.setFullScreen(true);
+        primaryStage.setFullScreen(true);*/
 
         //Build and display the main menu:
         switchToMainMenu();
@@ -67,6 +72,7 @@ public class SceneManager extends Application {
     // gracefully, ensuring that all threads are stopped.
     public static boolean confirmClose(){
         Alert closeConfirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        closeConfirmation.initOwner(primaryStage);
         closeConfirmation.setTitle("Close Application?");
         closeConfirmation.setHeaderText("Are you sure you want to exit the game?");
         ButtonType cancel = new ButtonType("Cancel");
@@ -100,9 +106,8 @@ public class SceneManager extends Application {
     // know of is to immediately call setFullScreen afterwards. This unfortunately causes a flicker and the chrome is
     // visible for a moment. Oh well...
     private static void setSceneWorkaround(Scene nextScene){
-        boolean fullScreen = primaryStage.isFullScreen();
         primaryStage.setScene(nextScene);
-        primaryStage.setFullScreen(fullScreen);
+        primaryStage.setFullScreen(primaryStage.isFullScreen());
     }
 
 
@@ -133,11 +138,11 @@ public class SceneManager extends Application {
         SoundManager.playRandomSongs();
     }
 
+    // Todo: multi-cannon mode is currently broken.
     static void switchTo2PlayerTestMode(){
         // add two players, controlled by the mouse:
         List<Player> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("NONE",true));
-        playerList.add(new LocalPlayer("NONE",false));
         playerList.add(new LocalPlayer("NONE",false));
 
         // Create the GameScene, passing the playerList to it:

@@ -1,5 +1,7 @@
 package Classes.NetworkCommunication;
 
+import Classes.SceneManager;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -31,6 +33,7 @@ public class HostConnectionManager extends ConnectionManager{
         } catch (IOException e) {
             System.err.println("Failed to open ServerSocket for network communication.");
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.initOwner(SceneManager.getPrimaryStage());
             alert.setTitle("Error!");
             alert.setHeaderText("Failed to open ServerSocket for network communication on port " + DEFAULT_PORT + ". \n" +
                     "This can happen if that port is being used by something else, or if there is another \n" +
@@ -50,6 +53,7 @@ public class HostConnectionManager extends ConnectionManager{
                     } catch (IOException e2) {
                         System.err.println("Failed to open ServerSocket for network communication.");
                         Alert alert2 = new Alert(Alert.AlertType.CONFIRMATION);
+                        alert2.initOwner(SceneManager.getPrimaryStage());
                         alert2.setTitle("Error!");
                         alert2.setHeaderText("Failed to open ServerSocket for network communication again. Perhaps \n" +
                                 "the network firewall is prohibiting the game from communicating. Please enable \n" +
@@ -60,6 +64,7 @@ public class HostConnectionManager extends ConnectionManager{
                         alert2.showAndWait();
                     }
                     Alert alert3 = new Alert(Alert.AlertType.CONFIRMATION);
+                    alert3.initOwner(SceneManager.getPrimaryStage());
                     alert3.setTitle("Success!");
                     alert3.setHeaderText("ServerSocket opened for the following port number. Please have your friends" +
                                     " connect to this port: \n\n" + serverSocket.getLocalPort());

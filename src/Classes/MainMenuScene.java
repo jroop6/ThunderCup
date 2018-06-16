@@ -266,7 +266,7 @@ public class MainMenuScene extends Scene {
                     break;
                 case EXIT:
                     System.out.println("clicked exit");
-                    WindowEvent closeEvent = new WindowEvent(getWindow(),WindowEvent.WINDOW_CLOSE_REQUEST);
+                    //WindowEvent closeEvent = new WindowEvent(getWindow(),WindowEvent.WINDOW_CLOSE_REQUEST);
                     if(SceneManager.confirmClose()){
                         System.out.println("exiting with code 0");
                         System.exit(0);
@@ -306,6 +306,7 @@ public class MainMenuScene extends Scene {
     private boolean showHostOrJoinDialog(boolean[] canceled){
         boolean isHost = true;
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.initOwner(SceneManager.getPrimaryStage());
         alert.setTitle("Select multiplayer option");
         alert.setHeaderText("Select an option:");
         ButtonType createGame = new ButtonType("Create new Game");
@@ -331,6 +332,7 @@ public class MainMenuScene extends Scene {
     private String showHostNameDialog(boolean[] canceled){
         String host = "";
         TextInputDialog hostNameAsker = new TextInputDialog();
+        hostNameAsker.initOwner(SceneManager.getPrimaryStage());
         hostNameAsker.setTitle("Identify Host");
         hostNameAsker.setHeaderText("Enter the name of the host computer:");
         hostNameAsker.setGraphic(null);
@@ -346,6 +348,7 @@ public class MainMenuScene extends Scene {
         String portNumber;
         int portNumberAsInt = 5000;
         TextInputDialog portAsker = new TextInputDialog("5000");
+        portAsker.initOwner(SceneManager.getPrimaryStage());
         portAsker.setTitle("Identify PortNumber");
         portAsker.setHeaderText("Enter the port Number to use (default is 5000):");
         portAsker.setGraphic(null);
@@ -357,6 +360,7 @@ public class MainMenuScene extends Scene {
             } catch(NumberFormatException e) {
                 canceled[0] = true;
                 Alert errorAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                errorAlert.initOwner(SceneManager.getPrimaryStage());
                 errorAlert.setTitle("Could not understand input");
                 errorAlert.setHeaderText("Parser could not convert your input into an integer value. Please try again with an integer value.");
                 ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
@@ -372,6 +376,7 @@ public class MainMenuScene extends Scene {
     private String showUsernameDialog(boolean[] canceled){
         String username = "";
         TextInputDialog nameAsker = new TextInputDialog();
+        nameAsker.initOwner(SceneManager.getPrimaryStage());
         nameAsker.setTitle("Choose a username");
         nameAsker.setHeaderText("Your name:");
         nameAsker.setGraphic(null);
@@ -386,6 +391,7 @@ public class MainMenuScene extends Scene {
     // Todo: Some of the sound effects were uploaded with an attribution license which requires me to link to a copy of the license. Others are published under CC0. Figure out a good way to handle these different cases without being too wordy. For now, people can look up the individual users and probably find the sounds I used.
     private void showCreditsDialog(){
         Alert creditsDialog = new Alert(Alert.AlertType.CONFIRMATION);
+        creditsDialog.initOwner(SceneManager.getPrimaryStage());
         creditsDialog.setTitle("Credits");
         creditsDialog.setHeaderText(
                 "Thunder Cup is a bubble breaker-style game programmed by Jonathan Roop as part of \n" +

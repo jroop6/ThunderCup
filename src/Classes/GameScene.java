@@ -507,6 +507,7 @@ public class GameScene extends Scene {
 
     private void showGameCanceledDialog(){
         Alert cancelAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        cancelAlert.initOwner(SceneManager.getPrimaryStage());
         cancelAlert.setTitle("Game Cancelled");
         cancelAlert.setHeaderText("The host is no longer connected. Game Cancelled.");
         ButtonType returnBtn = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);

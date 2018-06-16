@@ -1,5 +1,7 @@
 package Classes.NetworkCommunication;
 
+import Classes.SceneManager;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -15,12 +17,10 @@ import java.net.UnknownHostException;
  */ // Initiates 1 connection with the host computer
 public class ClientConnectionManager extends ConnectionManager{
 
-    Socket clientSideSocket;
-
     public ClientConnectionManager(String host, int port, long playerID){
         try{
             this.playerID = playerID;
-            clientSideSocket = new Socket(host, port);
+            Socket clientSideSocket = new Socket(host, port);
             SenderWorker newSenderWorker = new SenderWorker(clientSideSocket);
             ReceiverWorker newReceiverWorker = new ReceiverWorker(this, clientSideSocket);
             senderWorkers.add(newSenderWorker);
@@ -35,7 +35,7 @@ public class ClientConnectionManager extends ConnectionManager{
             displayTimeoutNotice();
             System.err.println("ConnectException encountered while attempting to create client-side socket");
         } catch(UnknownHostException e){
-            displayUknownHostNotice();
+            displayUnknownHostNotice();
             System.err.println("Unknown Host exception encountered while attempting to create client-side socket");
         } catch(IOException e){
             System.err.println("IOException encountered while attempting to create client-side socket");
@@ -54,6 +54,7 @@ public class ClientConnectionManager extends ConnectionManager{
     // the client that they were not able to join the game.
     public boolean getConfirmation(String host, int port){
         Alert connectingDialog = createConnectingDialog(host, port);
+        connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.show();
         int[] packetsProcessingInfo = {0,0,0};
         int timeoutAttempts = 40;
@@ -84,6 +85,7 @@ public class ClientConnectionManager extends ConnectionManager{
 
     private Alert createConnectingDialog(String host, int port){
         Alert connectingDialog = new Alert(Alert.AlertType.NONE);
+        connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.initStyle(StageStyle.UNDECORATED);
         //connectingDialog.setTitle("Connecting");
         connectingDialog.setHeaderText("Connecting");
@@ -92,8 +94,9 @@ public class ClientConnectionManager extends ConnectionManager{
         return connectingDialog;
     }
 
-    private void displayUknownHostNotice(){
+    private void displayUnknownHostNotice(){
         Alert unknownHostNotice = new Alert(Alert.AlertType.CONFIRMATION);
+        unknownHostNotice.initOwner(SceneManager.getPrimaryStage());
         unknownHostNotice.setTitle("Host not found.");
         unknownHostNotice.setHeaderText(
                 "The host name you entered could not be recognized on the network. Please ask the host of the game \n" +
@@ -109,6 +112,7 @@ public class ClientConnectionManager extends ConnectionManager{
 
     private void displayRejectionNotice(){
         Alert rejectionNotice = new Alert(Alert.AlertType.CONFIRMATION);
+        rejectionNotice.initOwner(SceneManager.getPrimaryStage());
         rejectionNotice.setTitle("Join request declined.");
         rejectionNotice.setHeaderText("Unable to join the game; no open player slots are available.");
         ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
@@ -119,6 +123,7 @@ public class ClientConnectionManager extends ConnectionManager{
 
     private void displayTimeoutNotice(){
         Alert timeoutNotice = new Alert(Alert.AlertType.CONFIRMATION);
+        timeoutNotice.initOwner(SceneManager.getPrimaryStage());
         timeoutNotice.setTitle("Connection Timed Out");
         timeoutNotice.setHeaderText("Unable to communicate with the host. Perhaps there is a problem with your network\n " +
                 "connection or the host's network connection? Also, make sure you are entering the\n correct hostName and " +
