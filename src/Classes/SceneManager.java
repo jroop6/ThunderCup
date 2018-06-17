@@ -115,7 +115,7 @@ public class SceneManager extends Application {
         System.out.println("building puzzle mode...");
 
         List<Player> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("NONE",true));
+        playerList.add(new LocalPlayer("YOU",true));
 
         // Create the GameScene, passing the PlayPanel to it:
         GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
@@ -123,16 +123,11 @@ public class SceneManager extends Application {
         SoundManager.playRandomSongs();
     }
 
-    static void switchToRandomPuzzleMode(){
-        System.out.println("building random puzzle mode...");
-
-        List<Player> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("NONE",true));
-
-        // Create the GameScene, passing the PlayPanel to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, -5);
-        setSceneWorkaround(gameScene);
-        SoundManager.playRandomSongs();
+    static void switchToPuzzleSelectionMode(){
+        System.out.println("entering puzzle selection mode...");
+        PuzzleSelectionScene puzzleSelectionScene = new PuzzleSelectionScene();
+        setSceneWorkaround(puzzleSelectionScene);
+        SoundManager.playSong(Music.THE_PERFECT_STALLION);
     }
 
     static void switchToMultiplayerMode(boolean isHost, String hostName, int port, String username){
@@ -154,8 +149,8 @@ public class SceneManager extends Application {
     static void switchTo2PlayerTestMode(){
         // add two players, controlled by the mouse:
         List<Player> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("NONE",true));
-        playerList.add(new LocalPlayer("NONE",false));
+        playerList.add(new LocalPlayer("YOU",true));
+        playerList.add(new LocalPlayer("YOU",false));
 
         // Create the GameScene, passing the playerList to it:
         GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, -5);
@@ -166,13 +161,25 @@ public class SceneManager extends Application {
     static void switchToPuzzleVsMode(){
         // add a player and a bot, each with the same puzzle:
         List<Player> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("NONE",true));
+        playerList.add(new LocalPlayer("YOU",true));
         BotPlayer botPlayer = new BotPlayer();
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 
         // Create the GameScene, passing the playerList to it:
         GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
+        setSceneWorkaround(gameScene);
+        SoundManager.playRandomSongs();
+    }
+
+    static void switchToPuzzleMode(int puzzleGroupIndex){
+        System.out.println("switching to puzzle mode...");
+
+        List<Player> playerList = new LinkedList<>();
+        playerList.add(new LocalPlayer("YOU",true));
+
+        // Create the GameScene, passing the PlayPanel to it:
+        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, puzzleGroupIndex);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }

@@ -217,12 +217,12 @@ public class MainMenuScene extends Scene {
                     break;
                 case PUZZLE:
                     System.out.println("clicked puzzle mode");
-                    SceneManager.switchToPuzzleMode();
+                    SceneManager.switchToPuzzleSelectionMode();
                     break;
                 case RANDOM_PUZZLE:
                     System.out.println("clicked random puzzle mode");
                     animationTimer.stop();
-                    SceneManager.switchToRandomPuzzleMode();
+                    SceneManager.switchToPuzzleMode(-4);
                     break;
                 case MULTIPLAYER:
                     System.out.println("clicked multiplayer mode");
@@ -273,7 +273,6 @@ public class MainMenuScene extends Scene {
                     }
                     break;
                 case MUTE:
-                    //TODO: toggle the mute indicator crossout thingy
                     if(SoundManager.isMuted()){
                         SoundManager.unMuteMusic();
                         btn.setGraphic(selectedImage);
