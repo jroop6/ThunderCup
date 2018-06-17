@@ -18,6 +18,10 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.List;
 
@@ -61,7 +65,6 @@ public class PlayPanel extends Pane {
 
     // For generating the puzzle and ammunition:
     String puzzleUrl;
-    String ammunitionUrl;
     int seed;
     private Random randomPuzzleGenerator;
     private Random randomTransferOrbGenerator;
@@ -70,12 +73,11 @@ public class PlayPanel extends Pane {
     // Audio
     MediaPlayer rumbleSoundEffect;
 
-    PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl, String ammunitionUrl){
+    PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl){
         this.numPlayers = players.size();
         this.randomPuzzleGenerator = new Random(seed);
         this.randomTransferOrbGenerator = new Random(seed);
         this.puzzleUrl = puzzleUrl;
-        this.ammunitionUrl = ammunitionUrl;
 
         foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
         dropCloudEnum = locationType.getDropCloudEnum();
@@ -98,11 +100,7 @@ public class PlayPanel extends Pane {
         playPanelData = new PlayPanelData(team, numPlayers);
 
         // Add initial Orbs:
-        initializePuzzle();
-    }
-
-    PlayPanel(int team, List<Player> players, LocationType locationType, int seed){
-        this(team, players, locationType, seed,"RANDOM_2","RANDOM"); // use random bubbles for both the puzzle and the ammunition.
+        initializePuzzle(puzzleUrl);
     }
 
     private void addPlayers(List<Player> players){
@@ -128,7 +126,7 @@ public class PlayPanel extends Pane {
             player.setScale(1.0);
 
             // load the player's ammunition:
-            player.readAmmunitionOrbs(ammunitionUrl, seed);
+            player.readAmmunitionOrbs(puzzleUrl, seed, i);
 
             // Inform the player where they are located in the playpanel and initialize the positions of the 1st two shooting orbs:
             player.getPlayerData().initializePlayerPos(i);
@@ -146,7 +144,19 @@ public class PlayPanel extends Pane {
         });
     }
 
-    private void initializePuzzle(){
+    /**
+     * Puzzles are organized into groups. Naming convention for puzzles:
+     *    puzzle_XX_YY_ZZ, where XX = group index, YY = individual index, and ZZ = number of players on the playpanel. Examples:
+     *    puzzle_01_01_01 - puzzle 1-1 for a single-player PlayPanel
+     *    puzzle_01_02_01 - puzzle 1-2 for a single-player PlayPanel
+     *    puzzle_01_01_03 - puzzle 1-1 for a three-player PlayPanel
+     * After the puzzle, shooter orbs are specified for each player on a separate line.
+     *
+     * Alternatively, a random puzzle can be specified with the "url" RANDOM_#, where # = the desired number of rows in the puzzle. Examples:
+     *    RANDOM_5 - a random puzzle with 5 rows
+     *    RANDOM_17 - a random puzzle with 17 rows
+     */
+    private void initializePuzzle(String puzzleUrl){
         Orb[][] orbArray = playPanelData.getOrbArray();
         orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
         if(puzzleUrl.substring(0,6).equals("RANDOM")){
@@ -172,9 +182,39 @@ public class PlayPanel extends Pane {
             }
         }
         else{
-            // Todo: read the appropriate puzzle
+            String line;
+            try{
+                InputStream stream = getClass().getClassLoader().getResourceAsStream(puzzleUrl);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+
+                // Discard the first line, which is just there for human-readability
+                while(!(line = reader.readLine()).equals("***PUZZLE***"));
+
+                int i;
+                int j;
+                for(i=0; !((line = reader.readLine()).trim().isEmpty()) && i<ARRAY_HEIGHT; i++){
+                    System.out.println("line is " + line);
+                    for (j=0; j<line.length() && j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                        char orbSymbol = line.charAt(j);
+                        OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol(orbSymbol);
+                        if(orbEnum==null) orbArray[i][j] = NULL;
+                        else orbArray[i][j] = new Orb(orbEnum,i,j,Orb.BubbleAnimationType.STATIC);
+                    }
+                    // if the input line was too short to fill the entire puzzle line, fill in the rest of the line with NULL orbs:
+                    for(/*j is already set*/; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                        orbArray[i][j] = NULL;
+                    }
+                }
+                // fill the rest of the orb array with NULL orbs:
+                for(/*i is already set*/; i<ARRAY_HEIGHT; i++){
+                    for(j=0; j<ARRAY_WIDTH_PER_CHARACTER; j++){
+                        orbArray[i][j] = NULL;
+                    }
+                }
+            } catch(IOException e){
+                e.printStackTrace();
+            }
         }
-        //repaint(); // updates view
     }
 
     // Called from GameScene only
@@ -701,7 +741,7 @@ public class PlayPanel extends Pane {
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
             List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()));
-            if(!Collections.disjoint(neighbors,connectedOrbs) && orbArray[orb.getI()][orb.getJ()] == NULL){
+            if((!Collections.disjoint(neighbors,connectedOrbs) || orb.getI()==0) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
                 playSoundEffect = true;
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos()));

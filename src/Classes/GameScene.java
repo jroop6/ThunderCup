@@ -66,7 +66,8 @@ public class GameScene extends Scene {
 
     private AnimationTimer animationTimer;
 
-    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType){
+    // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
+    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
         super(new StackPane());
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
@@ -94,10 +95,17 @@ public class GameScene extends Scene {
             missedPacketsCount.put(player.getPlayerData().getPlayerID(),0);
         }
 
+        // prepare the puzzle url string:
+        String puzzleURLbase = String.format("res/data/puzzles/puzzle_%02d_01_", puzzleGroupIndex);
+
         // Now create one PlayPanel for each team and assign its players:
         for (List<Player> playerList: teams.values()){
             int team = playerList.get(0).getPlayerData().getTeam();
-            PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED);
+            String puzzleURL;
+            if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
+            else puzzleURL = String.format("%s%02d",puzzleURLbase,playerList.size());
+            System.out.println("puzzle url: " + puzzleURL);
+            PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED,puzzleURL);
             playPanelMap.put(team,newPlayPanel);
         }
 
@@ -368,22 +376,21 @@ public class GameScene extends Scene {
         Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
         while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER){
 
-            if(!isPaused){
-                // Within each Packet, process PlayerData one at a time in order:
-                PlayerData playerData = packet.popPlayerData();
-                do{
-                    if(!gameData.getPause()){
-                        // update the Player and his/her PlayPanel with the new playerData:
-                        PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
-                        playPanel.updatePlayer(playerData, isHost);
-                    }
-                    // Reset the missed packets counter:
-                    if(playerData.getPlayerID()==0) missedPacketsCount.replace(playerData.getPlayerID(), 0);
 
-                    // Prepare for next iteration:
-                    playerData = packet.popPlayerData();
-                } while(playerData!=null);
-            }
+            // Within each Packet, process PlayerData one at a time in order:
+            PlayerData playerData = packet.popPlayerData();
+            do{
+                if(!gameData.getPause()){
+                    // update the Player and his/her PlayPanel with the new playerData:
+                    PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
+                    playPanel.updatePlayer(playerData, isHost);
+                }
+                // Reset the missed packets counter:
+                if(playerData.getPlayerID()==0) missedPacketsCount.replace(playerData.getPlayerID(), 0);
+
+                // Prepare for next iteration:
+                playerData = packet.popPlayerData();
+            } while(playerData!=null);
 
             // Now process the PlayPanelData one at a time in order. Note: this is mostly just a check for consistency.
             // Most of the time, this loop won't actually change anything. If desynchronization is detected between host
@@ -597,9 +604,20 @@ public class GameScene extends Scene {
             switch (buttonEnum) {
                 case RESIGN:
                     System.out.println("resign pressed!");
-                    //ToDo: show confirmation message first
-                    cleanUp();
-                    SceneManager.switchToMainMenu();
+
+                    Alert exitConfirmation = new Alert(Alert.AlertType.CONFIRMATION);
+                    exitConfirmation.initOwner(SceneManager.getPrimaryStage());
+                    exitConfirmation.setTitle("Close Application?");
+                    exitConfirmation.setHeaderText("Are you sure you want to exit the game?");
+                    ButtonType cancel = new ButtonType("Cancel");
+                    ButtonType yes = new ButtonType("Exit");
+                    exitConfirmation.getButtonTypes().setAll(yes,cancel);
+                    exitConfirmation.setGraphic(null);
+                    Optional<ButtonType> result = exitConfirmation.showAndWait();
+                    if(result.isPresent() && result.get() == yes) {
+                        cleanUp();
+                        SceneManager.switchToMainMenu();
+                    }
                     break;
                 case UNPAUSE:
                     System.out.println("Unpause Button Pressed!");

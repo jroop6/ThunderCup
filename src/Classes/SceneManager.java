@@ -4,6 +4,7 @@ import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
+import Classes.PlayerTypes.BotPlayer;
 import Classes.PlayerTypes.LocalPlayer;
 import Classes.PlayerTypes.Player;
 import javafx.application.Application;
@@ -110,6 +111,17 @@ public class SceneManager extends Application {
         primaryStage.setFullScreen(primaryStage.isFullScreen());
     }
 
+    static void switchToPuzzleMode(){
+        System.out.println("building puzzle mode...");
+
+        List<Player> playerList = new LinkedList<>();
+        playerList.add(new LocalPlayer("NONE",true));
+
+        // Create the GameScene, passing the PlayPanel to it:
+        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
+        setSceneWorkaround(gameScene);
+        SoundManager.playRandomSongs();
+    }
 
     static void switchToRandomPuzzleMode(){
         System.out.println("building random puzzle mode...");
@@ -118,7 +130,7 @@ public class SceneManager extends Application {
         playerList.add(new LocalPlayer("NONE",true));
 
         // Create the GameScene, passing the PlayPanel to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME);
+        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, -5);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }
@@ -133,7 +145,7 @@ public class SceneManager extends Application {
     }
 
     static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<Player> players){
-        GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME);
+        GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME, -5);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }
@@ -146,7 +158,21 @@ public class SceneManager extends Application {
         playerList.add(new LocalPlayer("NONE",false));
 
         // Create the GameScene, passing the playerList to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME);
+        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, -5);
+        setSceneWorkaround(gameScene);
+        SoundManager.playRandomSongs();
+    }
+
+    static void switchToPuzzleVsMode(){
+        // add a player and a bot, each with the same puzzle:
+        List<Player> playerList = new LinkedList<>();
+        playerList.add(new LocalPlayer("NONE",true));
+        BotPlayer botPlayer = new BotPlayer();
+        botPlayer.changeTeam(2);
+        playerList.add(botPlayer);
+
+        // Create the GameScene, passing the playerList to it:
+        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }

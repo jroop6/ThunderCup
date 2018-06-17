@@ -217,7 +217,7 @@ public class MainMenuScene extends Scene {
                     break;
                 case PUZZLE:
                     System.out.println("clicked puzzle mode");
-                    SoundManager.playSong(Music.FLUTTERSHYS_LAMENT);
+                    SceneManager.switchToPuzzleMode();
                     break;
                 case RANDOM_PUZZLE:
                     System.out.println("clicked random puzzle mode");
@@ -259,7 +259,7 @@ public class MainMenuScene extends Scene {
                 case VS_COMPUTER:
                     System.out.println("clicked vs computer");
                     animationTimer.stop();
-                    SceneManager.switchTo2PlayerTestMode();
+                    SceneManager.switchToPuzzleVsMode();
                     break;
                 case CREDITS:
                     showCreditsDialog();

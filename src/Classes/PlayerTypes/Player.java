@@ -15,7 +15,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Font;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 
 
@@ -289,19 +292,40 @@ public abstract class Player {
 
     // Attempt to load Orbs from the file first. If the file doesn't exist or if "RANDOM" is specified or if there are
     // only a few orbs in the file, then add random Orbs to the ammunition until we have 10.
-    public void readAmmunitionOrbs(String filename, int seed){
+    public void readAmmunitionOrbs(String filename, int seed, int positionIndex){
         this.seed = seed;
         ammunitionGenerator = new Random(seed);
         List<Orb> ammunitionOrbs = playerData.getAmmunition();
-        // Add the Orbs specified in the file to the ammunitionOrbs Queue:
-        if(!filename.equals("RANDOM")){
-            InputStream ammunitionFile = getClass().getClassLoader().getResourceAsStream(filename);
-            Scanner ammunitionScanner = new Scanner(ammunitionFile);
-            while(ammunitionScanner.hasNext()){
-                char nextOrbSymbol = ammunitionScanner.next().charAt(0);
-                OrbImages orbImage = OrbImages.lookupOrbImageBySymbol(nextOrbSymbol);
-                ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
-                // Note: view gets updated 24 times per second in the repaint() method of the PlaypPanel.
+        if(!filename.substring(0,6).equals("RANDOM")){
+            InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+
+            try{
+                // skip ahead to where the shooter orbs are:
+                String line;
+                while(!(line = reader.readLine()).equals("***SHOOTER_ORBS***"));
+
+                // skip ahead to the line for this player's positionIndex:
+                for(int i=0; i<positionIndex; i++){
+                    reader.readLine();
+                }
+
+                // Add the Orbs specified in the file to the ammunitionOrbs Queue:
+                int nextOrbSymbol;
+                int temp = 0;
+                while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n'){
+                    OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol((char)nextOrbSymbol);
+                    if(orbEnum==null){
+                        System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");
+                        continue;
+                    }
+                    ammunitionOrbs.add(new Orb(orbEnum,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
+                    temp++;
+                    // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
+                }
+                System.out.println("read " + temp + "orbs from file");
+            } catch(IOException e){
+                e.printStackTrace();
             }
         }
         // Add random Orbs to the ammunitionOrbs Queue after that:

@@ -98,14 +98,15 @@ public class PlayPanelData implements Serializable {
         List<PointInt> openSpots = new LinkedList<>();
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=offset + i%2 - 2*offset*i%2; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j+=2){
-                if(orbArray[i][j]==Orb.NULL && !getNeighbors(new PointInt(i,j)).isEmpty() && !isTransferInOrbOccupyingPosition(i,j)){
+                if(orbArray[i][j]==Orb.NULL && (!getNeighbors(new PointInt(i,j)).isEmpty() || i==0) && !isTransferInOrbOccupyingPosition(i,j)){
                     openSpots.add(new PointInt(i,j));
                 }
             }
         }
 
         // Now pick one spot for each orb:
-        //todo: if there are not enough open spots, put one in deathOrbs
+        //todo: if the orbArray is full, put transfer orbs in the deathOrbs list
+        //todo: if there are otherwise not enough open, connected spots, then place transferOrbs in secondary and tertiary locations.
         for(Orb orb : newTransferOrbs){
             int index = miscRandomGenerator.nextInt(openSpots.size());
             PointInt openSpot = openSpots.get(index);
@@ -113,6 +114,7 @@ public class PlayPanelData implements Serializable {
             orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
             System.out.println("size of openSpots is " + openSpots.size());
             openSpots.remove(index);
+            if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0).
         }
 
         // now, finally add them to the appropriate Orb list:
