@@ -634,8 +634,9 @@ public class GameScene extends Scene {
         return btn;
     }
 
+    // Called after every PlayPanel has tick()'ed. This method processes inter-PlayPanel and game-wide events.
     private void tick(){
-        // transfer the transferOrbs
+        // transfer the transferOutOrbs.
         for(PlayPanel fromPlayPanel : playPanelMap.values()){
             List<Orb> transferOutOrbs = fromPlayPanel.getPlayPanelData().getTransferOutOrbs();
             if(!transferOutOrbs.isEmpty()){
@@ -646,6 +647,54 @@ public class GameScene extends Scene {
                 }
                 transferOutOrbs.clear();
             }
+        }
+
+        // Todo: what if 2 players declare victory at the exact same time?
+        // check to see whether anybody's won a quick victory by clearing their playpanel:
+        for(PlayPanel playPanel : playPanelMap.values()){
+            if(playPanel.getPlayPanelData().isVictoriousChanged()){
+                // Todo: host should check whether it's actually true.
+                // set defeated = true for all other players:
+                for(PlayPanel otherPlayPanel : playPanelMap.values()){
+                    if(otherPlayPanel == playPanel) continue;
+                    for(Player defeatedPlayer : otherPlayPanel.getPlayerList()){
+                        defeatedPlayer.resignPlayer();
+                    }
+                }
+                System.out.println("Hey, somebody won a quick victory!");
+            }
+        }
+
+        // check to see whether anybody's lost due to uncleared deathOrbs:
+        for(PlayPanel playPanel : playPanelMap.values()){
+            if(!playPanel.getPlayPanelData().getDeathOrbs().isEmpty()){
+                for(Player defeatedPlayer : playPanel.getPlayerList()){
+                    defeatedPlayer.resignPlayer();
+                }
+            }
+        }
+
+        // check to see whether there's only 1 live team left
+        int numLiveTeams = 0;
+        for(PlayPanel playPanel : playPanelMap.values()){
+            boolean alive = false;
+            for(Player player : playPanel.getPlayerList()){
+                if(!player.getPlayerData().getDefeated()){
+                    alive = true;
+                    break;
+                }
+            }
+            if(alive) numLiveTeams++;
+            if(numLiveTeams>1) break;
+        }
+        if(numLiveTeams==1){
+            System.out.println("There's only 1 team left. They've won the game!");
+        }
+
+
+        // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
+        if(numLiveTeams == 0){
+            System.out.println("WHOA!!! A tie!!!!");
         }
     }
 

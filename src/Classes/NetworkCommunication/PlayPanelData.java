@@ -15,7 +15,7 @@ public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
-    public static final int SHOTS_BETWEEN_DROPS = 20; // After the player shoots this many times, a new row of orbs appears at the top.
+    public static final int SHOTS_BETWEEN_DROPS = 999; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private int team;
     private int numPlayers;
@@ -27,6 +27,9 @@ public class PlayPanelData implements Serializable {
     private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
     private List<Orb> transferInOrbs = new LinkedList<>(); // orbs to be transferred from other players
     private List<Orb> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
+    //Todo: make deathOrbs an array with width=PLAYPANLE_WIDTH_PER_PLAYER*numPlayers, for easier lookup by (i,j) coordinates
+    private List<Orb> deathOrbs = new LinkedList<>(); // orbs below the line of death. If these are not immediately cleared in 1 frame, then this team has lost.
+    private boolean victorious = false;
 
     // Flags indicating a change in the data:
     private boolean orbArrayChanged = false;
@@ -35,6 +38,8 @@ public class PlayPanelData implements Serializable {
     private boolean droppingOrbsChanged = false;
     private boolean transferOutOrbsChanged = false;
     private boolean transferInOrbsChanged = false;
+    private boolean deathOrbsChanged = false;
+    private boolean victoriousChanged = false;
 
     // Counter for how many frames the local orbArray data has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -65,6 +70,8 @@ public class PlayPanelData implements Serializable {
         droppingOrbs.addAll(other.getDroppingOrbs());
         transferInOrbs.addAll(other.getTransferInOrbs());
         transferOutOrbs.addAll(other.getTransferOutOrbs());
+        deathOrbs.addAll(other.getDeathOrbs());
+        victorious = other.getVictorious();
 
         orbArrayChanged = other.isOrbArrayChanged();
         shootingOrbsChanged = other.isShootingOrbsChanged();
@@ -72,6 +79,8 @@ public class PlayPanelData implements Serializable {
         droppingOrbsChanged = other.isDroppingOrbsChanged();
         transferInOrbsChanged = other.isTransferInOrbsChanged();
         transferOutOrbsChanged = other.isTransferOutOrbsChanged();
+        victoriousChanged = other.isVictoriousChanged();
+        deathOrbsChanged = other.isDeathOrbsChanged();
     }
 
     /* Changers: These are called when the host wants to notify the client that something has changed in the official
@@ -114,7 +123,7 @@ public class PlayPanelData implements Serializable {
             orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
             System.out.println("size of openSpots is " + openSpots.size());
             openSpots.remove(index);
-            if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0).
+            if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0). In the future, place transferOrbs in secondary and tertiary locations.
         }
 
         // now, finally add them to the appropriate Orb list:
@@ -132,10 +141,18 @@ public class PlayPanelData implements Serializable {
     }
     public void changeBurstArrayOrbs(List<PointInt> newBurstingOrbs){
         for(PointInt point : newBurstingOrbs){
-            Orb orb = orbArray[point.i][point.j];
+            Orb orb = Orb.NULL;
+            if(validCoordinates(point)) orb = orbArray[point.i][point.j];
+            else{
+                for(Orb deathOrb : deathOrbs){
+                    if(deathOrb.getI() == point.i && deathOrb.getJ() == point.j) orb = deathOrb;
+                    break;
+                }
+            }
             orb.setAnimationEnum(Orb.BubbleAnimationType.IMPLODING);
             burstingOrbs.add(orb);
-            orbArray[point.i][point.j] = Orb.NULL;
+            if(validCoordinates(point)) orbArray[point.i][point.j] = Orb.NULL;
+            else deathOrbs.remove(orb);
         }
         burstingOrbsChanged = true;
         orbArrayChanged = true;
@@ -148,6 +165,16 @@ public class PlayPanelData implements Serializable {
         }
         droppingOrbsChanged = true;
         orbArrayChanged = true;
+    }
+    public void changeAddDeathOrb(Orb orb){
+        deathOrbs.add(orb);
+        deathOrbsChanged = true;
+    }
+    public void changeDeclareVictory(){
+        if(!victorious){ // Don't do anything if we've already declared victory
+            this.victorious = true;
+            this.victoriousChanged = true;
+        }
     }
 
     public void decrementShotsUntilNewRow(int amountToDecrement){
@@ -192,6 +219,12 @@ public class PlayPanelData implements Serializable {
             this.transferInOrbs.add(new Orb(orb.getOrbEnum(), orb.getI(), orb.getJ(), orb.getAnimationEnum()));
         }
     }
+    public void setAddDeathOrbs(List<Orb> newDeathOrbs){
+        this.deathOrbs.addAll(newDeathOrbs);
+    }
+    public void setVictorious(boolean newVal){
+        victorious = newVal;
+    }
 
 
     /* Change Getters: These are called to see whether the host has changed the data. They are always
@@ -214,6 +247,12 @@ public class PlayPanelData implements Serializable {
     }
     public boolean isTransferInOrbsChanged(){
         return transferInOrbsChanged;
+    }
+    public boolean isDeathOrbsChanged(){
+        return deathOrbsChanged;
+    }
+    public boolean isVictoriousChanged() {
+        return victoriousChanged;
     }
 
     /* Direct Getters: These are called to get the actual player data*/
@@ -244,8 +283,14 @@ public class PlayPanelData implements Serializable {
     public List<Orb> getThunderOrbs(){
         return thunderOrbs;
     }
+    public List<Orb> getDeathOrbs(){
+        return deathOrbs;
+    }
     public int getShotsUntilNewRow(){
         return shotsUntilNewRow;
+    }
+    public boolean getVictorious(){
+        return victorious;
     }
 
     public void resetFlags(){
@@ -253,6 +298,10 @@ public class PlayPanelData implements Serializable {
         shootingOrbsChanged = false;
         burstingOrbsChanged = false;
         droppingOrbsChanged = false;
+        transferOutOrbsChanged = false;
+        transferInOrbsChanged = false;
+        deathOrbsChanged = false;
+        victoriousChanged = false;
     }
 
     // In one game tick, the following happens here:
@@ -291,7 +340,7 @@ public class PlayPanelData implements Serializable {
 
         // Add the collision's shooter orb to the active list and mark it as "examined"
         active.push(source);
-        examined[source.i][source.j] = true;
+        if(validCoordinates(source)) examined[source.i][source.j] = true; // deathOrbs have "invalid" coordinates.
 
         // Do a depth-first search
         while (!active.isEmpty()) {
@@ -307,7 +356,15 @@ public class PlayPanelData implements Serializable {
                             passesFilter = true;
                             break;
                         case SAME_COLOR:
-                            if(orbArray[neighbor.i][neighbor.j].getOrbEnum() == orbArray[source.i][source.j].getOrbEnum()) passesFilter = true;
+                            Orb sourceOrb = Orb.NULL; // needs to be initialized to satisfy compiler.
+                            if(!validCoordinates(source)){
+                                for(Orb orb : deathOrbs){
+                                    if(orb.getI() == source.i && orb.getJ() == source.j) sourceOrb = orb;
+                                    break;
+                                }
+                            }
+                            else sourceOrb = orbArray[source.i][source.j];
+                            if(orbArray[neighbor.i][neighbor.j].getOrbEnum() == sourceOrb.getOrbEnum()) passesFilter = true;
                             break;
                     }
                     if(passesFilter){
@@ -320,9 +377,7 @@ public class PlayPanelData implements Serializable {
         return matches;
     }
 
-    // Finds floating orbs and drops them. Also checks for victory conditions
-    public List<PointInt> findFloatingOrbs(){
-        List<PointInt> orbsToDrop = new LinkedList<>();
+    public Set<PointInt> findConnectedOrbs(){
         Set<PointInt> connectedOrbs = new HashSet<>();
 
         // find all orbs connected to the ceiling:
@@ -332,9 +387,12 @@ public class PlayPanelData implements Serializable {
             connectedOrbs.addAll(depthFirstSearch(sourcePoint, FilterOption.ALL));
         }
 
-        // If there are no orbs connected to the ceiling, then this team has won
-        // Todo: declare victory here.
-        if(connectedOrbs.isEmpty()) System.out.println("VICTORY!");
+        return connectedOrbs;
+    }
+
+    // Finds floating orbs and drops them. Also checks for victory conditions
+    public List<PointInt> findFloatingOrbs(Set<PointInt> connectedOrbs){
+        List<PointInt> orbsToDrop = new LinkedList<>();
 
         // any remaining orbs in the array should be dropped.
         for(int i=0; i<ARRAY_HEIGHT; i++){

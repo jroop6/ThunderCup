@@ -268,6 +268,7 @@ public class PlayPanel extends Pane {
         List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, shootingOrbsToBurst);
         //shootingOrbsToBurst.addAll(checkOverlaps(orbsToSnap)); // Todo: I'm pretty sure this line is completely superfluous now. Delete this eventually if there are no problems.
 
+
         // Advance the animation frame of existing bursting orbs, then burst new orbs:
         advanceBurstingOrbs();
         if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
@@ -294,8 +295,10 @@ public class PlayPanel extends Pane {
         }
         playPanelData.setAddThunderOrbs(orbsToTransferCopy); // Note: the thunderOrbs list is persistent.
 
-        // Find floating orbs and drop them, adding visual flourishes.
-        List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs();
+        // Find floating orbs and drop them, adding visual flourishes. If there are no orbs connected to the ceiling, then this team has won.
+        Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(); // orbs that are connected to the ceiling.
+        if(connectedOrbs.isEmpty()) playPanelData.changeDeclareVictory();
+        List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs);
         if(!orbsToDrop.isEmpty()){
             SoundManager.playSoundEffect(SoundEffect.DROP);
             for(PointInt orbToDrop : orbsToDrop){
@@ -565,11 +568,11 @@ public class PlayPanel extends Pane {
                 }
             }
 
-            // If the i coordinate is below the bottom of the array, then this team has lost.
-            if(iSnap >= PlayPanelData.ARRAY_HEIGHT){
-                // Todo: put the orb in a deathOrbs list
-                // Todo: declare defeat here.
-                System.out.println("we're dead!");
+            // If the i coordinate is below the bottom of the array, then put the orb on the deathOrbs list.
+            if(iSnap == PlayPanelData.ARRAY_HEIGHT){
+                playPanelData.getDeathOrbs().add(snap.shooterOrb);
+                snap.shooterOrb.setIJ(iSnap, jSnap);
+                SoundManager.playSoundEffect(SoundEffect.PLACEMENT);
             }
             // If the snap coordinates are somehow off the edge of the array in a different fashion, then just burst
             // the orb. This should never happen, but... you never know.
@@ -626,7 +629,7 @@ public class PlayPanel extends Pane {
             Point2D arrayOrbLoc = sourceOrb.xyToIj();
             int i = (int)Math.round(arrayOrbLoc.getX());
             int j = (int)Math.round(arrayOrbLoc.getY());
-            if(!playPanelData.validCoordinates(new PointInt(i,j))) continue;
+            //if(!playPanelData.validCoordinates(new PointInt(i,j))) continue;
 
             // find all connected orbs of the same color
             List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), PlayPanelData.FilterOption.SAME_COLOR);
@@ -860,6 +863,9 @@ public class PlayPanel extends Pane {
                 }
             }
         }
+
+        // paint Death orbs:
+        for(Orb orb: playPanelData.getDeathOrbs()) orb.drawSelf(orbDrawer,vibrationOffset);
 
         // paint VisualFlourishes:
         for(VisualFlourish visualFlourish : visualFlourishes) visualFlourish.drawSelf(orbDrawer);

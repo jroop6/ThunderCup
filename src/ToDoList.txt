@@ -1,4 +1,5 @@
 -------Bugs-------
+change deathOrbs from a List to an array.
 fix multiplayer de-synch problems
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 

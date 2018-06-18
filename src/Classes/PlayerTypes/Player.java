@@ -128,6 +128,8 @@ public abstract class Player {
 
     public void resignPlayer(){
         playerData.changeDefeated(true); // updates model
+        character.freeze(); // updates view (GameScene)
+        cannon.freeze();// updates view (GameScene)
         // in the MultiplayerSceneSelection, the view is updated in either the deleteRemovedPlayer() or
         // processPacketAsClient() methods, for host and clients respectively.
     }
@@ -145,6 +147,7 @@ public abstract class Player {
 
     // Points the cannon at a position given in scene coordinates.
     public void pointCannon(double sceneX, double sceneY){
+        if(playerData.getDefeated()) return;
         Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
         double mouseRelativeX = localLoc.getX() - cannon.getPosX();
         double mouseRelativeY = -(localLoc.getY() - cannon.getPosY()); // recall that the y-axis points down.
@@ -155,11 +158,13 @@ public abstract class Player {
 
     // Points the cannon at a given angle, in degrees (0 degrees points straight up)
     public void pointCannon(double angle){
+        if(playerData.getDefeated()) return;
         playerData.changeCannonAngle(angle); // updates model
         cannon.setAngle(angle); // updates view
     }
 
     private void setFireCannon(){
+        if(playerData.getDefeated()) return;
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
         playerData.setFire(randomOrdinal); // updates Player model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
@@ -167,6 +172,7 @@ public abstract class Player {
     }
 
     public void changeFireCannon(){
+        if(playerData.getDefeated()) return;
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
         Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), randomOrdinal); // updates Player model
         playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates PlayPanel model
