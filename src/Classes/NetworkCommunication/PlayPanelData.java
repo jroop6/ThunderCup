@@ -66,23 +66,35 @@ public class PlayPanelData implements Serializable {
         shotsUntilNewRow = SHOTS_BETWEEN_DROPS*numPlayers;
     }
 
-    // Copy Constructor:
+    // The Copy Constructor is used to make a copy of all the data before sending it out over the network.
     public PlayPanelData(PlayPanelData other){
         team = other.getTeam();
         numPlayers = other.getNumPlayers();
         shotsUntilNewRow = other.getShotsUntilNewRow();
 
         orbArray = new Orb[ARRAY_HEIGHT][ARRAY_WIDTH_PER_CHARACTER*other.getNumPlayers()];
+        Orb[][] otherOrbArray = other.getOrbArray();
+        //todo: don't copy NULL. Just set the reference to NULL.
         for(int i=0; i<ARRAY_HEIGHT; i++){
-            System.arraycopy(other.getOrbArray()[i],0,orbArray[i],0,orbArray[i].length);
+            // System.arraycopy(other.getOrbArray()[i],0,orbArray[i],0,orbArray[i].length); // Unfortunately, System.arraycopy doesn't work because it only copies references to the orbs. Hence, the orbs might get modified before they are sent over the socket connection.
+            for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                orbArray[i][j] = new Orb(otherOrbArray[i][j]);
+            }
         }
+
+        //todo: don't copy NULL. Just set the reference to NULL.
         deathOrbs = new Orb[ARRAY_WIDTH_PER_CHARACTER*numPlayers];
-        System.arraycopy(other.getDeathOrbs(),0,deathOrbs,0,deathOrbs.length);
-        shootingOrbs.addAll(other.getShootingOrbs());
-        burstingOrbs.addAll(other.getBurstingOrbs());
-        droppingOrbs.addAll(other.getDroppingOrbs());
-        transferInOrbs.addAll(other.getTransferInOrbs());
-        transferOutOrbs.addAll(other.getTransferOutOrbs());
+        Orb[] otherDeathOrbs = other.getDeathOrbs();
+        // System.arraycopy(other.getDeathOrbs(),0,deathOrbs,0,deathOrbs.length); // Unfortunately, System.arraycopy doesn't work because it only copies references to the orbs. Hence, the orbs might get modified before they are sent over the socket connection.
+        for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+            deathOrbs[j] = new Orb(otherDeathOrbs[j]);
+        }
+
+        shootingOrbs = deepCopyOrbList(other.getShootingOrbs());
+        burstingOrbs = deepCopyOrbList(other.getBurstingOrbs());
+        droppingOrbs = deepCopyOrbList(other.getDroppingOrbs());
+        transferInOrbs = deepCopyOrbList(other.getTransferInOrbs());
+        transferOutOrbs = deepCopyOrbList(other.getTransferOutOrbs());
         victorious = other.getVictorious();
 
         orbArrayChanged = other.isOrbArrayChanged();
@@ -93,6 +105,14 @@ public class PlayPanelData implements Serializable {
         transferOutOrbsChanged = other.isTransferOutOrbsChanged();
         victoriousChanged = other.isVictoriousChanged();
         deathOrbsChanged = other.isDeathOrbsChanged();
+    }
+
+    public List<Orb> deepCopyOrbList(List<Orb> other){
+        List<Orb> copiedList = new LinkedList<>();
+        for(Orb orb : other){
+            copiedList.add(new Orb(orb));
+        }
+        return copiedList;
     }
 
     /* Changers: These are called when the host wants to notify the client that something has changed in the official
@@ -219,7 +239,7 @@ public class PlayPanelData implements Serializable {
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                 Orb otherOrb = newOrbArray[i][j];
                 if(otherOrb.equals(NULL)) orbArray[i][j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
-                else orbArray[i][j] = new Orb(otherOrb.getOrbEnum(),i,j,otherOrb.getAnimationEnum());
+                else orbArray[i][j] = new Orb(otherOrb);
             }
         }
     }
@@ -227,25 +247,16 @@ public class PlayPanelData implements Serializable {
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
             Orb otherOrb = newDeathOrbs[j];
             if(otherOrb.equals(NULL)) deathOrbs[j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
-            else deathOrbs[j] = new Orb(otherOrb.getOrbEnum(),ARRAY_HEIGHT,j,otherOrb.getAnimationEnum());
+            else deathOrbs[j] = new Orb(otherOrb);
         }
     }
     public void setShotsUntilNewRow(int newVal){
         shotsUntilNewRow = newVal;
     }
-    public void setTransferOutOrbs(List<Orb> transferOutOrbs){
-        this.transferOutOrbs.clear();
-        this.transferOutOrbs.addAll(transferOutOrbs);
-    }
-    public void setTransferInOrbs(List<Orb> newTransferInOrbs){
-        transferInOrbs.clear();
-        //this.transferInOrbs.addAll(transferInOrbs); // Using addAll() would be faster and cleaner, but may use more memory because the game would have to keep a reference to the entire PlayPanelData from the host.
-        //todo: create a copyOrb() or cloneOrb() method/constructor.
-        for(Orb orb : newTransferInOrbs){
-            Orb newTransferInOrb = new Orb(orb.getOrbEnum(), orb.getI(), orb.getJ(), orb.getAnimationEnum());
-            transferInOrbs.add(newTransferInOrb);
-            newTransferInOrb.setCurrentFrame(orb.getCurrentFrame());
-        }
+    public void setOrbList(List<Orb> listToOverwrite, List<Orb> listToCopy){
+        listToOverwrite.clear();
+        // Using addAll() would be faster and cleaner, but may use more memory because the game would have to keep a reference to the entire PlayPanelData from the host.
+        for(Orb orb : listToCopy) listToOverwrite.add(new Orb(orb));
     }
     public void setAddDeathOrbs(List<Orb> newDeathOrbs){
         for(Orb newDeathOrb : newDeathOrbs){
@@ -502,6 +513,13 @@ public class PlayPanelData implements Serializable {
             System.out.println("number of shots until new row appears is inconsistent between host and client");
         }
 
+        // Check that the number of shooting, bursting, dropping, thunder, and transferOut orbs are consistent:
+        if(other.getShootingOrbs().size() != shootingOrbs.size()) inconsistent = true;
+        if(other.getBurstingOrbs().size() != burstingOrbs.size()) inconsistent = true;
+        if(other.getDroppingOrbs().size() != droppingOrbs.size()) inconsistent = true;
+        if(other.getThunderOrbs().size() != thunderOrbs.size()) inconsistent = true;
+        if(other.getTransferOutOrbs().size() != transferOutOrbs.size()) inconsistent = true;
+
         // Check that the transferInOrbs list is consistent:
         if(other.getTransferInOrbs().size() != transferInOrbs.size()) inconsistent=true;
         else{
@@ -528,7 +546,12 @@ public class PlayPanelData implements Serializable {
             setOrbArray(other.getOrbArray());
             setDeathOrbs(other.getDeathOrbs());
             setShotsUntilNewRow(other.getShotsUntilNewRow());
-            setTransferInOrbs(other.transferInOrbs);
+            setOrbList(transferInOrbs, other.getTransferInOrbs());
+            setOrbList(shootingOrbs, other.getShootingOrbs());
+            setOrbList(burstingOrbs, other.getBurstingOrbs());
+            setOrbList(droppingOrbs, other.getDroppingOrbs());
+            setOrbList(thunderOrbs, other.getThunderOrbs());
+            setOrbList(transferOutOrbs, other.getTransferOutOrbs());
             inconsistencyCounter = 0;
         }
     }

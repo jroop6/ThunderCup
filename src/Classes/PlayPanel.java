@@ -203,7 +203,7 @@ public class PlayPanel extends Pane {
             Orb orbCopy = new Orb(orb.getOrbEnum(), 0,0, Orb.BubbleAnimationType.THUNDERING);
             orbsToTransferCopy.add(orbCopy);
         }
-        playPanelData.setAddThunderOrbs(orbsToTransferCopy); // Note: the thunderOrbs list is persistent.
+        playPanelData.setAddThunderOrbs(orbsToTransferCopy);
 
         // Find floating orbs and drop them, adding visual flourishes. If there are no orbs connected to the ceiling, then this team has won.
         Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(); // orbs that are connected to the ceiling.

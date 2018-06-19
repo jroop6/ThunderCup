@@ -61,11 +61,30 @@ public class Orb implements Serializable{
 
     public Orb(OrbImages orbEnum, int iPos, int jPos, BubbleAnimationType animationEnum){
         this.orbEnum = orbEnum;
-        this.iPos = iPos;
-        this.jPos = jPos;
-        xPos = ORB_RADIUS + ORB_RADIUS *(jPos);
-        yPos = ORB_RADIUS + iPos*PlayPanel.ROW_HEIGHT;
+        setIJ(iPos, jPos);
         setAnimationEnum(animationEnum);
+    }
+
+    /* Copy Constructor */
+    public Orb(Orb other){
+        orbEnum = other.getOrbEnum();
+        orbElectrification = other.getOrbElectrification();
+        orbExplosion = other.getOrbExplosion();
+        orbThunder = other.getOrbThunder();
+        animationEnum = other.getAnimationEnum();
+
+        xPos = other.getXPos();
+        yPos = other.getYPos();
+        angle = other.getAngle();
+        speed = other.getSpeed();
+        iPos = other.getI();
+        jPos = other.getJ();
+
+        currentFrame = other.getCurrentFrame();
+        electrificationAnimationFrame = other.getElectrificationAnimationFrame();
+
+        rawTimestamp = other.getRawTimestamp();
+        timeStamp = other.getTimestamp();
     }
 
     public void setXPos(double xPos){
@@ -136,6 +155,9 @@ public class Orb implements Serializable{
     double getSpeed(){
         return speed;
     }
+    long getRawTimestamp(){
+        return rawTimestamp;
+    }
     long getTimestamp(){
         return timeStamp;
     }
@@ -151,8 +173,20 @@ public class Orb implements Serializable{
     public OrbImages getOrbEnum(){
         return orbEnum;
     }
+    public OrbElectrification getOrbElectrification(){
+        return orbElectrification;
+    }
+    public OrbExplosion getOrbExplosion(){
+        return orbExplosion;
+    }
+    public SoundEffect getOrbThunder(){
+        return orbThunder;
+    }
     public int getCurrentFrame(){
         return currentFrame;
+    }
+    public int getElectrificationAnimationFrame(){
+        return electrificationAnimationFrame;
     }
 
 
@@ -291,7 +325,6 @@ public class Orb implements Serializable{
                     && Math.abs(otherOrb.yPos-yPos)<tolerance
                     && otherOrb.getOrbEnum() == orbEnum
                     && Math.abs(otherOrb.getAngle()-angle)<tolerance/180) return true;
-//            if(otherOrb.xPos==xPos && otherOrb.yPos==yPos && otherOrb.getOrbEnum()==orbEnum && otherOrb.getAngle()==angle) return true;
             else return false;
         }
     }

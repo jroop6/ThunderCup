@@ -76,8 +76,9 @@ public class PlayerData implements Serializable {
         cannonEnum = other.getCannonEnum();
         team = other.getTeam();
         defeated = other.getDefeated();
-        ammunitionOrbs.addAll(other.getAmmunition());
-        firedOrbs.addAll(other.getFiredOrbs());
+
+        ammunitionOrbs = deepCopyOrbList(other.getAmmunition());
+        firedOrbs = deepCopyOrbQueue(other.getFiredOrbs());
 
         bubbleDataChanged = other.isBubbleDataChanged();
         firing = other.isFiring();
@@ -87,6 +88,23 @@ public class PlayerData implements Serializable {
         teamChanged = other.isTeamChanged();
         defeatedChanged = other.isDefeatedChanged();
         ammunitionOrbsChanged = other.isAmmunitionChanged();
+    }
+
+    // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
+    public List<Orb> deepCopyOrbList(List<Orb> other){
+        List<Orb> copiedList = new LinkedList<>();
+        for(Orb orb : other){
+            copiedList.add(new Orb(orb));
+        }
+        return copiedList;
+    }
+
+    public Queue<Orb> deepCopyOrbQueue(Queue<Orb> other){
+        Queue<Orb> copiedQueue = new LinkedList<>();
+        for(Orb orb : other){
+            copiedQueue.add(new Orb(orb));
+        }
+        return copiedQueue;
     }
 
     // Called by the PlayPanel constructor
@@ -207,7 +225,9 @@ public class PlayerData implements Serializable {
     }
     public void setAmmunitionOrbs(List<Orb> ammunitionOrbs){
         this.ammunitionOrbs.clear();
-        this.ammunitionOrbs.addAll(ammunitionOrbs);
+        for(Orb orb : ammunitionOrbs){
+            this.ammunitionOrbs.add(new Orb(orb));
+        }
     }
 
     public void resetFlags(){
