@@ -18,10 +18,6 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.*;
 import java.util.List;
 
@@ -66,7 +62,6 @@ public class PlayPanel extends Pane {
     // For generating the puzzle and ammunition:
     String puzzleUrl;
     int seed;
-    private Random randomPuzzleGenerator;
     private Random randomTransferOrbGenerator;
     private Random miscRandomGenerator = new Random();
 
@@ -75,7 +70,6 @@ public class PlayPanel extends Pane {
 
     PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl){
         this.numPlayers = players.size();
-        this.randomPuzzleGenerator = new Random(seed);
         this.randomTransferOrbGenerator = new Random(seed);
         this.puzzleUrl = puzzleUrl;
 
@@ -97,10 +91,7 @@ public class PlayPanel extends Pane {
         addPlayers(players);
 
         // Initialize PlayPanelData:
-        playPanelData = new PlayPanelData(team, numPlayers);
-
-        // Add initial Orbs:
-        initializePuzzle(puzzleUrl);
+        playPanelData = new PlayPanelData(team, numPlayers, seed, puzzleUrl);
     }
 
     private void addPlayers(List<Player> players){
@@ -144,78 +135,7 @@ public class PlayPanel extends Pane {
         });
     }
 
-    /**
-     * Puzzles are organized into groups. Naming convention for puzzles:
-     *    puzzle_XX_YY_ZZ, where XX = group index, YY = individual index, and ZZ = number of players on the playpanel. Examples:
-     *    puzzle_01_01_01 - puzzle 1-1 for a single-player PlayPanel
-     *    puzzle_01_02_01 - puzzle 1-2 for a single-player PlayPanel
-     *    puzzle_01_01_03 - puzzle 1-1 for a three-player PlayPanel
-     * After the puzzle, shooter orbs are specified for each player on a separate line.
-     *
-     * Alternatively, a random puzzle can be specified with the "url" RANDOM_#, where # = the desired number of rows in the puzzle. Examples:
-     *    RANDOM_5 - a random puzzle with 5 rows
-     *    RANDOM_17 - a random puzzle with 17 rows
-     */
-    private void initializePuzzle(String puzzleUrl){
-        Orb[][] orbArray = playPanelData.getOrbArray();
-        orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
-        if(puzzleUrl.substring(0,6).equals("RANDOM")){
-            int rows = Integer.parseInt(puzzleUrl.substring(7));
-            if(rows>19) rows = 19;
-            int orbEnumBound = OrbImages.values().length;
-            OrbImages[] orbImages = OrbImages.values();
 
-            for(int i=0; i<rows; ++i){
-                for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                    if(j%2==i%2){
-                        int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
-                        OrbImages orbImage = orbImages[randomOrdinal];
-                        orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
-                    }
-                    else orbArray[i][j] = NULL;
-                }
-            }
-            for(int i=rows; i<ARRAY_HEIGHT; i++){
-                for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                    orbArray[i][j] = NULL;
-                }
-            }
-        }
-        else{
-            String line;
-            try{
-                InputStream stream = getClass().getClassLoader().getResourceAsStream(puzzleUrl);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-
-                // Discard the first line, which is just there for human-readability
-                while(!(line = reader.readLine()).equals("***PUZZLE***"));
-
-                int i;
-                int j;
-                for(i=0; !((line = reader.readLine()).trim().isEmpty()) && i<ARRAY_HEIGHT; i++){
-                    System.out.println("line is " + line);
-                    for (j=0; j<line.length() && j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                        char orbSymbol = line.charAt(j);
-                        OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol(orbSymbol);
-                        if(orbEnum==null) orbArray[i][j] = NULL;
-                        else orbArray[i][j] = new Orb(orbEnum,i,j,Orb.BubbleAnimationType.STATIC);
-                    }
-                    // if the input line was too short to fill the entire puzzle line, fill in the rest of the line with NULL orbs:
-                    for(/*j is already set*/; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                        orbArray[i][j] = NULL;
-                    }
-                }
-                // fill the rest of the orb array with NULL orbs:
-                for(/*i is already set*/; i<ARRAY_HEIGHT; i++){
-                    for(j=0; j<ARRAY_WIDTH_PER_CHARACTER; j++){
-                        orbArray[i][j] = NULL;
-                    }
-                }
-            } catch(IOException e){
-                e.printStackTrace();
-            }
-        }
-    }
 
     // Called from GameScene only
     void updatePlayer(PlayerData playerData, boolean isHost){
@@ -242,16 +162,8 @@ public class PlayPanel extends Pane {
             }
             player.updateWithSetters(playerData, player instanceof LocalPlayer);
         }
-
-
-        //ToDo: check for team victory/defeat conditions, here.
     }
 
-    /*public void fireCannon(Player player, double angle){
-        Orb firedOrb = player.changeFireCannon(angle); // This will update the playerData model
-        playPanelData.getShootingOrbs().add(firedOrb); // updates playPanelData model
-        // Note: the view gets updated during the repaint() method, which is called 24 frames/sec.
-    }*/
 
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
     void tick(){
@@ -262,12 +174,10 @@ public class PlayPanel extends Pane {
         List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes();
         visualFlourishes.removeAll(flourishesToRemove);
 
-        // Advance shooting orbs deal with all their collisions:
+        // Advance shooting orbs and deal with all their collisions:
         List<Collision> orbsToSnap = advanceShootingOrbs(1/(double)ANIMATION_FRAME_RATE); // Updates model
         List<Orb> shootingOrbsToBurst = snapOrbs(orbsToSnap);
         List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, shootingOrbsToBurst);
-        //shootingOrbsToBurst.addAll(checkOverlaps(orbsToSnap)); // Todo: I'm pretty sure this line is completely superfluous now. Delete this eventually if there are no problems.
-
 
         // Advance the animation frame of existing bursting orbs, then burst new orbs:
         advanceBurstingOrbs();
@@ -287,7 +197,7 @@ public class PlayPanel extends Pane {
         // Advance existing dropping orbs:
         List<Orb> orbsToTransfer = advanceDroppingOrbs();
         playPanelData.getDroppingOrbs().removeAll(orbsToTransfer);
-        playPanelData.changeAddTransferOutOrbs(orbsToTransfer); // Note: the transferOutOrbs list will get cleared before the end of this frame.
+        playPanelData.changeAddTransferOutOrbs(orbsToTransfer); // Note: the transferOutOrbs list will get cleared before the end of this frame, in GameScene.tick().
         List<Orb> orbsToTransferCopy = new LinkedList<>();
         for(Orb orb : orbsToTransfer){ // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
             Orb orbCopy = new Orb(orb.getOrbEnum(), 0,0, Orb.BubbleAnimationType.THUNDERING);
@@ -313,7 +223,13 @@ public class PlayPanel extends Pane {
         if(playPanelData.getShotsUntilNewRow()==1){
             if(rumbleSoundEffect==null) rumbleSoundEffect = SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
         }
-        if(playPanelData.getShotsUntilNewRow()<=0) addNewRow();
+        if(playPanelData.getShotsUntilNewRow()<=0){
+            playPanelData.addNewRow();
+            // stop the rumble sound effect and play a thunderclap:
+            SoundManager.stopLoopingSoundEffect(rumbleSoundEffect);
+            rumbleSoundEffect = null;
+            SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
+        }
 
         // Advance the transfer orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
@@ -569,14 +485,22 @@ public class PlayPanel extends Pane {
             }
 
             // If the i coordinate is below the bottom of the array, then put the orb on the deathOrbs list.
-            if(iSnap == PlayPanelData.ARRAY_HEIGHT){
-                playPanelData.getDeathOrbs().add(snap.shooterOrb);
-                snap.shooterOrb.setIJ(iSnap, jSnap);
-                SoundManager.playSoundEffect(SoundEffect.PLACEMENT);
+            if(playPanelData.validDeathOrbsCoordinates(new PointInt(iSnap, jSnap))){
+                // If s-s collisions are turned off, it is possible for two shooter orbs to try to snap to the same location
+                // on the deathOrbs array. If that's the case, then burst the second orb that attempts to snap
+                if(playPanelData.getDeathOrbs()[jSnap] != NULL){
+                    orbsToBurst.add(snap.shooterOrb);
+                    System.out.println("Two orbs attempted to snap to the same deathOrbs index. Bursting second orb");
+                }
+                else{
+                    playPanelData.getDeathOrbs()[jSnap] = snap.shooterOrb;
+                    snap.shooterOrb.setIJ(iSnap, jSnap);
+                    SoundManager.playSoundEffect(SoundEffect.PLACEMENT);
+                }
             }
             // If the snap coordinates are somehow off the edge of the array in a different fashion, then just burst
             // the orb. This should never happen, but... you never know.
-            else if(!playPanelData.validCoordinates(new PointInt(iSnap, jSnap))){
+            else if(!playPanelData.validOrbArrayCoordinates(new PointInt(iSnap, jSnap))){
                 System.err.println("Invalid snap coordinates detected. Bursting orb.");
                 orbsToBurst.add(snap.shooterOrb);
             }
@@ -584,7 +508,7 @@ public class PlayPanel extends Pane {
             // If that's the case, then burst the second orb that attempts to snap.
             else if(playPanelData.getOrbArray()[iSnap][jSnap] != NULL){
                 orbsToBurst.add(snap.shooterOrb);
-                System.err.println("OH, SNAP!!!!");
+                System.out.println("Two orbs attempted to snap to the same orbArray coordinate. Bursting second orb");
             }
             else{
                 playPanelData.getOrbArray()[iSnap][jSnap] = snap.shooterOrb;
@@ -595,22 +519,6 @@ public class PlayPanel extends Pane {
 
             // Remove the shooting orb from the shootingOrbs list
             playPanelData.getShootingOrbs().remove(snap.shooterOrb);
-        }
-
-        return orbsToBurst;
-    }
-
-    // Check to see whether any shooting orbs now overlap any orbs that were snapped during this frame. If so, burst
-    // them.
-    private List<Orb> checkOverlaps(List<Collision> recentlySnappedOrbs){
-        List<Orb> orbsToBurst = new LinkedList<>();
-
-        for(Orb orb : playPanelData.getShootingOrbs()){
-            for(Collision collision : recentlySnappedOrbs){
-                if(orb.computeSquareDistance(collision.shooterOrb) < 4*ORB_RADIUS*ORB_RADIUS){
-                    orbsToBurst.add(orb);
-                }
-            }
         }
 
         return orbsToBurst;
@@ -629,7 +537,7 @@ public class PlayPanel extends Pane {
             Point2D arrayOrbLoc = sourceOrb.xyToIj();
             int i = (int)Math.round(arrayOrbLoc.getX());
             int j = (int)Math.round(arrayOrbLoc.getY());
-            //if(!playPanelData.validCoordinates(new PointInt(i,j))) continue;
+            //if(!playPanelData.validOrbArrayCoordinates(new PointInt(i,j))) continue;
 
             // find all connected orbs of the same color
             List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), PlayPanelData.FilterOption.SAME_COLOR);
@@ -780,59 +688,6 @@ public class PlayPanel extends Pane {
         return orbsToRemove;
     }
 
-    private void addNewRow(){
-        System.out.println("ADDING NEW ROW");
-
-        Orb[][] orbArray = playPanelData.getOrbArray();
-        // Move the existing array down 1 index:
-        int i = orbArray.length-1;
-        for(int j=0; j<orbArray[i].length; j++){
-            if(orbArray[i][j]!=NULL){
-                System.out.println("This team has lost");
-                //Todo: move these orbs down 1 level manually. Maybe add them to a deathOrbs list
-            }
-        }
-        for(i=orbArray.length-2; i>=0; i--){
-            for(int j=0; j<orbArray[i].length; j++){
-                if(orbArray[i][j]!=NULL) orbArray[i][j].setIJ(i+1, j);
-                orbArray[i+1][j] = orbArray[i][j];
-            }
-        }
-
-        // Move all transferring orbs down 1 index:
-        for(Orb transferOrb : playPanelData.getTransferInOrbs()){
-            transferOrb.setIJ(transferOrb.getI()+1,transferOrb.getJ());
-        }
-
-        // Determine whether the new row has "odd" or "even" placement:
-        i = 1;
-        int newRowOffset = 0;
-        for(int j=0; j<orbArray[i].length; j++){
-            if(orbArray[i][j] != NULL){
-                newRowOffset = 1-j%2;
-                break;
-            }
-        }
-
-        // finally, add the new row
-        i = 0;
-        int orbEnumBound = OrbImages.values().length;
-        OrbImages[] orbImages = OrbImages.values();
-        for(int j=0; j<orbArray[i].length; j++){
-            if(j%2==newRowOffset){
-                int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
-                OrbImages orbImage = orbImages[randomOrdinal];
-                orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
-            }
-            else orbArray[i][j] = NULL;
-        }
-
-        // stop the rumble sound effect and play a thunderclap:
-        SoundManager.stopLoopingSoundEffect(rumbleSoundEffect);
-        rumbleSoundEffect = null;
-        SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
-    }
-
     // repaints all orbs and Character animations on the PlayPanel.
     private void repaint(){
         // Clear the canvas
@@ -857,10 +712,7 @@ public class PlayPanel extends Pane {
         Orb[][] orbArray = playPanelData.getOrbArray();
         for(int i=0; i<ARRAY_HEIGHT; ++i){
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                Orb orb = orbArray[i][j];
-                if(orb != NULL){
-                    orb.drawSelf(orbDrawer, vibrationOffset); // updates view
-                }
+                orbArray[i][j].drawSelf(orbDrawer, vibrationOffset);
             }
         }
 

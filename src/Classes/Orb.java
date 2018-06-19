@@ -117,6 +117,9 @@ public class Orb implements Serializable{
         xPos = ORB_RADIUS + ORB_RADIUS *(jPos);
         yPos = ORB_RADIUS + iPos*PlayPanel.ROW_HEIGHT;
     }
+    public void setCurrentFrame(int newIndex){
+        currentFrame = newIndex;
+    }
     public void computeTimeStamp(long timeLastPacketSent){
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
@@ -147,6 +150,9 @@ public class Orb implements Serializable{
     }
     public OrbImages getOrbEnum(){
         return orbEnum;
+    }
+    public int getCurrentFrame(){
+        return currentFrame;
     }
 
 
@@ -199,6 +205,7 @@ public class Orb implements Serializable{
     }
 
     public void drawSelf(GraphicsContext orbDrawer, double vibrationOffset){
+        if(this == NULL) return; // null orbs are not drawn.
         switch(animationEnum){
             case STATIC:
             case DROPPING:

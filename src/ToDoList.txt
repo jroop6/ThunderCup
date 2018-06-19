@@ -1,6 +1,6 @@
 -------Bugs-------
-change deathOrbs from a List to an array.
 fix multiplayer de-synch problems
+    I think part of the issue is that currentFrame is not being copied when Orbs are duplicated in methods like setOrbArray and setTransferInOrbs. Create a copy constructor for Orb that copies everything carefully.
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 
 -------important features-------
@@ -13,6 +13,7 @@ respond to defeat and victory conditions
 smarter bots
 
 -------moderate refactoring-------
+Consider using Orbs instead of PointInts for depth-first search and other related methods.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
 	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
 combine animation enums into 1 file instead of 3 (exception for orbImages)

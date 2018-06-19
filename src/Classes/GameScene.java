@@ -379,7 +379,7 @@ public class GameScene extends Scene {
 
             // Within each Packet, process PlayerData one at a time in order:
             PlayerData playerData = packet.popPlayerData();
-            do{
+            while(playerData!=null){
                 if(!gameData.getPause()){
                     // update the Player and his/her PlayPanel with the new playerData:
                     PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
@@ -390,7 +390,7 @@ public class GameScene extends Scene {
 
                 // Prepare for next iteration:
                 playerData = packet.popPlayerData();
-            } while(playerData!=null);
+            }
 
             // Now process the PlayPanelData one at a time in order. Note: this is mostly just a check for consistency.
             // Most of the time, this loop won't actually change anything. If desynchronization is detected between host
@@ -645,8 +645,8 @@ public class GameScene extends Scene {
                         toPlayPanel.changeAddTransferInOrbs(transferOutOrbs);
                     }
                 }
-                transferOutOrbs.clear();
             }
+            transferOutOrbs.clear();
         }
 
         // Todo: what if 2 players declare victory at the exact same time?
@@ -667,7 +667,7 @@ public class GameScene extends Scene {
 
         // check to see whether anybody's lost due to uncleared deathOrbs:
         for(PlayPanel playPanel : playPanelMap.values()){
-            if(!playPanel.getPlayPanelData().getDeathOrbs().isEmpty()){
+            if(!playPanel.getPlayPanelData().isDeathOrbsEmpty()){
                 for(Player defeatedPlayer : playPanel.getPlayerList()){
                     defeatedPlayer.resignPlayer();
                 }
