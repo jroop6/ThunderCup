@@ -127,7 +127,10 @@ public class PlayPanelData implements Serializable {
         transferOutOrbs.addAll(newTransferOrbs);
         transferOutOrbsChanged = true;
     }
-    public void changeAddTransferInOrbs(List<Orb> newTransferOrbs, Random miscRandomGenerator){
+    public void changeAddTransferInOrbs(List<Orb> transferOutOrbs, Random miscRandomGenerator){
+        // Make a deep copy of the orbs to be transferred. We can't place the same orb instance in 2 PlayPanels
+        List<Orb> newTransferOrbs = deepCopyOrbList(transferOutOrbs);
+
         // The new transfer orbs need to be placed appropriately. Find open, connected spots:
         int offset = 0;
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
@@ -401,7 +404,7 @@ public class PlayPanelData implements Serializable {
                             }
                             break;
                         case SAME_COLOR:
-                            Orb sourceOrb = NULL; // needs to be initialized to satisfy compiler.
+                            Orb sourceOrb;
                             if(validDeathOrbsCoordinates(source)){
                                 sourceOrb = deathOrbs[source.j];
                             }

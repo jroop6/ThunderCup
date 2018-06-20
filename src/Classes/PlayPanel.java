@@ -1,6 +1,7 @@
 package Classes;
 
 import Classes.Animation.MiscAnimations;
+import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Animation.OrbImages;
@@ -12,6 +13,7 @@ import Classes.PlayerTypes.Player;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
@@ -213,7 +215,7 @@ public class PlayPanel extends Pane {
             SoundManager.playSoundEffect(SoundEffect.DROP);
             for(PointInt orbToDrop : orbsToDrop){
                 Orb orb = playPanelData.getOrbArray()[orbToDrop.i][orbToDrop.j];
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos()));
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
             }
             playPanelData.changeDropArrayOrbs(orbsToDrop);
         }
@@ -555,7 +557,7 @@ public class PlayPanel extends Pane {
                 for(int k=0; k<numTransferOrbs; k++){
                     PointInt point = connectedOrbs.get(k);
                     Orb orb = orbArray[point.i][point.j];
-                    visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos()));
+                    visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
                     SoundManager.playSoundEffect(SoundEffect.DROP);
                 }
             }
@@ -617,8 +619,13 @@ public class PlayPanel extends Pane {
         List<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
         List<Orb> transferOrbsToSnap = new LinkedList<>();
         for(Orb orb : transferInOrbs){
+            if(playPanelData.getTeam()==2) System.out.println("ticking a transfer orb with animationEnum " + orb.getAnimationEnum());
             if (orb.animationTick()){
+                if(playPanelData.getTeam()==2) System.out.println("tick returned true. animationEnum is now " + orb.getAnimationEnum());
                 transferOrbsToSnap.add(orb);
+            }
+            else {
+                if(playPanelData.getTeam()==2) System.out.println("tick returned false. animationEnum is still " + orb.getAnimationEnum());
             }
         }
         return transferOrbsToSnap;
@@ -655,7 +662,7 @@ public class PlayPanel extends Pane {
             if((!Collections.disjoint(neighbors,connectedOrbs) || orb.getI()==0) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
                 playSoundEffect = true;
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos()));
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), false));
             }
         }
 
@@ -746,8 +753,8 @@ public class PlayPanel extends Pane {
         return playPanelData;
     }
 
-    public void changeAddTransferInOrbs(List<Orb> transferInOrbs){
-        playPanelData.changeAddTransferInOrbs(transferInOrbs,randomTransferOrbGenerator);
+    public void changeAddTransferInOrbs(List<Orb> transferOutOrbs){
+        playPanelData.changeAddTransferInOrbs(transferOutOrbs,randomTransferOrbGenerator);
     }
 
     private class Collision{
@@ -765,6 +772,14 @@ public class PlayPanel extends Pane {
 
     public List<Player> getPlayerList(){
         return playerList;
+    }
+
+    public void displayVictoryResults(boolean victorious){
+        if(victorious){
+            visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
+            SoundManager.playSong(Music.GO_TAKE_FLIGHT);
+        }
+        else visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
     }
 
 }

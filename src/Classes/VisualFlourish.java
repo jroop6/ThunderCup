@@ -10,16 +10,25 @@ public class VisualFlourish {
     private double xPos;
     private double yPos;
     private MiscAnimations animationEnum;
+    private boolean sticky; // Should the last frame continue to be displayed when the animation is over?
 
-    public VisualFlourish(MiscAnimations animationEnum, double xPos, double yPos){
+    public VisualFlourish(MiscAnimations animationEnum, double xPos, double yPos, boolean sticky){
         this.animationEnum = animationEnum;
         this.xPos = xPos;
         this.yPos = yPos;
+        this.sticky = sticky;
     }
 
     public boolean animationTick(){
         currentFrame++;
-        return currentFrame > animationEnum.getSpriteSheet().getMaxFrameIndex();
+        if(currentFrame > animationEnum.getSpriteSheet().getMaxFrameIndex()){
+            if(sticky){
+                currentFrame = animationEnum.getSpriteSheet().getMaxFrameIndex();
+                return false;
+            }
+            else return true;
+        }
+        return false;
     }
 
     public void drawSelf(GraphicsContext orbDrawer){

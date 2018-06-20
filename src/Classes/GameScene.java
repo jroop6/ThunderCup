@@ -35,21 +35,28 @@ public class GameScene extends Scene {
     static final double GRAVITY = 1000.0; // pixels per second squared
     private final int SEED = 14; // todo: temporary seed value passed to each PlayPanel
 
-    private ConnectionManager connectionManager;
-    private boolean isHost;
-    private StackPane rootNode = new StackPane();
-    private GameData gameData = new GameData();
-    private LocalPlayer localPlayer;
+    // Fields related to layout:
+    private StackPane rootNode;
     private Scale scaler = new Scale(1,1);
+
+    // Fields containing data, controllers, or mix of data and JavaFx nodes:
     private Map<Integer, PlayPanel> playPanelMap = new HashMap<>(); // For quick access to a PlayPanel using the team number
+    private GameData gameData = new GameData();
+    private ChatBox chatBox;
+    private LocalPlayer localPlayer;
     private List<Player> players;
     private int numPlayers;
-    private ChatBox chatBox;
+    private boolean gameComplete = false;
+
+    // Variables related to animation and timing:
+    private AnimationTimer animationTimer;
     private boolean initializing = true;
     static final int ANIMATION_FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds)
 
     // Variables related to network communications:
+    private ConnectionManager connectionManager;
+    private boolean isHost;
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent out (nanoseconds).
     private long nextSendInstance = 0; // The time at which the next packet will be sent (nanoseconds).
     private final long maxConsecutivePacketsMissed; // If this many packets are missed consecutively from a particular player, alert the user.
@@ -61,10 +68,9 @@ public class GameScene extends Scene {
     private int MSSCalls = 0;
     private long nextReport = 0; // The time at which miscellaneous debugging info will next be printed (nanoseconds).
 
+    // for pause menu
     private Rectangle pauseOverlay;
     private StackPane pauseMenu;
-
-    private AnimationTimer animationTimer;
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
     public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
@@ -209,7 +215,7 @@ public class GameScene extends Scene {
                     if(!gameData.getPause()){
                         // update each PlayPanel:
                         for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
-                        // process inter-PlayPanel events (namely, transferring orbs):
+                        // process inter-PlayPanel events (transferring orbs and determining victory/defeat):
                         tick();
                     }
                     nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
@@ -252,6 +258,7 @@ public class GameScene extends Scene {
             }
         };
         animationTimer.start();
+
     }
 
     private void processBots(){
@@ -634,7 +641,7 @@ public class GameScene extends Scene {
         return btn;
     }
 
-    // Called after every PlayPanel has tick()'ed. This method processes inter-PlayPanel and game-wide events.
+    // Called once after every PlayPanel has tick()'ed. This method processes inter-PlayPanel and game-wide events.
     private void tick(){
         // transfer the transferOutOrbs.
         for(PlayPanel fromPlayPanel : playPanelMap.values()){
@@ -654,13 +661,7 @@ public class GameScene extends Scene {
         for(PlayPanel playPanel : playPanelMap.values()){
             if(playPanel.getPlayPanelData().isVictoriousChanged()){
                 // Todo: host should check whether it's actually true.
-                // set defeated = true for all other players:
-                for(PlayPanel otherPlayPanel : playPanelMap.values()){
-                    if(otherPlayPanel == playPanel) continue;
-                    for(Player defeatedPlayer : otherPlayPanel.getPlayerList()){
-                        defeatedPlayer.resignPlayer();
-                    }
-                }
+                displayVictoryResults(playPanel.playPanelData.getTeam());
                 System.out.println("Hey, somebody won a quick victory!");
             }
         }
@@ -674,28 +675,57 @@ public class GameScene extends Scene {
             }
         }
 
-        // check to see whether there's only 1 live team left
-        int numLiveTeams = 0;
-        for(PlayPanel playPanel : playPanelMap.values()){
-            boolean alive = false;
-            for(Player player : playPanel.getPlayerList()){
-                if(!player.getPlayerData().getDefeated()){
-                    alive = true;
-                    break;
+        // In competitive multiplayer (or Vs Computer) games, check to see whether there's only 1 live team left
+        if(playPanelMap.values().size()>1){
+            int numLiveTeams = 0;
+            for(PlayPanel playPanel : playPanelMap.values()){
+                boolean alive = false;
+                for(Player player : playPanel.getPlayerList()){
+                    if(!player.getPlayerData().getDefeated()){
+                        alive = true;
+                        break;
+                    }
+                }
+                if(alive) numLiveTeams++;
+                if(numLiveTeams>1) break;
+            }
+            if(numLiveTeams==1){
+                System.out.println("There's only 1 team left. They've won the game!");
+                // Todo: the following for loop is nearly-duplicated code. There's got to be a better way of doing this.
+                for(PlayPanel playPanel : playPanelMap.values()){
+                    for(Player player : playPanel.getPlayerList()){
+                        if(!player.getPlayerData().getDefeated()){
+                            displayVictoryResults(playPanel.getPlayPanelData().getTeam());
+                            break;
+                        }
+                    }
                 }
             }
-            if(alive) numLiveTeams++;
-            if(numLiveTeams>1) break;
-        }
-        if(numLiveTeams==1){
-            System.out.println("There's only 1 team left. They've won the game!");
-        }
 
 
-        // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
-        if(numLiveTeams == 0){
-            System.out.println("WHOA!!! A tie!!!!");
+            // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
+            if(numLiveTeams == 0){
+                System.out.println("WHOA!!! A tie!!!!");
+            }
         }
+    }
+
+    private void displayVictoryResults(int victoriousTeam){
+        if(gameComplete) return; // to ensure this method only gets called once after a victory.
+
+        for(PlayPanel playPanel: playPanelMap.values()){
+            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam) playPanel.displayVictoryResults(true);
+            else {
+                // set defeated = true for all other players:
+                for(Player defeatedPlayer : playPanel.getPlayerList()){
+                    defeatedPlayer.resignPlayer();
+                }
+                playPanel.displayVictoryResults(false);
+            }
+        }
+
+        System.out.println("team " + victoriousTeam + " has won.");
+        gameComplete = true;
     }
 
 }

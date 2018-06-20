@@ -38,9 +38,9 @@ public class SpriteSheet extends Image {
     }
 
     /**
-     *  Constructor used for spritesheets whose frames are arranged on a regular grid. It is assumed that the sprites
-     *  are arranged in the order you would read English text (left to right, then top to bottom). Anchor points are
-     *  simply placed in the top-left corner of each frame.
+     * Deprecated Constructor used for spritesheets whose frames are arranged on a regular grid. It is assumed that the
+     *  sprites are arranged in the order you would read English text (left to right, then top to bottom). Anchor points
+     *  are simply placed in the top-left corner of each frame.
      * @param spriteSheetURL The URL of the image file containing the spritesheet.
      * @param frameWidth The width of a single sprite
      * @param frameHeight The height of a single sprite
@@ -83,10 +83,6 @@ public class SpriteSheet extends Image {
             e.printStackTrace();
         }
     }
-
-    /*public List<FrameBound> getFrameBounds(){
-        return frameBounds;
-    }*/
 
     public int getMaxFrameIndex(){
         return frameBounds.size()-1;

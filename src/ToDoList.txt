@@ -1,9 +1,10 @@
 -------Bugs-------
 fix multiplayer de-synch problems
-    transferInOrbs are not being put onto the orbArray nor being removed from the transferInOrbs list. debug the snapTransferOrbs method in PlayPanel
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
+If the same music is played in 2 scenes, don't restart the music when switching scenes.
 
 -------important features-------
+create a "lose" flourish for players who have lost.
 load manual puzzles
 implement the Vs Computer game mode
 when a game begins, the program should move the camera so that it is centered on your character and maybe have some visual flourish indicate which character is yours.
@@ -28,8 +29,10 @@ cannon moving parts have too small a hole - it is only 45 px wide instead of 46.
 add a progress bar at the top, indicating how many shots the player has left until a new row appears.
 Add a new feature/game mode - controlling multiple cannons.
 Make multiplayer games easier for non-techie people to set up.
+Display an error message if java fails to launch with sufficient memory for the game.
 
 -------cleanup and loose ends-------
+make all audio files .mp3
 replace i++ with ++i in for-loops (does this even make a difference in Java?)
 add links to CC licenses in credits for audio assets
     while I'm at it, make sure the audio credits are complete and correct.

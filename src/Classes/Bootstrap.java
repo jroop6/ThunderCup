@@ -14,7 +14,7 @@ import static Classes.GameSettings.LOWRES_MEMORY_CUTOFF;
 
 // todo: credit to Benjamin: http://www.silentsoftware.co.uk
 // todo: if launching the program completely fails, display a message to the user.
-// Ensures that the program is launching with enough memory, and redirects all output to a file.
+// Ensures that the program is launching with enough memory, and optionally redirects all output to a file.
 public class Bootstrap {
 
     private static final boolean logOutput = false;
