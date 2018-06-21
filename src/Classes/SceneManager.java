@@ -52,15 +52,16 @@ public class SceneManager extends Application {
         });
 
         //Adjust the stage size to fit the computer's primary screen nicely:
-        /* Fullscreen mode is annoying for development, so use these settings for now*/
         Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
+
+        /* Fullscreen mode is annoying for development, so use these settings for now*/
         primaryStage.setHeight(primaryScreenBounds.getHeight()*0.666);
         primaryStage.setWidth((primaryScreenBounds.getWidth())*0.666);
 
         /* Use these settings for the final release */
         /*primaryStage.setHeight(primaryScreenBounds.getHeight());
         primaryStage.setWidth((primaryScreenBounds.getWidth()));
-        primaryStage.setMaximized(true);
+        primaryStage.setMaximized(true); // to reduce the severity of flicker when switching scenes.
         primaryStage.setFullScreen(true);*/
 
         //Build and display the main menu:
@@ -100,15 +101,16 @@ public class SceneManager extends Application {
     public static void switchToMainMenu(){
         System.out.println("Building main menu scene...");
         setSceneWorkaround(new MainMenuScene());
-        SoundManager.playSong(Music.THE_PERFECT_STALLION);
+        SoundManager.playSong(Music.THE_PERFECT_STALLION, true);
     }
 
     // There is a bug in JavaFx where fullscreen mode is turned off whenever you call setScene. The only workaround I
     // know of is to immediately call setFullScreen afterwards. This unfortunately causes a flicker and the chrome is
     // visible for a moment. Oh well...
     private static void setSceneWorkaround(Scene nextScene){
+        boolean isFullScreen = primaryStage.isFullScreen();
         primaryStage.setScene(nextScene);
-        primaryStage.setFullScreen(primaryStage.isFullScreen());
+        primaryStage.setFullScreen(isFullScreen);
     }
 
     static void switchToPuzzleMode(){
@@ -127,7 +129,7 @@ public class SceneManager extends Application {
         System.out.println("entering puzzle selection mode...");
         PuzzleSelectionScene puzzleSelectionScene = new PuzzleSelectionScene();
         setSceneWorkaround(puzzleSelectionScene);
-        SoundManager.playSong(Music.THE_PERFECT_STALLION);
+        SoundManager.playSong(Music.THE_PERFECT_STALLION, true);
     }
 
     static void switchToMultiplayerMode(boolean isHost, String hostName, int port, String username){

@@ -13,7 +13,6 @@ import Classes.PlayerTypes.Player;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.media.MediaPlayer;
@@ -62,8 +61,8 @@ public class PlayPanel extends Pane {
     private List<VisualFlourish> visualFlourishes = new LinkedList<>();
 
     // For generating the puzzle and ammunition:
-    String puzzleUrl;
-    int seed;
+    private String puzzleUrl;
+    private int seed;
     private Random randomTransferOrbGenerator;
     private Random miscRandomGenerator = new Random();
 
@@ -123,6 +122,7 @@ public class PlayPanel extends Pane {
 
             // Inform the player where they are located in the playpanel and initialize the positions of the 1st two shooting orbs:
             player.getPlayerData().initializePlayerPos(i);
+            player.getPlayerData().positionAmmunitionOrbs();
         }
 
         // todo: temporary. Delete this eventually.
@@ -207,9 +207,8 @@ public class PlayPanel extends Pane {
         }
         playPanelData.setAddThunderOrbs(orbsToTransferCopy);
 
-        // Find floating orbs and drop them, adding visual flourishes. If there are no orbs connected to the ceiling, then this team has won.
+        // Find floating orbs and drop them, adding visual flourishes.
         Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(); // orbs that are connected to the ceiling.
-        if(connectedOrbs.isEmpty()) playPanelData.changeDeclareVictory();
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs);
         if(!orbsToDrop.isEmpty()){
             SoundManager.playSoundEffect(SoundEffect.DROP);
@@ -220,22 +219,41 @@ public class PlayPanel extends Pane {
             playPanelData.changeDropArrayOrbs(orbsToDrop);
         }
 
-        // If the player has fired a sufficient number of times, then add a new row of orbs:
-        playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
-        if(playPanelData.getShotsUntilNewRow()==1){
-            if(rumbleSoundEffect==null) rumbleSoundEffect = SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
-        }
-        if(playPanelData.getShotsUntilNewRow()<=0){
-            playPanelData.addNewRow();
-            // stop the rumble sound effect and play a thunderclap:
-            SoundManager.stopLoopingSoundEffect(rumbleSoundEffect);
-            rumbleSoundEffect = null;
-            SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
-        }
-
         // Advance the transfer orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
         snapTransferOrbs(transferOrbsToSnap);
+
+        // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
+        if(connectedOrbs.isEmpty()){
+            playPanelData.getShootingOrbs().clear();
+            if(puzzleUrl.substring(0,6).equals("RANDOM")){ // this was a random puzzle. Declare victory
+                playPanelData.changeDeclareVictory();
+            }
+            else{ // This was a pre-built puzzle. Load the next one, if there is one.
+                int currentIndex = Integer.parseInt(puzzleUrl.substring(puzzleUrl.length()-2,puzzleUrl.length()));
+                puzzleUrl = String.format("%s%02d",puzzleUrl.substring(0,puzzleUrl.length()-2),currentIndex+1);
+                if(!playPanelData.initializeOrbArray(puzzleUrl)){ // There was no next puzzle. Declare victory.
+                    playPanelData.changeDeclareVictory();
+                }
+                else{
+                    for(int i=0; i<playerList.size(); i++){
+                        Player player = playerList.get(i);
+                        player.readAmmunitionOrbs(puzzleUrl,seed,i);
+                        player.getPlayerData().positionAmmunitionOrbs();
+                    }
+                }
+            }
+        }
+
+        // If the player has fired a sufficient number of times, then add a new row of orbs:
+        playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
+        if(playPanelData.getShotsUntilNewRow()==1){
+            SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
+        }
+        if(playPanelData.getShotsUntilNewRow()<=0){
+            playPanelData.addNewRow();
+            SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
+        }
 
         removeStrayOrbs();
         repaint(); // Updates view
@@ -777,7 +795,7 @@ public class PlayPanel extends Pane {
     public void displayVictoryResults(boolean victorious){
         if(victorious){
             visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
-            SoundManager.playSong(Music.GO_TAKE_FLIGHT);
+            SoundManager.playSong(Music.GO_TAKE_FLIGHT, false);
         }
         else visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
     }

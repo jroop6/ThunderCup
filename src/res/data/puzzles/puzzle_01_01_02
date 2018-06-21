@@ -1,8 +1,9 @@
 ***PUZZLE***
-B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B 
- R R R R R R B R R R R R R R R R R R R R R B R R R R R R R R
-G G G G G G G B G G G G G G G G G G G G G G B G G G G G G G 
+B B B B B B G G G G B B B B B 
+ B G G G G B G G G B G G G G G
+B R R R R B R R R R B R R R R 
+   G G G     G G G     G G G  
 
 ***SHOOTER_ORBS***
-BBGRGRGBRGB
-BBGRGRGBRGB
+BBGRRGBRGRB
+

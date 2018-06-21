@@ -19,8 +19,8 @@ import java.util.Random;
  * can be removed from an enumeration without breaking code.
  */
 public class SoundManager {
-    public static double MUSIC_VOLUME = 0.5;
-    public static double SOUND_EFFECTS_VOLUME  = 1.0;
+    private static double MUSIC_VOLUME = 0.5;
+    private static double SOUND_EFFECTS_VOLUME  = 1.0;
 
     // Random number generator used for selecting random music:
     private static Random rand = new Random();
@@ -32,13 +32,15 @@ public class SoundManager {
 
     //TODO: handle audio files that did not load for some reason
     // Play any random background music except the one specified in the argument.
-    public static void playRandomSongs(Music notThisSong){
+    private static void playRandomSongs(Music notThisSong){
         if(muted) return;
         Music randomSong;
         do{
             randomSong = Music.values()[rand.nextInt(Music.values().length)];
         } while (!randomSong.isRandomBgMusic() && randomSong!=notThisSong);
-        playSong(randomSong);
+        playSong(randomSong, false);
+
+        // loop random songs
         final Music randomSongCopy = randomSong; // need a final instance for the lambda expression.
         randomSong.getMediaPlayer().setOnEndOfMedia(()-> SoundManager.playRandomSongs(randomSongCopy));
     }
@@ -48,12 +50,22 @@ public class SoundManager {
         playRandomSongs(null);
     }
 
-    public static void playSong(Music song){
-        stopMusic(); // stop any music that's already playing
+    public static void playSong(Music song, boolean loop){
+        if (currentMusic == song) return; // don't restart a song that's already playing
+        stopMusic(); // stop any other music that's already playing
         currentMusic = song;
         if(!muted){
             currentMusic.getMediaPlayer().setVolume(MUSIC_VOLUME);
             currentMusic.getMediaPlayer().play();
+        }
+
+        // loop the song
+        if(loop){
+            final Music songCopy = song; // need a final instance for the lambda expression.
+            songCopy.getMediaPlayer().setOnEndOfMedia(()-> {
+                songCopy.getMediaPlayer().stop();
+                songCopy.getMediaPlayer().play();
+            });
         }
     }
 
@@ -78,7 +90,7 @@ public class SoundManager {
         MediaPlayer mediaPlayer = playSoundEffect(soundEffect);
         if(mediaPlayer == null) return null;
         mediaPlayer.setOnEndOfMedia(()-> {
-            System.out.println("media has ended. loopForever = " + loopForever + " passed time(millis) = " +  (System.currentTimeMillis()-startTime));
+            //System.out.println("media has ended. loopForever = " + loopForever + " passed time(millis) = " +  (System.currentTimeMillis()-startTime));
             if(!loopForever && System.currentTimeMillis()-startTime > 60000){
                 System.err.println("IN HERE");
                 stopLoopingSoundEffect(mediaPlayer);
@@ -105,6 +117,13 @@ public class SoundManager {
             currentMusic.getMediaPlayer().setOnEndOfMedia(null); // remove any eventHandler
             currentMusic.getMediaPlayer().stop();
         }
+    }
+
+    public static void stopAllSoundEffects(){
+        for(MediaPlayer soundEffect : currentSoundEffects){
+            soundEffect.stop();
+        }
+        currentSoundEffects.clear();
     }
 
     public static void muteMusic(){

@@ -40,7 +40,7 @@ public class MainMenuScene extends Scene {
 
     // Some distance constants for the layout of the buttons (in unscaled pixels):
     private final int BUTTONS_VERTICAL_STARTING_POSITION = 460;
-    private final int BUTTONS_HORIZONTAL_STARTING_POSITION = 1560;
+    private final int BUTTONS_HORIZONTAL_STARTING_POSITION = 1480;
     private final int BUTTON_HEIGHT = 82;
     private final int EXIT_BUTTON_SEPARATION_DISTANCE = 30;
     private final String PROGRAMMER_WEBSITE_URL = "jonathanroop.wordpress.com";
@@ -145,7 +145,7 @@ public class MainMenuScene extends Scene {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 System.out.println("New width:  " + newValue);
-                scaleAssertionFromWidth = (double)newValue/1985.0;
+                scaleAssertionFromWidth = (double)newValue/1920.0;
                 scale();
             }
         });
@@ -153,7 +153,7 @@ public class MainMenuScene extends Scene {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 System.out.println("New height: " + newValue);
-                scaleAssertionFromHeight = (double)newValue/1060.0;
+                scaleAssertionFromHeight = (double)newValue/1080.0;
                 scale();
             }
         });
@@ -222,7 +222,7 @@ public class MainMenuScene extends Scene {
                 case RANDOM_PUZZLE:
                     System.out.println("clicked random puzzle mode");
                     animationTimer.stop();
-                    SceneManager.switchToPuzzleMode(-4);
+                    SceneManager.switchToPuzzleMode(-1);
                     break;
                 case MULTIPLAYER:
                     System.out.println("clicked multiplayer mode");
@@ -403,7 +403,7 @@ public class MainMenuScene extends Scene {
                 "For more works by AllLevelsAtOnce, please visit " + COMPOSER_WEBSITE_URL + "\n\n" +
                 "Sound effects were downloaded from freeSound.org and then modified. Many thanks \n" +
                 "to the original uploaders: Arctura, Figowitz, LittleRobotSoundFactory, Timbre,\n" +
-                "suntemple, Bykgames, suonho, and Benboncan. \n\n" +
+                "suntemple, Bykgames, suonho, Benboncan, and Komit. \n\n" +
                 "Disclaimer: Thunder Cup and its contributors are not affiliated with Hasbro or \n" +
                 "the My Little Pony brand. This game was created for the purpose of showcasing the \n" +
                 "programmer's Java coding ability and also as a labor of love for the incredible \n" +

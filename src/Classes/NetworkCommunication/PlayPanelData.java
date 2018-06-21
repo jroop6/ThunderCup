@@ -576,17 +576,17 @@ public class PlayPanelData implements Serializable {
 
     /*
      * Puzzles are organized into groups. Naming convention for puzzles:
-     *    puzzle_XX_YY_ZZ, where XX = group index, YY = individual index, and ZZ = number of players on the playpanel. Examples:
-     *    puzzle_01_01_01 - puzzle 1-1 for a single-player PlayPanel
-     *    puzzle_01_02_01 - puzzle 1-2 for a single-player PlayPanel
-     *    puzzle_01_01_03 - puzzle 1-1 for a three-player PlayPanel
+     *    puzzle_XX_YY_ZZ, where XX = number of players on the playpanel, YY = group index, and ZZ = individual index. Examples:
+     *    puzzle_01_01_01 - single-player PlayPanel, puzzle 1-1
+     *    puzzle_01_01_02 - single-player PlayPanel, puzzle 1-2
+     *    puzzle_03_01_01 - three-player PlayPanel, puzzle 1-1
      * After the puzzle, shooter orbs are specified for each player on a separate line.
      *
      * Alternatively, a random puzzle can be specified with the "url" RANDOM_#, where # = the desired number of rows in the puzzle. Examples:
      *    RANDOM_5 - a random puzzle with 5 rows
      *    RANDOM_17 - a random puzzle with 17 rows
      */
-    private void initializeOrbArray(String puzzleUrl){
+    public boolean initializeOrbArray(String puzzleUrl){
         if(puzzleUrl.substring(0,6).equals("RANDOM")){
             int rows = Integer.parseInt(puzzleUrl.substring(7));
             if(rows>19) rows = 19;
@@ -613,6 +613,7 @@ public class PlayPanelData implements Serializable {
             String line;
             try{
                 InputStream stream = getClass().getClassLoader().getResourceAsStream(puzzleUrl);
+                if(stream == null) return false;
                 BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 
                 // Discard the first line, which is just there for human-readability
@@ -639,10 +640,13 @@ public class PlayPanelData implements Serializable {
                         orbArray[i][j] = NULL;
                     }
                 }
+                reader.close();
+
             } catch(IOException e){
                 e.printStackTrace();
             }
         }
+        return true;
     }
 
     public void addNewRow(){

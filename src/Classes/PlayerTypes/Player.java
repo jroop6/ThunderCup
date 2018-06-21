@@ -300,8 +300,9 @@ public abstract class Player {
     // only a few orbs in the file, then add random Orbs to the ammunition until we have 10.
     public void readAmmunitionOrbs(String filename, int seed, int positionIndex){
         this.seed = seed;
-        ammunitionGenerator = new Random(seed);
+        if(ammunitionGenerator==null) ammunitionGenerator = new Random(seed);
         List<Orb> ammunitionOrbs = playerData.getAmmunition();
+        ammunitionOrbs.clear();
         if(!filename.substring(0,6).equals("RANDOM")){
             InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
             BufferedReader reader = new BufferedReader(new InputStreamReader(stream));

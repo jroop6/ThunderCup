@@ -110,12 +110,7 @@ public class PlayerData implements Serializable {
     // Called by the PlayPanel constructor
     public void initializePlayerPos(int playerPos){
         this.playerPos = playerPos;
-
-        // set the positions of the 1st and second shooting orbs for this player
-        getAmmunition().get(0).setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(0).setYPos(CANNON_Y_POS);
-        ammunitionOrbs.get(1).setXPos(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(1).setYPos(CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
+        positionAmmunitionOrbs();
     }
 
 
@@ -166,17 +161,22 @@ public class PlayerData implements Serializable {
         firedOrbs.add(firedOrb);
         firing = true;
 
-        // update the positions of the next 2 ammunition orbs
-        ammunitionOrbs.get(0).setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(0).setYPos(CANNON_Y_POS);
-        ammunitionOrbs.get(1).setXPos(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(1).setYPos(CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
+        positionAmmunitionOrbs();
 
         // Add a new ammunition orb to the end of the list
         OrbImages orbImage = OrbImages.values()[newOrdinal];
         ammunitionOrbs.add(new Orb(orbImage,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
 
         return firedOrb;
+    }
+
+    // set the positions of the 1st and second shooting orbs for this player
+    public void positionAmmunitionOrbs(){
+        // update the positions of the next 2 ammunition orbs
+        ammunitionOrbs.get(0).setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
+        ammunitionOrbs.get(0).setYPos(CANNON_Y_POS);
+        ammunitionOrbs.get(1).setXPos(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
+        ammunitionOrbs.get(1).setYPos(CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
     }
 
     public void changeFiringFlag(boolean firing){

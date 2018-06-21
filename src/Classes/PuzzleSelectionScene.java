@@ -5,6 +5,7 @@ import Classes.Images.ButtonImages;
 import Classes.Images.PuzzleSetSelectorImages;
 import Classes.Images.StaticBgImages;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
@@ -13,7 +14,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-import static javafx.scene.layout.AnchorPane.setLeftAnchor;
+import static javafx.scene.layout.AnchorPane.*;
 
 public class PuzzleSelectionScene extends Scene {
 
@@ -39,13 +40,16 @@ public class PuzzleSelectionScene extends Scene {
         HBox leftSideButtonsHolder = new HBox();
         leftSideButtonsHolder.setPickOnBounds(false);
         Button returnToMainMenu = createButton(ButtonImages.RETURN_TO_MAIN_MENU_HOST);
+        returnToMainMenu.setAlignment(Pos.CENTER_LEFT);
+        leftSideButtonsHolder.getChildren().add(returnToMainMenu);
         Button mute = createButton(ButtonImages.MUTE);
-        leftSideButtonsHolder.getChildren().addAll(returnToMainMenu, mute);
-        buttonHolder.getChildren().add(leftSideButtonsHolder);
+        buttonHolder.getChildren().addAll(leftSideButtonsHolder, mute);
         setLeftAnchor(leftSideButtonsHolder, 0.0);
+        /*setTopAnchor(leftSideButtonsHolder, 0.0);
+        setBottomAnchor(leftSideButtonsHolder, 0.0);*/
+        setRightAnchor(mute,0.0);
         buttonHolder.setBorder(new Border(new BorderStroke(Color.BLACK,BorderStrokeStyle.SOLID,new CornerRadii(0.0),new BorderWidths(2.0))));
         rootNode.getChildren().add(buttonHolder);
-
     }
 
 
@@ -100,8 +104,18 @@ public class PuzzleSelectionScene extends Scene {
         });
 
         // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> btn.setGraphic(selectedImage));
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> btn.setGraphic(unselectedImage));
+        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> {
+            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
+                btn.setGraphic(ButtonImages.MUTED.getSelectedImage());
+            }
+            else btn.setGraphic(selectedImage);
+        });
+        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> {
+            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
+                btn.setGraphic(ButtonImages.MUTED.getUnselectedImage());
+            }
+            else btn.setGraphic(unselectedImage);
+        });
 
         return btn;
     }

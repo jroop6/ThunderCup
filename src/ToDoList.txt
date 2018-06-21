@@ -1,9 +1,13 @@
 -------Bugs-------
 fix multiplayer de-synch problems
+    transferInOrbs eventually go out of synch every time.
+    sometimes it seems that the host doesn't pick up that a client has fired.
+    Some computers have a tough time hosting despite not using all their CPU power. What's the issue?
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 If the same music is played in 2 scenes, don't restart the music when switching scenes.
 
 -------important features-------
+new ammunition orb colors should somewhat match the orbs remaining on the board.
 create a "lose" flourish for players who have lost.
 load manual puzzles
 implement the Vs Computer game mode
@@ -14,6 +18,7 @@ respond to defeat and victory conditions
 smarter bots
 
 -------moderate refactoring-------
+There are several places where I have a createButton method that are all nearly identical. Consider putting it in a static utility class.
 use a hashmap for the transferInOrbs instead of a list, for easier consistency checking.
 Consider using Orbs instead of PointInts for depth-first search and other related methods.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
@@ -30,6 +35,8 @@ add a progress bar at the top, indicating how many shots the player has left unt
 Add a new feature/game mode - controlling multiple cannons.
 Make multiplayer games easier for non-techie people to set up.
 Display an error message if java fails to launch with sufficient memory for the game.
+background clouds on the main menu disappear a little too early.
+center the "Return to Main Menu" button in the PuzzleSelectionScene or make the mute button smaller.
 
 -------cleanup and loose ends-------
 make all audio files .mp3

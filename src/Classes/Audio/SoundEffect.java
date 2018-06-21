@@ -14,7 +14,8 @@ public enum SoundEffect{
     DROP("res/sound/soundEffects/drop.wav"),
     EXPLOSION("res/sound/soundEffects/explosion.wav"),
     ALMOST_NEW_ROW("res/sound/soundEffects/AlmostNewRow.wav"),
-    NEW_ROW("res/sound/soundEffects/NewRow.wav");
+    NEW_ROW("res/sound/soundEffects/NewRow.wav"),
+    VICTORY_FLOURISH("res/sound/soundEffects/victoryFlourish.wav");
 
     private String name;
 

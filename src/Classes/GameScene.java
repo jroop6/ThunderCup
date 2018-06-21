@@ -1,5 +1,7 @@
 package Classes;
 
+import Classes.Audio.SoundEffect;
+import Classes.Audio.SoundManager;
 import Classes.Images.ButtonImages;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
@@ -46,7 +48,13 @@ public class GameScene extends Scene {
     private LocalPlayer localPlayer;
     private List<Player> players;
     private int numPlayers;
-    private boolean gameComplete = false;
+    private int numPuzzles = 1;
+
+    // Variables related to displaying victory/defeat graphics:
+    private boolean victoryPauseStarted = false;
+    private boolean victoryDisplayStarted = false;
+    private long victoryTime = 0;
+    private int victoriousTeam;
 
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
@@ -101,15 +109,12 @@ public class GameScene extends Scene {
             missedPacketsCount.put(player.getPlayerData().getPlayerID(),0);
         }
 
-        // prepare the puzzle url string:
-        String puzzleURLbase = String.format("res/data/puzzles/puzzle_%02d_01_", puzzleGroupIndex);
-
         // Now create one PlayPanel for each team and assign its players:
         for (List<Player> playerList: teams.values()){
             int team = playerList.get(0).getPlayerData().getTeam();
             String puzzleURL;
             if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
-            else puzzleURL = String.format("%s%02d",puzzleURLbase,playerList.size());
+            else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01",playerList.size(),puzzleGroupIndex);
             System.out.println("puzzle url: " + puzzleURL);
             PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED,puzzleURL);
             playPanelMap.put(team,newPlayPanel);
@@ -661,7 +666,7 @@ public class GameScene extends Scene {
         for(PlayPanel playPanel : playPanelMap.values()){
             if(playPanel.getPlayPanelData().isVictoriousChanged()){
                 // Todo: host should check whether it's actually true.
-                displayVictoryResults(playPanel.playPanelData.getTeam());
+                startVictoryPause(playPanel.playPanelData.getTeam());
                 System.out.println("Hey, somebody won a quick victory!");
             }
         }
@@ -695,7 +700,7 @@ public class GameScene extends Scene {
                 for(PlayPanel playPanel : playPanelMap.values()){
                     for(Player player : playPanel.getPlayerList()){
                         if(!player.getPlayerData().getDefeated()){
-                            displayVictoryResults(playPanel.getPlayPanelData().getTeam());
+                            startVictoryPause(playPanel.playPanelData.getTeam());
                             break;
                         }
                     }
@@ -708,11 +713,27 @@ public class GameScene extends Scene {
                 System.out.println("WHOA!!! A tie!!!!");
             }
         }
+
+        // If someone has won, handle the delay before the victory graphics are actually displayed:
+        if(victoryPauseStarted && !victoryDisplayStarted){
+            if(((System.nanoTime() - victoryTime)/1000000000)>0.85) startVictoryDisplay(victoriousTeam);
+        }
+
+
     }
 
-    private void displayVictoryResults(int victoriousTeam){
-        if(gameComplete) return; // to ensure this method only gets called once after a victory.
+    private void startVictoryPause(int victoriousTeam){
+        if(victoryPauseStarted) return; // To ensure that the effects of this method are only applied once.
+        victoryTime = System.nanoTime();
+        this.victoriousTeam = victoriousTeam;
+        SoundManager.stopMusic();
+        SoundManager.stopAllSoundEffects();
+        SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
+        victoryPauseStarted = true;
+        System.out.println("team " + victoriousTeam + " has won.");
+    }
 
+    private void startVictoryDisplay(int victoriousTeam){
         for(PlayPanel playPanel: playPanelMap.values()){
             if(playPanel.getPlayPanelData().getTeam() == victoriousTeam) playPanel.displayVictoryResults(true);
             else {
@@ -723,9 +744,7 @@ public class GameScene extends Scene {
                 playPanel.displayVictoryResults(false);
             }
         }
-
-        System.out.println("team " + victoriousTeam + " has won.");
-        gameComplete = true;
+        victoryDisplayStarted = true;
     }
 
 }
@@ -767,3 +786,4 @@ enum LocationType {
         return separator;
     }
 }
+
