@@ -797,7 +797,7 @@ public class PlayPanel extends Pane {
             visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
             SoundManager.playSong(Music.GO_TAKE_FLIGHT, false);
         }
-        else visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
+        else visualFlourishes.add(new VisualFlourish(MiscAnimations.LOSE_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
     }
 
 }
