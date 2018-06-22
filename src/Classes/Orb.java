@@ -142,6 +142,9 @@ public class Orb implements Serializable{
     public void computeTimeStamp(long timeLastPacketSent){
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
+    public void setOrbEnum(OrbImages orbEnum){
+        this.orbEnum = orbEnum;
+    }
 
     public double getXPos(){
         return xPos;

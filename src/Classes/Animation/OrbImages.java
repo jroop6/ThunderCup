@@ -6,7 +6,6 @@ import Classes.SpriteSheet;
  * Note: Orbs are assumed to be 46 pixels in diameter. This cannot easily be changed.
  */
 public enum OrbImages {
-    //RED_ORB("res/images/orbs/highRes/redOrb_spritesheet.png", new int[]{1,23}, new int[]{24,57}, 720.0, 'R'),
     RED_ORB("res/images/orbs/highRes/redOrb_spritesheet.png", 720.0, 'R'),
     GREEN_ORB("res/images/orbs/highRes/greenOrb_spritesheet.png", 720.0, 'G'),
     BLUE_ORB("res/images/orbs/highRes/blueOrb_spritesheet.png", 720.0, 'B'),
@@ -30,7 +29,7 @@ public enum OrbImages {
     public double getOrbSpeed(){
         return orbSpeed;
     }
-    private char getSymbol(){
+    public char getSymbol(){
         return symbol;
     }
 
@@ -39,5 +38,17 @@ public enum OrbImages {
             if(orbImage.getSymbol()==symbol) return orbImage;
         }
         return null;
+    }
+
+    // Retrieves the next orb in the enumeration, or null if the end of the enumeration has been reached.
+    public OrbImages next(){
+        if(this.ordinal()+1==values().length) return null;
+        else return values()[(this.ordinal()+1)];
+    }
+
+    // Retrieves the previous orb in the enumeration, or null if the beginning of the enumeration has been reached.
+    public OrbImages previous(){
+        if(this.ordinal()==0) return null;
+        else return values()[(this.ordinal()-1)];
     }
 }

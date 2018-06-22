@@ -19,7 +19,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -39,7 +38,6 @@ public class GameScene extends Scene {
 
     // Fields related to layout:
     private StackPane rootNode;
-    private Scale scaler = new Scale(1,1);
 
     // Fields containing data, controllers, or mix of data and JavaFx nodes:
     private Map<Integer, PlayPanel> playPanelMap = new HashMap<>(); // For quick access to a PlayPanel using the team number
@@ -103,8 +101,7 @@ public class GameScene extends Scene {
                 teams.put(team,newTeam);
             }
 
-            // while we're here, check to see if this is the LocalPlayer. If so, initialize missedPacketsCount and add
-            // the mouseListener:
+            // while we're here, check to see if this is the LocalPlayer.
             if(player instanceof LocalPlayer) localPlayer = (LocalPlayer) player;
             missedPacketsCount.put(player.getPlayerData().getPlayerID(),0);
         }
@@ -154,14 +151,6 @@ public class GameScene extends Scene {
         });
         addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)->{
             localPlayer.pointCannon(event.getX(), event.getY());
-        });
-
-        // Make everything scale correctly when the window is resized:
-        rootNode.heightProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("New height of GameScene: " + newValue);
-            double scaleValue = (double)newValue/1080.0;
-            scaler.setX(scaleValue);
-            scaler.setY(scaleValue);
         });
 
         // Add keyboard listeners:
