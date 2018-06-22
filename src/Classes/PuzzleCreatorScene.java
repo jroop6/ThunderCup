@@ -7,16 +7,19 @@ import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 
+import java.util.Optional;
 
 import static Classes.GameScene.ANIMATION_FRAME_RATE;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
@@ -38,13 +41,16 @@ public class PuzzleCreatorScene extends Scene {
     private Canvas orbCanvas;
 
     PuzzleCreatorScene(int numPlayers){
-        super(new Pane());
-        Pane rootNode = (Pane)getRoot();
+        super(new AnchorPane());
+        AnchorPane rootNode = (AnchorPane)getRoot();
 
         // Give everything a nice background:
         ImageView nightSky = StaticBgImages.NIGHT_SKY.getImageView();
         rootNode.getChildren().add(nightSky);
-        //nightSky.fitHeightProperty().bind(rootNode.heightProperty());
+        AnchorPane.setBottomAnchor(nightSky,0.0);
+        AnchorPane.setTopAnchor(nightSky,0.0);
+        nightSky.setPreserveRatio(true);
+        nightSky.fitHeightProperty().bind(rootNode.heightProperty());
 
         // Most things are arranged on an HBox
         HBox hBox = new HBox();
@@ -85,14 +91,13 @@ public class PuzzleCreatorScene extends Scene {
             if(iPos>=orbArray.length || jPos>=ARRAY_WIDTH_PER_CHARACTER*numPlayers) return;
 
             // Change the OrbImage enum:
-            if(orbArray[iPos][jPos] == NULL);
-            else if(orbArray[iPos][jPos]==EMPTY){
+            if(orbArray[iPos][jPos]==EMPTY){
                 OrbImages newEnum;
                 if(event.isPrimaryButtonDown()) newEnum = OrbImages.values()[0]; // left-click
                 else newEnum = OrbImages.values()[OrbImages.values().length-1]; // right-click
                 orbArray[iPos][jPos] = new Orb(newEnum,iPos,jPos,Orb.BubbleAnimationType.STATIC);
             }
-            else{
+            else if(orbArray[iPos][jPos] != NULL){
                 OrbImages newEnum;
                 if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbEnum().next(); // left-click
                 else newEnum = orbArray[iPos][jPos].getOrbEnum().previous(); // right-click
@@ -132,8 +137,29 @@ public class PuzzleCreatorScene extends Scene {
         vBox.getChildren().addAll(generate,textArea);
         hBox.getChildren().add(vBox);
 
+        // There is another button that lets you start over:
+        Button reset = new Button("Start Over");
+        reset.setOnAction((event -> {
+            // Confirm that the user wishes to start over
+            Alert exitConfirmation = new Alert(Alert.AlertType.CONFIRMATION);
+            exitConfirmation.initOwner(PuzzleCreatorUtility.getPrimaryStage());
+            exitConfirmation.setTitle("Restart?");
+            exitConfirmation.setHeaderText("Are you sure you want to start over and erase your work?");
+            ButtonType cancel = new ButtonType("Cancel");
+            ButtonType yes = new ButtonType("Restart");
+            exitConfirmation.getButtonTypes().setAll(yes,cancel);
+            exitConfirmation.setGraphic(null);
+            Optional<ButtonType> result = exitConfirmation.showAndWait();
+            if(result.isPresent() && result.get() == yes) {
+                cleanUp();
+                // Ask the user how many players the new puzzle is for:
+                PuzzleCreatorUtility.askNumPlayers();
+            }
+        }));
+        vBox.getChildren().add(reset);
+
         // Make everything scale correctly when the window is resized:
-        rootNode.getTransforms().add(scaler);
+        hBox.getTransforms().add(scaler);
         rootNode.heightProperty().addListener((observable, oldValue, newValue) -> {
             System.out.println("New height of PuzzleCreatorScene: " + newValue);
             double scaleValue = (double)newValue/(orbCanvas.getHeight());
