@@ -4,7 +4,8 @@ import javafx.scene.image.ImageView;
 
 public enum PuzzleSetSelectorImages {
 
-    PUZZLE_SET_1("res/images/buttons/PUZZLE_SET_1.png","res/images/buttons/PUZZLE_SET_1_SEL.png",1);
+    PUZZLE_SET_1("res/images/buttons/PUZZLE_SET_1.png","res/images/buttons/PUZZLE_SET_1_SEL.png",1),
+    PUZZLE_SET_2("res/images/buttons/PUZZLE_SET_1.png","res/images/buttons/PUZZLE_SET_1_SEL.png",2);
 
 
     private String unselectedImageUrl;

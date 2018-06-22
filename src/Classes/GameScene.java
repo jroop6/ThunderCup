@@ -696,7 +696,6 @@ public class GameScene extends Scene {
                 }
             }
 
-
             // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
             if(numLiveTeams == 0){
                 System.out.println("WHOA!!! A tie!!!!");
@@ -707,8 +706,6 @@ public class GameScene extends Scene {
         if(victoryPauseStarted && !victoryDisplayStarted){
             if(((System.nanoTime() - victoryTime)/1000000000)>0.85) startVictoryDisplay(victoriousTeam);
         }
-
-
     }
 
     private void startVictoryPause(int victoriousTeam){
