@@ -37,7 +37,7 @@ public class SoundManager {
         Music randomSong;
         do{
             randomSong = Music.values()[rand.nextInt(Music.values().length)];
-        } while (!randomSong.isRandomBgMusic() && randomSong!=notThisSong);
+        } while (!randomSong.isRandomBgMusic() || randomSong==notThisSong);
         playSong(randomSong, false);
 
         // loop random songs
