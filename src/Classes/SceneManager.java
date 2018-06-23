@@ -84,7 +84,7 @@ public class SceneManager extends Application {
         Optional<ButtonType> result = closeConfirmation.showAndWait();
         if(result.isPresent()) {
             if (result.get() == yes) {
-                SoundManager.stopMusic();
+                SoundManager.silenceMusic();
                 Scene currentScene = primaryStage.getScene();
                 if(currentScene.getClass() == MultiplayerSelectionScene.class){
                     ((MultiplayerSelectionScene)currentScene).cleanUp();
@@ -137,7 +137,7 @@ public class SceneManager extends Application {
         MultiplayerSelectionScene multiplayerSelectionScene = new MultiplayerSelectionScene(isHost, username, hostName, port);
         if(multiplayerSelectionScene.isConnected()){
             setSceneWorkaround(multiplayerSelectionScene);
-            SoundManager.stopMusic();
+            SoundManager.silenceMusic();
         }
     }
 

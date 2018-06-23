@@ -179,7 +179,9 @@ public class PlayPanel extends Pane {
         // Advance shooting orbs and deal with all their collisions:
         List<Collision> orbsToSnap = advanceShootingOrbs(1/(double)ANIMATION_FRAME_RATE); // Updates model
         List<Orb> shootingOrbsToBurst = snapOrbs(orbsToSnap);
-        List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, shootingOrbsToBurst);
+        boolean[] playDropSound = new boolean[1];
+        playDropSound[0] = false; // findPatternCompletions will make this value true if appropriate
+        List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, shootingOrbsToBurst, playDropSound);
 
         // Advance the animation frame of existing bursting orbs, then burst new orbs:
         advanceBurstingOrbs();
@@ -211,7 +213,7 @@ public class PlayPanel extends Pane {
         Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(); // orbs that are connected to the ceiling.
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs);
         if(!orbsToDrop.isEmpty()){
-            SoundManager.playSoundEffect(SoundEffect.DROP);
+            playDropSound[0] = true;
             for(PointInt orbToDrop : orbsToDrop){
                 Orb orb = playPanelData.getOrbArray()[orbToDrop.i][orbToDrop.j];
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
@@ -222,6 +224,11 @@ public class PlayPanel extends Pane {
         // Advance the transfer orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
         snapTransferOrbs(transferOrbsToSnap);
+
+        // If the player dropped any orbs or burst a sufficient number of orbs, play the Drop sound effect:
+        if(playDropSound[0]){
+            SoundManager.playSoundEffect(SoundEffect.DROP);
+        }
 
         // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
         if(connectedOrbs.isEmpty()){
@@ -544,7 +551,7 @@ public class PlayPanel extends Pane {
         return orbsToBurst;
     }
 
-    private List<PointInt> findPatternCompletions(List<Collision> orbsToSnap, List<Orb> shootingOrbsToBurst){
+    private List<PointInt> findPatternCompletions(List<Collision> orbsToSnap, List<Orb> shootingOrbsToBurst, boolean[] playDropSound){
 
         List<PointInt> arrayOrbsToBurst = new LinkedList<>();
         List<Orb> transferOutOrbs = playPanelData.getTransferOutOrbs();
@@ -565,6 +572,7 @@ public class PlayPanel extends Pane {
 
             // If there are more than 3 grouped together, then add a transfer out orb of the same color, as well as a visual flourish:
             if(connectedOrbs.size() > 3) {
+                playDropSound[0] = true;
                 int numTransferOrbs = (connectedOrbs.size()-3)/2;
                 OrbImages orbEnum = sourceOrb.getOrbEnum();
                 for(int k=0; k<numTransferOrbs; k++){
@@ -576,7 +584,6 @@ public class PlayPanel extends Pane {
                     PointInt point = connectedOrbs.get(k);
                     Orb orb = orbArray[point.i][point.j];
                     visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
-                    SoundManager.playSoundEffect(SoundEffect.DROP);
                 }
             }
         }

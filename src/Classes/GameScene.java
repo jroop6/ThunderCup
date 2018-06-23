@@ -712,8 +712,8 @@ public class GameScene extends Scene {
         if(victoryPauseStarted) return; // To ensure that the effects of this method are only applied once.
         victoryTime = System.nanoTime();
         this.victoriousTeam = victoriousTeam;
-        SoundManager.stopMusic();
-        SoundManager.stopAllSoundEffects();
+        SoundManager.silenceMusic();
+        SoundManager.silenceAllSoundEffects();
         SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
         victoryPauseStarted = true;
         System.out.println("team " + victoriousTeam + " has won.");

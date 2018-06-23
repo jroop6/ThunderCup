@@ -30,6 +30,8 @@ public class SoundManager {
     private static Music currentMusic;
     private static List<MediaPlayer> currentSoundEffects = new LinkedList<>();
 
+    // A cached instance of the Victory sound effect
+
     //TODO: handle audio files that did not load for some reason
     // Play any random background music except the one specified in the argument.
     private static void playRandomSongs(Music notThisSong){
@@ -51,10 +53,13 @@ public class SoundManager {
     }
 
     public static void playSong(Music song, boolean loop){
-        if (currentMusic == song) return; // don't restart a song that's already playing
-        stopMusic(); // stop any other music that's already playing
+        if (currentMusic == song && Math.abs(currentMusic.getMediaPlayer().getVolume()-MUSIC_VOLUME)<0.001){
+            return; // don't restart a song that's already playing
+        }
+        silenceMusic(); // stop any other music that's already playing
         currentMusic = song;
         if(!muted){
+            currentMusic.getMediaPlayer().seek(Duration.ZERO); // go back to the beginning of the song, in case we're not already there.
             currentMusic.getMediaPlayer().setVolume(MUSIC_VOLUME);
             currentMusic.getMediaPlayer().play();
         }
@@ -63,7 +68,7 @@ public class SoundManager {
         if(loop){
             final Music songCopy = song; // need a final instance for the lambda expression.
             songCopy.getMediaPlayer().setOnEndOfMedia(()-> {
-                songCopy.getMediaPlayer().stop();
+                songCopy.getMediaPlayer().seek(Duration.ZERO);
                 songCopy.getMediaPlayer().play();
             });
         }
@@ -107,7 +112,7 @@ public class SoundManager {
 
     public static void stopLoopingSoundEffect(MediaPlayer mediaPlayerToStop){
         if(mediaPlayerToStop==null) return;
-        mediaPlayerToStop.stop();
+        mediaPlayerToStop.setVolume(0.0);
         currentSoundEffects.remove(mediaPlayerToStop);
         System.out.println("removing looping sound effect");
     }
@@ -119,11 +124,24 @@ public class SoundManager {
         }
     }
 
-    public static void stopAllSoundEffects(){
-        for(MediaPlayer soundEffect : currentSoundEffects){
-            soundEffect.stop();
+    // A quicker way to "stop" the music. It doesn't actually stop playing, but it's volume is set to 0. If the track is
+    // ever played again, playSong() will set the volume back to MUSIC_VOLUME.
+    public static void silenceMusic(){
+        if(currentMusic != null){
+            currentMusic.getMediaPlayer().setVolume(0.0);
+            currentMusic.getMediaPlayer().setOnEndOfMedia(null); //
         }
-        currentSoundEffects.clear();
+    }
+
+    // Sets the volume of all current sound effects to zero. The sound effects are not removed from the
+    // currentSoundEffects list right away, but will eventually be removed via their setOnEndOfMedia listeners (see
+    // playSoundEffect()). Note: the original solution used soundEffect.stop() on all sounds followed by
+    // currentSoundEffects.clear(), but this caused a few frames to be dropped (I guess stopping a MediaPlayer is a lot
+    // of work?).
+    public static void silenceAllSoundEffects(){
+        for(MediaPlayer soundEffect : currentSoundEffects){
+            soundEffect.setVolume(0.0);
+        }
     }
 
     public static void muteMusic(){
@@ -151,5 +169,4 @@ public class SoundManager {
             soundEffect.setVolume(newVolume);
         }
     }
-
 }
