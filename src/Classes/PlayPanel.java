@@ -262,6 +262,13 @@ public class PlayPanel extends Pane {
             SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
         }
 
+        // check to see whether this team has lost due to uncleared deathOrbs:
+        if(!getPlayPanelData().isDeathOrbsEmpty()){
+            for(Player defeatedPlayer : getPlayerList()){
+                defeatedPlayer.resignPlayer();
+            }
+        }
+
         removeStrayOrbs();
         repaint(); // Updates view
     }

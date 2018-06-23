@@ -19,6 +19,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -46,7 +47,6 @@ public class GameScene extends Scene {
     private LocalPlayer localPlayer;
     private List<Player> players;
     private int numPlayers;
-    private int numPuzzles = 1;
 
     // Variables related to displaying victory/defeat graphics:
     private boolean victoryPauseStarted = false;
@@ -208,7 +208,9 @@ public class GameScene extends Scene {
                 if(now>nextAnimationFrameInstance){
                     if(!gameData.getPause()){
                         // update each PlayPanel:
-                        for(PlayPanel playPanel: playPanelMap.values()) playPanel.tick();
+                        for(PlayPanel playPanel: playPanelMap.values()){
+                            playPanel.tick();
+                        }
                         // process inter-PlayPanel events (transferring orbs and determining victory/defeat):
                         tick();
                     }
@@ -591,6 +593,41 @@ public class GameScene extends Scene {
         return pauseMenu;
     }
 
+    private StackPane createPuzzleCompleteMenu(){
+        // The root of the pause menu is a stackPane:
+        StackPane puzzleCompleteMenu = new StackPane();
+
+        // Get the pause menu background:
+        ImageView background = StaticBgImages.PUZZLE_COMPLETE.getImageView();
+        puzzleCompleteMenu.getChildren().add(background);
+
+        // place the title and buttons:
+        VBox buttonsHolder = new VBox();
+        buttonsHolder.setAlignment(Pos.CENTER);
+        buttonsHolder.setSpacing(3.0);
+        Rectangle spacer = new Rectangle(1,100); // Spacer so that the buttons and text don't run into the title
+        Label statistics = new Label("total orbs fired: " + 0); //todo: keep track of the number of orbs fired
+        statistics.setFont(new Font(32));
+        Button returnToMain = createButton(ButtonImages.RETURN_TO_MAIN_MENU_HOST);
+        buttonsHolder.getChildren().addAll(spacer, statistics, returnToMain);
+        puzzleCompleteMenu.getChildren().add(buttonsHolder);
+
+        /*// Make everything scale correctly when the window is resized:
+        buttonsHolder.getTransforms().add(scaler);
+        background.getTransforms().add(scaler);*/
+
+        return puzzleCompleteMenu;
+    }
+
+    // Todo: implement this.
+    private StackPane createVictoryMenu(){
+        return createPuzzleCompleteMenu();
+    }
+
+    // Todo: implement this.
+    private StackPane createDefeatMenu(){
+        return createPuzzleCompleteMenu();
+    }
 
     private Button createButton(ButtonImages buttonEnum){
         Button btn = new Button();
@@ -625,6 +662,10 @@ public class GameScene extends Scene {
                     //removePauseMenu();
                     gameData.changePause(false);
                     break;
+                case RETURN_TO_MAIN_MENU_HOST:
+                    System.out.println("We're done!");
+                    cleanUp();
+                    SceneManager.switchToMainMenu();
             }
         });
 
@@ -651,21 +692,12 @@ public class GameScene extends Scene {
         }
 
         // Todo: what if 2 players declare victory at the exact same time?
-        // check to see whether anybody's won a quick victory by clearing their playpanel:
+        // check to see whether anybody's won a quick victory by clearing their PlayPanel:
         for(PlayPanel playPanel : playPanelMap.values()){
             if(playPanel.getPlayPanelData().isVictoriousChanged()){
                 // Todo: host should check whether it's actually true.
                 startVictoryPause(playPanel.playPanelData.getTeam());
                 System.out.println("Hey, somebody won a quick victory!");
-            }
-        }
-
-        // check to see whether anybody's lost due to uncleared deathOrbs:
-        for(PlayPanel playPanel : playPanelMap.values()){
-            if(!playPanel.getPlayPanelData().isDeathOrbsEmpty()){
-                for(Player defeatedPlayer : playPanel.getPlayerList()){
-                    defeatedPlayer.resignPlayer();
-                }
             }
         }
 
@@ -731,6 +763,23 @@ public class GameScene extends Scene {
             }
         }
         victoryDisplayStarted = true;
+
+        StackPane gameOverMenu;
+        if(playPanelMap.values().size()==1){ // This was a puzzle game.
+            // Congratulate the player and tell him/her how many shots they fired:
+            gameOverMenu = createPuzzleCompleteMenu();
+        }
+        else if(localPlayer.getPlayerData().getTeam()==victoriousTeam){ // This was a competitive game, and the local player won
+            // Congratulate the player and tell him/her various statistic about the game:
+            gameOverMenu = createVictoryMenu();
+        }
+        else { // This was a competitive game, and the local player lost
+            // Inform the player that he/she lost, and tell him/her various statistics about the game:
+            gameOverMenu = createDefeatMenu();
+        }
+        rootNode.getChildren().add(gameOverMenu);
+
+
     }
 
 }

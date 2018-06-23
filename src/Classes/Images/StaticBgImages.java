@@ -37,7 +37,8 @@ public enum StaticBgImages {
     PLAYPANEL_NIGHTSKY_BACKGROUND_CLOUDS("res/images/backgrounds/PlayPanelNightSkyBackgroundClouds.png"),
     PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS("res/images/backgrounds/PlayPanelNightSkyForegroundClouds.png"),
     PLAYPANEL_NIGHTSKY_SEPARATOR("res/images/backgrounds/PlayPanelNightSkySeparator.png"),
-    GAME_PAUSED("res/images/backgrounds/GamePaused.png");
+    GAME_PAUSED("res/images/backgrounds/GamePaused.png"),
+    PUZZLE_COMPLETE("res/images/backgrounds/GamePaused.png"); // todo: update this last one.
 
     Image image;
 
