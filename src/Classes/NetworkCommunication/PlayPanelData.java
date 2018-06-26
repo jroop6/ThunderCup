@@ -1,6 +1,8 @@
 package Classes.NetworkCommunication;
 
 import Classes.Animation.OrbImages;
+import Classes.Audio.SoundEffect;
+import Classes.Audio.SoundManager;
 import Classes.Orb;
 import Classes.PointInt;
 
@@ -17,7 +19,7 @@ public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
-    public static final int SHOTS_BETWEEN_DROPS = 999; // After the player shoots this many times, a new row of orbs appears at the top.
+    public static final int SHOTS_BETWEEN_DROPS = 999*ARRAY_WIDTH_PER_CHARACTER; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private Random randomPuzzleGenerator;
 
@@ -35,6 +37,13 @@ public class PlayPanelData implements Serializable {
     //Todo: make deathOrbs an array with width=PLAYPANLE_WIDTH_PER_PLAYER*numPlayers, for easier lookup by (i,j) coordinates
     private boolean victorious = false;
 
+    // cumulative data for this playpanel, for end-of-game statistics:
+    private int cumulativeShotsFired = 0; // involving all players of this playpanel.
+    private int cumulativeOrbsBurst = 0;
+    private int cumulativeOrbsTransferred = 0;
+    private int cumulativeOrbsDropped = 0;
+    private int largestGroupExplosion = 0;
+
     // Flags indicating a change in the data:
     private boolean orbArrayChanged = false;
     private boolean shootingOrbsChanged = false;
@@ -44,6 +53,7 @@ public class PlayPanelData implements Serializable {
     private boolean transferInOrbsChanged = false;
     private boolean deathOrbsChanged = false;
     private boolean victoriousChanged = false;
+    private boolean shotsFiredChanged = false;
 
     // Counter for how many frames the local orbArray data has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -121,10 +131,14 @@ public class PlayPanelData implements Serializable {
     /* Specialized Changers */
     public void changeAddShootingOrbs(Queue<Orb> newShootingOrbs){
         shootingOrbs.addAll(newShootingOrbs);
+        cumulativeShotsFired +=newShootingOrbs.size();
         shootingOrbsChanged = true;
+        shotsFiredChanged = true;
     }
     public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
         transferOutOrbs.addAll(newTransferOrbs);
+        cumulativeOrbsTransferred += newTransferOrbs.size();
+        System.out.println("transferring " + newTransferOrbs.size() + " orbs. New sum is " + cumulativeOrbsTransferred);
         transferOutOrbsChanged = true;
     }
     public void changeAddTransferInOrbs(List<Orb> transferOutOrbs, Random miscRandomGenerator){
@@ -196,6 +210,7 @@ public class PlayPanelData implements Serializable {
             orb.setAnimationEnum(Orb.BubbleAnimationType.IMPLODING);
             burstingOrbs.add(orb);
         }
+        cumulativeOrbsBurst += newBurstingOrbs.size();
         burstingOrbsChanged = true;
     }
     public void changeDropArrayOrbs(List<PointInt> newDroppingOrbs){
@@ -204,6 +219,8 @@ public class PlayPanelData implements Serializable {
             droppingOrbs.add(orb);
             orbArray[point.i][point.j] = NULL;
         }
+        cumulativeOrbsDropped += newDroppingOrbs.size();
+        System.out.println("dropping " + newDroppingOrbs.size() + " orbs");
         droppingOrbsChanged = true;
         orbArrayChanged = true;
     }
@@ -220,15 +237,14 @@ public class PlayPanelData implements Serializable {
 
     public void decrementShotsUntilNewRow(int amountToDecrement){
         shotsUntilNewRow-=amountToDecrement;
+        if(amountToDecrement>0 && shotsUntilNewRow==1) SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
     }
 
     /* Setters: These are called by clients when they are updating their data according to data from the host*/
     //ToDo: Do I really need these, or should I just use the copy constructor?
-    public void setAddShootingOrb(Orb newOrb){
-        shootingOrbs.add(newOrb);
-    }
     public void setAddShootingOrbs(Queue<Orb> newShootingOrbs){
         shootingOrbs.addAll(newShootingOrbs);
+        cumulativeShotsFired +=newShootingOrbs.size();
     }
     public void setAddDroppingOrb(Orb newOrb){
         droppingOrbs.add(newOrb);
@@ -269,7 +285,21 @@ public class PlayPanelData implements Serializable {
     public void setVictorious(boolean newVal){
         victorious = newVal;
     }
-
+    public void setCumulativeShotsFired(int newVal){
+        cumulativeShotsFired = newVal;
+    }
+    public void setCumulativeOrbsBurst(int newVal){
+        cumulativeOrbsBurst = newVal;
+    }
+    public void setCumulativeOrbsTransferred(int newVal){
+        cumulativeOrbsTransferred = newVal;
+    }
+    public void setCumulativeOrbsDropped(int newVal){
+        cumulativeOrbsDropped = newVal;
+    }
+    public void setLargestGroupExplosion(int newVal){
+        largestGroupExplosion = newVal;
+    }
 
     /* Change Getters: These are called to see whether the host has changed the data. They are always
      * called before retrieving their corresponding, actual Orb data. */
@@ -336,6 +366,22 @@ public class PlayPanelData implements Serializable {
     public boolean getVictorious(){
         return victorious;
     }
+    public int getCumulativeShotsFired(){
+        return cumulativeShotsFired;
+    }
+
+    public int getCumulativeOrbsBurst(){
+        return cumulativeOrbsBurst;
+    }
+    public int getCumulativeOrbsTransferred(){
+        return cumulativeOrbsTransferred;
+    }
+    public int getCumulativeOrbsDropped(){
+        return cumulativeOrbsDropped;
+    }
+    public int getLargestGroupExplosion(){
+        return largestGroupExplosion;
+    }
 
     public void resetFlags(){
         orbArrayChanged = false;
@@ -346,6 +392,7 @@ public class PlayPanelData implements Serializable {
         transferInOrbsChanged = false;
         deathOrbsChanged = false;
         victoriousChanged = false;
+        shotsFiredChanged = false;
     }
 
     // In one game tick, the following happens here:
@@ -545,7 +592,7 @@ public class PlayPanelData implements Serializable {
         else inconsistencyCounter = 0;
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE){
-            System.err.println("Client data is inconsistent with the host! overriding orbArray, shotsUntilNewRow, and transferInOrbs...");
+            System.err.println("Client data is inconsistent with the host! overriding client data...");
             setOrbArray(other.getOrbArray());
             setDeathOrbs(other.getDeathOrbs());
             setShotsUntilNewRow(other.getShotsUntilNewRow());
@@ -555,6 +602,11 @@ public class PlayPanelData implements Serializable {
             setOrbList(droppingOrbs, other.getDroppingOrbs());
             setOrbList(thunderOrbs, other.getThunderOrbs());
             setOrbList(transferOutOrbs, other.getTransferOutOrbs());
+            setCumulativeShotsFired(other.getCumulativeShotsFired());
+            setCumulativeOrbsBurst(other.getCumulativeOrbsBurst());
+            setCumulativeOrbsDropped(other.getCumulativeOrbsDropped());
+            setCumulativeOrbsTransferred(other.getCumulativeOrbsTransferred());
+            setLargestGroupExplosion(other.getLargestGroupExplosion());
             inconsistencyCounter = 0;
         }
     }
@@ -646,6 +698,7 @@ public class PlayPanelData implements Serializable {
                 e.printStackTrace();
             }
         }
+        shotsUntilNewRow = SHOTS_BETWEEN_DROPS;
         return true;
     }
 
@@ -657,7 +710,9 @@ public class PlayPanelData implements Serializable {
         for(int j=0; j<orbArray[i].length; j++){
             if(orbArray[i][j]!=NULL){
                 System.out.println("This team has lost");
-                //Todo: move these orbs down 1 level manually. Maybe add them to a deathOrbs list
+                orbArray[i][j].setIJ(i+1,j);
+                deathOrbs[j] = orbArray[i][j];
+                orbArray[i][j] = NULL;
             }
         }
         for(i=orbArray.length-2; i>=0; i--){

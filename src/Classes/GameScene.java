@@ -558,6 +558,7 @@ public class GameScene extends Scene {
     }
 
     // Overlays the Scene with a transparent black rectangle when the game is paused:
+    // todo: reduce the width of the pause overlay a little (and also set the width of the VBox in createPauseMenu to 1.0) so that the scroll buttons remain accessible.
     private Rectangle createPauseOverlay(){
         Rectangle pauseOverlay = new Rectangle();
         pauseOverlay.setFill(new Color(0,0,0,0.25));
@@ -593,42 +594,6 @@ public class GameScene extends Scene {
         return pauseMenu;
     }
 
-    private StackPane createPuzzleCompleteMenu(){
-        // The root of the pause menu is a stackPane:
-        StackPane puzzleCompleteMenu = new StackPane();
-
-        // Get the pause menu background:
-        ImageView background = StaticBgImages.PUZZLE_COMPLETE.getImageView();
-        puzzleCompleteMenu.getChildren().add(background);
-
-        // place the title and buttons:
-        VBox buttonsHolder = new VBox();
-        buttonsHolder.setAlignment(Pos.CENTER);
-        buttonsHolder.setSpacing(3.0);
-        Rectangle spacer = new Rectangle(1,100); // Spacer so that the buttons and text don't run into the title
-        Label statistics = new Label("total orbs fired: " + 0); //todo: keep track of the number of orbs fired
-        statistics.setFont(new Font(32));
-        Button returnToMain = createButton(ButtonImages.RETURN_TO_MAIN_MENU_HOST);
-        buttonsHolder.getChildren().addAll(spacer, statistics, returnToMain);
-        puzzleCompleteMenu.getChildren().add(buttonsHolder);
-
-        /*// Make everything scale correctly when the window is resized:
-        buttonsHolder.getTransforms().add(scaler);
-        background.getTransforms().add(scaler);*/
-
-        return puzzleCompleteMenu;
-    }
-
-    // Todo: implement this.
-    private StackPane createVictoryMenu(){
-        return createPuzzleCompleteMenu();
-    }
-
-    // Todo: implement this.
-    private StackPane createDefeatMenu(){
-        return createPuzzleCompleteMenu();
-    }
-
     private Button createButton(ButtonImages buttonEnum){
         Button btn = new Button();
         ImageView unselectedImage = buttonEnum.getUnselectedImage();
@@ -662,7 +627,7 @@ public class GameScene extends Scene {
                     //removePauseMenu();
                     gameData.changePause(false);
                     break;
-                case RETURN_TO_MAIN_MENU_HOST:
+                case RETURN_TO_MAIN_MENU_CLIENT:
                     System.out.println("We're done!");
                     cleanUp();
                     SceneManager.switchToMainMenu();
@@ -747,39 +712,46 @@ public class GameScene extends Scene {
         SoundManager.silenceMusic();
         SoundManager.silenceAllSoundEffects();
         SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
+
+        for(PlayPanel playPanel: playPanelMap.values()){
+            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
+                // freeze all players // todo: I don't like how freezing the player looks, but I don't want the bots to continue firing either. Create a disableCannon() method or something.
+                /*for(Player victoriousPlayer : playPanel.getPlayerList()){
+                    victoriousPlayer.getPlayerData().changeFrozen(true);
+                    victoriousPlayer.freezePlayer();
+                }*/
+            }
+            else {
+                // set defeated = true for all other players:
+                for(Player defeatedPlayer : playPanel.getPlayerList()){
+                    defeatedPlayer.resignPlayer();
+                }
+            }
+        }
+
         victoryPauseStarted = true;
         System.out.println("team " + victoriousTeam + " has won.");
     }
 
     private void startVictoryDisplay(int victoriousTeam){
         for(PlayPanel playPanel: playPanelMap.values()){
-            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam) playPanel.displayVictoryResults(true);
+            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
+                playPanel.displayVictoryResults(true);
+            }
             else {
-                // set defeated = true for all other players:
-                for(Player defeatedPlayer : playPanel.getPlayerList()){
-                    defeatedPlayer.resignPlayer();
-                }
                 playPanel.displayVictoryResults(false);
             }
         }
         victoryDisplayStarted = true;
 
-        StackPane gameOverMenu;
-        if(playPanelMap.values().size()==1){ // This was a puzzle game.
-            // Congratulate the player and tell him/her how many shots they fired:
-            gameOverMenu = createPuzzleCompleteMenu();
-        }
-        else if(localPlayer.getPlayerData().getTeam()==victoriousTeam){ // This was a competitive game, and the local player won
-            // Congratulate the player and tell him/her various statistic about the game:
-            gameOverMenu = createVictoryMenu();
-        }
-        else { // This was a competitive game, and the local player lost
-            // Inform the player that he/she lost, and tell him/her various statistics about the game:
-            gameOverMenu = createDefeatMenu();
-        }
-        rootNode.getChildren().add(gameOverMenu);
-
-
+        //ImageView background = StaticBgImages.PUZZLE_COMPLETE.getImageView();
+        //rootNode.getChildren().add(background);
+        VBox vBox = new VBox();
+        vBox.setMaxWidth(1.0); // to prevent the VBox from covering the scroll buttons
+        Button returnToMain = createButton(ButtonImages.RETURN_TO_MAIN_MENU_CLIENT);
+        vBox.getChildren().add(returnToMain);
+        vBox.setAlignment(Pos.TOP_CENTER);
+        rootNode.getChildren().add(vBox);
     }
 
 }

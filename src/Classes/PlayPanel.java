@@ -11,13 +11,18 @@ import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.LocalPlayer;
 import Classes.PlayerTypes.Player;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 
 import java.util.*;
 import java.util.List;
@@ -201,13 +206,15 @@ public class PlayPanel extends Pane {
         // Advance existing dropping orbs:
         List<Orb> orbsToTransfer = advanceDroppingOrbs();
         playPanelData.getDroppingOrbs().removeAll(orbsToTransfer);
-        playPanelData.changeAddTransferOutOrbs(orbsToTransfer); // Note: the transferOutOrbs list will get cleared before the end of this frame, in GameScene.tick().
-        List<Orb> orbsToTransferCopy = new LinkedList<>();
-        for(Orb orb : orbsToTransfer){ // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
-            Orb orbCopy = new Orb(orb.getOrbEnum(), 0,0, Orb.BubbleAnimationType.THUNDERING);
-            orbsToTransferCopy.add(orbCopy);
+        if(!orbsToTransfer.isEmpty()){
+            playPanelData.changeAddTransferOutOrbs(orbsToTransfer); // Note: the transferOutOrbs list will get cleared before the end of this frame, in GameScene.tick().
+            List<Orb> orbsToTransferCopy = new LinkedList<>();
+            for(Orb orb : orbsToTransfer){ // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
+                Orb orbCopy = new Orb(orb.getOrbEnum(), 0,0, Orb.BubbleAnimationType.THUNDERING);
+                orbsToTransferCopy.add(orbCopy);
+            }
+            playPanelData.setAddThunderOrbs(orbsToTransferCopy);
         }
-        playPanelData.setAddThunderOrbs(orbsToTransferCopy);
 
         // Find floating orbs and drop them, adding visual flourishes.
         Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(); // orbs that are connected to the ceiling.
@@ -254,9 +261,6 @@ public class PlayPanel extends Pane {
 
         // If the player has fired a sufficient number of times, then add a new row of orbs:
         playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
-        if(playPanelData.getShotsUntilNewRow()==1){
-            SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
-        }
         if(playPanelData.getShotsUntilNewRow()<=0){
             playPanelData.addNewRow();
             SoundManager.playSoundEffect(SoundEffect.NEW_ROW);
@@ -561,7 +565,7 @@ public class PlayPanel extends Pane {
     private List<PointInt> findPatternCompletions(List<Collision> orbsToSnap, List<Orb> shootingOrbsToBurst, boolean[] playDropSound){
 
         List<PointInt> arrayOrbsToBurst = new LinkedList<>();
-        List<Orb> transferOutOrbs = playPanelData.getTransferOutOrbs();
+        List<Orb> transferOrbList = new LinkedList<>();
 
         for(Collision collision : orbsToSnap){
             Orb sourceOrb = collision.shooterOrb;
@@ -584,7 +588,7 @@ public class PlayPanel extends Pane {
                 OrbImages orbEnum = sourceOrb.getOrbEnum();
                 for(int k=0; k<numTransferOrbs; k++){
                     //transferOutOrbs.add(new Orb(orbEnum,miscRandomGenerator.nextInt(),miscRandomGenerator.nextInt(),Orb.BubbleAnimationType.TRANSFERRING));
-                    transferOutOrbs.add(new Orb(orbEnum,0,0,Orb.BubbleAnimationType.STATIC));
+                    transferOrbList.add(new Orb(orbEnum,0,0,Orb.BubbleAnimationType.STATIC));
                 }
                 Orb[][] orbArray = playPanelData.getOrbArray();
                 for(int k=0; k<numTransferOrbs; k++){
@@ -593,8 +597,12 @@ public class PlayPanel extends Pane {
                     visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
                 }
             }
+            if(connectedOrbs.size()>playPanelData.getLargestGroupExplosion()){
+                playPanelData.setLargestGroupExplosion(connectedOrbs.size());
+            }
         }
 
+        //if(!transferOrbList.isEmpty()) playPanelData.changeAddTransferOutOrbs(transferOrbList);
         return arrayOrbsToBurst;
     }
 
@@ -808,10 +816,32 @@ public class PlayPanel extends Pane {
 
     public void displayVictoryResults(boolean victorious){
         if(victorious){
-            visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
+            visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100, true));
             SoundManager.playSong(Music.GO_TAKE_FLIGHT, false);
         }
-        else visualFlourishes.add(new VisualFlourish(MiscAnimations.LOSE_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2, true));
+        else visualFlourishes.add(new VisualFlourish(MiscAnimations.LOSE_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100, true));
+
+
+        // Display statistics for this playpanel
+        VBox vBox = new VBox(); // For centering the text on the PlayPanel
+        vBox.setAlignment(Pos.CENTER);
+        vBox.setSpacing(3.0);
+        // Note: we must add getDroppingOrbs().size() to getCumulativeOrbsTransferred() because orbs that are dropping at the very end of the game haven't been added to the transferOutOrbs list, yet.
+        Text statistics = new Text("total orbs fired: " + playPanelData.getCumulativeShotsFired() + "\n" +
+                "Orbs burst: " + playPanelData.getCumulativeOrbsBurst() + "\n" +
+                "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n" +//Todo: if this was a puzzle game, change this to "orbs dropped"
+                //"Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n" +
+                "Largest group explosion: " + playPanelData.getLargestGroupExplosion());
+        statistics.setFont(new Font(32));
+        statistics.setFill(Color.WHITE);
+        statistics.setStroke(Color.BLACK);
+        statistics.setStrokeWidth(1.0);
+        statistics.setStyle("-fx-font-weight: bold");
+        statistics.setTextAlignment(TextAlignment.CENTER);
+        vBox.getChildren().addAll(statistics);
+        vBox.prefWidthProperty().bind(widthProperty());
+        getChildren().add(vBox);
+        vBox.relocate(0,PLAYPANEL_HEIGHT/2 -50);
     }
 
 }

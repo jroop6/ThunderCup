@@ -128,10 +128,15 @@ public abstract class Player {
 
     public void resignPlayer(){
         playerData.changeDefeated(true); // updates model
-        character.freeze(); // updates view (GameScene)
-        cannon.freeze();// updates view (GameScene)
+        playerData.changeFrozen(true);
+        freezePlayer(); // updates view (GameScene)
         // in the MultiplayerSceneSelection, the view is updated in either the deleteRemovedPlayer() or
         // processPacketAsClient() methods, for host and clients respectively.
+    }
+
+    public void freezePlayer(){
+        character.freeze(); // updates view (GameScene)
+        cannon.freeze();// updates view (GameScene)
     }
 
     public void changeUsername(String newUsername){
@@ -175,7 +180,9 @@ public abstract class Player {
         if(playerData.getDefeated()) return;
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
         Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), randomOrdinal); // updates Player model
-        playPanel.getPlayPanelData().getShootingOrbs().add(firedOrb); // updates PlayPanel model
+        Queue<Orb> firedOrbList = new LinkedList<>();
+        firedOrbList.add(firedOrb);
+        playPanel.getPlayPanelData().changeAddShootingOrbs(firedOrbList); // updates PlayPanel model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
     }
 
@@ -210,10 +217,13 @@ public abstract class Player {
         }
         if(newPlayerData.isDefeatedChanged()){
             playerData.changeDefeated(newPlayerData.getDefeated()); //updates model
-            character.freeze(); // updates view
-            cannon.freeze(); // updates view
             // Note: In the MultiplayerSceneSelection, this player's corresponding PlayerSlot will be removed in either
             // the deleteRemovedPlayer() or processPacketAsClient() methods, for host and clients respectively.
+            // In the GameScene, the player should also have been frozen. Updating the frozen state updates the view.
+        }
+        if(newPlayerData.isFrozenChanged()){
+            playerData.changeFrozen(newPlayerData.getFrozen()); // updates model
+            freezePlayer(); // updates view
         }
         if(newPlayerData.isTeamChanged()){
             playerData.changeTeam(newPlayerData.getTeam()); // updates model
@@ -257,8 +267,10 @@ public abstract class Player {
         }
         if(newPlayerData.isDefeatedChanged() && !playerData.isDefeatedChanged()){
             playerData.setDefeated(newPlayerData.getDefeated()); //updates model
-            character.freeze(); // updates view
-            cannon.freeze(); // updates view
+        }
+        if(newPlayerData.isFrozenChanged() && !playerData.isFrozenChanged()){
+            playerData.setFrozen(newPlayerData.getFrozen()); // updates model
+            freezePlayer(); // updates view
         }
         if(newPlayerData.isTeamChanged() && !playerData.isTeamChanged()){
             playerData.setTeam(newPlayerData.getTeam()); // updates model

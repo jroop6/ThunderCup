@@ -37,6 +37,8 @@ public class BotPlayer extends Player {
         //Todo: implement this.
         // temporary implementation, just to see if the framework is working:
 
+        if(playerData.getFrozen()) return;
+
         if(System.nanoTime() > nextTime){
             double newAngleDeg = 180.0*(new Random().nextDouble()); // degrees
             pointCannon(newAngleDeg);

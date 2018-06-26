@@ -142,7 +142,7 @@ public class SceneManager extends Application {
     }
 
     static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<Player> players){
-        GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME, -1);
+        GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME, -5);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }

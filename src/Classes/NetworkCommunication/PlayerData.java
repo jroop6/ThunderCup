@@ -32,6 +32,7 @@ public class PlayerData implements Serializable {
     private long latency;
     private List<Orb> ammunitionOrbs = new LinkedList<>();
     private Queue<Orb> firedOrbs = new LinkedList<>();
+    private boolean frozen = false;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -42,6 +43,7 @@ public class PlayerData implements Serializable {
     private boolean teamChanged = false; // Also used to indicate a playerslot that is unclaimed (team 0);
     private boolean defeatedChanged = false;
     private boolean ammunitionOrbsChanged = false;
+    private boolean frozenChanged = false;
 
     // Counter for how many frames the local ammunitionOrbs list has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -76,6 +78,7 @@ public class PlayerData implements Serializable {
         cannonEnum = other.getCannonEnum();
         team = other.getTeam();
         defeated = other.getDefeated();
+        frozen = other.getFrozen();
 
         ammunitionOrbs = deepCopyOrbList(other.getAmmunition());
         firedOrbs = deepCopyOrbQueue(other.getFiredOrbs());
@@ -88,6 +91,7 @@ public class PlayerData implements Serializable {
         teamChanged = other.isTeamChanged();
         defeatedChanged = other.isDefeatedChanged();
         ammunitionOrbsChanged = other.isAmmunitionChanged();
+        frozenChanged = other.isFrozenChanged();
     }
 
     // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
@@ -169,6 +173,10 @@ public class PlayerData implements Serializable {
 
         return firedOrb;
     }
+    public void changeFrozen(boolean newVal){
+        frozen = newVal;
+        frozenChanged = true;
+    }
 
     // set the positions of the 1st and second shooting orbs for this player
     public void positionAmmunitionOrbs(){
@@ -229,6 +237,9 @@ public class PlayerData implements Serializable {
             this.ammunitionOrbs.add(new Orb(orb));
         }
     }
+    public void setFrozen(boolean newVal){
+        frozen = newVal;
+    }
 
     public void resetFlags(){
         bubbleDataChanged = false;
@@ -239,6 +250,7 @@ public class PlayerData implements Serializable {
         teamChanged = false;
         defeatedChanged = false;
         firedOrbs.clear();
+        frozenChanged = false;
     }
 
     /* Change Getters: These are called to see whether the sending party has changed the data. They are always
@@ -267,6 +279,9 @@ public class PlayerData implements Serializable {
     }
     boolean isAmmunitionChanged(){
         return ammunitionOrbsChanged;
+    }
+    public boolean isFrozenChanged(){
+        return frozenChanged;
     }
 
     /* Direct Getters: These are called to get the actual player data*/
@@ -303,6 +318,9 @@ public class PlayerData implements Serializable {
     public Queue<Orb> getFiredOrbs(){
         return firedOrbs;
     }
+    public boolean getFrozen(){
+        return frozen;
+    }
 
     public void checkForConsistency(PlayerData other){
         List<Orb> hostAmmunition = other.getAmmunition();
@@ -310,12 +328,15 @@ public class PlayerData implements Serializable {
         for(int i=0; i<ammunitionOrbs.size(); i++){
             if(ammunitionOrbs.get(i).getOrbEnum() != hostAmmunition.get(i).getOrbEnum()) inconsistent = true;
         }
+        if(frozen != other.getFrozen()) inconsistent = true;
+
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE) {
             System.err.println("Client ammunitionOrbs list is inconsistent with the host! overriding ammunitionOrbs...");
             setAmmunitionOrbs(hostAmmunition);
+            frozen = other.getFrozen();
             inconsistencyCounter = 0;
         }
     }
