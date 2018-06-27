@@ -387,7 +387,7 @@ public class MultiplayerSelectionScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                player.resignPlayer();
+                player.changeResignPlayer();
             }
             dialogStage.close();
         }));
@@ -663,7 +663,7 @@ public class MultiplayerSelectionScene extends Scene {
             prepareAndSendServerPacket(packetsProcessingInfo);
         }
         else{
-            localPlayer.resignPlayer();
+            localPlayer.changeResignPlayer();
             prepareAndSendClientPacket(packetsProcessingInfo);
         }
         // wait a little bit to make sure the packet gets through:

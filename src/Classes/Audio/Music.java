@@ -15,7 +15,9 @@ public enum Music {
     BBBFF("res/sound/music/BBBFF (The Pony Way) (Instrumental).mp3",true),
     PONY_SHOULD_PONY_PONY("res/sound/music/Pony Should Pony Pony (Instrumental).mp3",true),
     GO_TAKE_FLIGHT("res/sound/music/Go Take Flight.wav",false),
-    CHANGELING("res/sound/music/Changeling (Instrumental).mp3",true);
+    CHANGELING("res/sound/music/Changeling (Instrumental).mp3",true),
+    CELESTIAS_FAITHFUL("res/sound/music/Celestia's Faithful (Instrumental).mp3",true),
+    GAME_OVER("res/sound/music/GameOver.wav",false);
 
     private boolean randomBgMusic; // indicates whether the song is OK to play as random background music during a game.
     private MediaPlayer mediaPlayer;

@@ -269,7 +269,7 @@ public class PlayPanel extends Pane {
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!getPlayPanelData().isDeathOrbsEmpty()){
             for(Player defeatedPlayer : getPlayerList()){
-                defeatedPlayer.resignPlayer();
+                defeatedPlayer.changeResignPlayer();
             }
         }
 
@@ -814,24 +814,47 @@ public class PlayPanel extends Pane {
         return playerList;
     }
 
-    public void displayVictoryResults(boolean victorious){
-        if(victorious){
-            visualFlourishes.add(new VisualFlourish(MiscAnimations.WIN_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100, true));
-            SoundManager.playSong(Music.GO_TAKE_FLIGHT, false);
-        }
-        else visualFlourishes.add(new VisualFlourish(MiscAnimations.LOSE_SCREEN,PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100, true));
+    public void displayVictoryResults(VictoryType victoryType){
+        Text statistics;
+        VisualFlourish visualFlourish;
+        String specializedStatistic;
 
+        // Note: we must add getDroppingOrbs().size() to getCumulativeOrbsTransferred() because orbs that are dropping at the very end of the game haven't been added to the transferOutOrbs list, yet.
+        switch(victoryType) {
+            case VS_WIN:
+                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN, 0, 0, true);
+                specializedStatistic = "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n";
+                break;
+            case VS_LOSE:
+                visualFlourish = new VisualFlourish(MiscAnimations.LOSE_SCREEN, 0, 0, true);
+                specializedStatistic = "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n";
+                break;
+            case PUZZLE_CLEARED:
+                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN, 0, 0, true);
+                specializedStatistic = "Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n";
+                break;
+            case PUZZLE_FAILED:
+                visualFlourish = new VisualFlourish(MiscAnimations.LOSE_SCREEN, 0, 0, true);
+                specializedStatistic = "Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n";
+                break;
+            default:
+                System.err.println("Unrecognized VictoryType. setting default visual Flourish.");
+                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN,0,0,true);
+                specializedStatistic = "\n";
+        }
+
+        // Add an appropriate Win/Lose/Cleared animation
+        visualFlourish.relocate(PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100);
+        visualFlourishes.add(visualFlourish);
 
         // Display statistics for this playpanel
+        statistics = new Text("total orbs fired: " + playPanelData.getCumulativeShotsFired() + "\n" +
+                "Orbs burst: " + playPanelData.getCumulativeOrbsBurst() + "\n" +
+                specializedStatistic +
+                "Largest group explosion: " + playPanelData.getLargestGroupExplosion());
         VBox vBox = new VBox(); // For centering the text on the PlayPanel
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(3.0);
-        // Note: we must add getDroppingOrbs().size() to getCumulativeOrbsTransferred() because orbs that are dropping at the very end of the game haven't been added to the transferOutOrbs list, yet.
-        Text statistics = new Text("total orbs fired: " + playPanelData.getCumulativeShotsFired() + "\n" +
-                "Orbs burst: " + playPanelData.getCumulativeOrbsBurst() + "\n" +
-                "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n" +//Todo: if this was a puzzle game, change this to "orbs dropped"
-                //"Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n" +
-                "Largest group explosion: " + playPanelData.getLargestGroupExplosion());
         statistics.setFont(new Font(32));
         statistics.setFill(Color.WHITE);
         statistics.setStroke(Color.BLACK);
@@ -843,6 +866,8 @@ public class PlayPanel extends Pane {
         getChildren().add(vBox);
         vBox.relocate(0,PLAYPANEL_HEIGHT/2 -50);
     }
+
+    public enum VictoryType{PUZZLE_CLEARED, PUZZLE_FAILED, VS_WIN, VS_LOSE}
 
 }
 

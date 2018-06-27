@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonImages;
@@ -19,7 +20,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -502,7 +502,7 @@ public class GameScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                player.resignPlayer();
+                player.changeResignPlayer();
             }
             dialogStage.close();
         }));
@@ -542,7 +542,7 @@ public class GameScene extends Scene {
             prepareAndSendServerPacket(packetsProcessingInfo);
         }
         else{
-            localPlayer.resignPlayer();
+            localPlayer.changeResignPlayer();
             prepareAndSendClientPacket(packetsProcessingInfo);
         }
         // wait a little bit to make sure the packet gets through:
@@ -699,12 +699,23 @@ public class GameScene extends Scene {
             }
         }
 
+        // In puzzle games, check to see whether the only existing team has lost:
+        else{
+            for(Player player : playPanelMap.get(localPlayer.getPlayerData().getTeam()).getPlayerList()){
+                if(player.getPlayerData().getDefeated()){
+                    startVictoryPause(-1);
+                }
+            }
+        }
+
         // If someone has won, handle the delay before the victory graphics are actually displayed:
         if(victoryPauseStarted && !victoryDisplayStarted){
             if(((System.nanoTime() - victoryTime)/1000000000)>0.85) startVictoryDisplay(victoriousTeam);
         }
     }
 
+    // If victoriousTeam == -1, that means nobody won (player failed a puzzle challenge, for example)
+    // todo: what about ties? Am I gonna bother with those?
     private void startVictoryPause(int victoriousTeam){
         if(victoryPauseStarted) return; // To ensure that the effects of this method are only applied once.
         victoryTime = System.nanoTime();
@@ -713,20 +724,25 @@ public class GameScene extends Scene {
         SoundManager.silenceAllSoundEffects();
         SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
 
+        // Disable all cannons and freeze all defeated players:
         for(PlayPanel playPanel: playPanelMap.values()){
             if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
                 // freeze all players // todo: I don't like how freezing the player looks, but I don't want the bots to continue firing either. Create a disableCannon() method or something.
-                /*for(Player victoriousPlayer : playPanel.getPlayerList()){
-                    victoriousPlayer.getPlayerData().changeFrozen(true);
-                    victoriousPlayer.freezePlayer();
-                }*/
+                for(Player victoriousPlayer : playPanel.getPlayerList()){
+                    victoriousPlayer.changeDisableCannon();
+                }
             }
             else {
                 // set defeated = true for all other players:
                 for(Player defeatedPlayer : playPanel.getPlayerList()){
-                    defeatedPlayer.resignPlayer();
+                    defeatedPlayer.changeResignPlayer();
                 }
             }
+        }
+
+        // clear any outstanding shooting orbs:
+        for(PlayPanel playPanel: playPanelMap.values()){
+            playPanel.getPlayPanelData().getShootingOrbs().clear();
         }
 
         victoryPauseStarted = true;
@@ -736,16 +752,18 @@ public class GameScene extends Scene {
     private void startVictoryDisplay(int victoriousTeam){
         for(PlayPanel playPanel: playPanelMap.values()){
             if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
-                playPanel.displayVictoryResults(true);
+                if(playPanelMap.values().size()==1) playPanel.displayVictoryResults(PlayPanel.VictoryType.PUZZLE_CLEARED);
+                else playPanel.displayVictoryResults(PlayPanel.VictoryType.VS_WIN);
             }
             else {
-                playPanel.displayVictoryResults(false);
+                if(playPanelMap.values().size()==1) playPanel.displayVictoryResults(PlayPanel.VictoryType.PUZZLE_FAILED);
+                else playPanel.displayVictoryResults(PlayPanel.VictoryType.VS_LOSE);
             }
         }
+        if(localPlayer.getPlayerData().getTeam() == victoriousTeam) SoundManager.playSong(Music.GO_TAKE_FLIGHT,false);
+        else SoundManager.playSong(Music.GAME_OVER,false);
         victoryDisplayStarted = true;
 
-        //ImageView background = StaticBgImages.PUZZLE_COMPLETE.getImageView();
-        //rootNode.getChildren().add(background);
         VBox vBox = new VBox();
         vBox.setMaxWidth(1.0); // to prevent the VBox from covering the scroll buttons
         Button returnToMain = createButton(ButtonImages.RETURN_TO_MAIN_MENU_CLIENT);

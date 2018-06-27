@@ -33,6 +33,7 @@ public class PlayerData implements Serializable {
     private List<Orb> ammunitionOrbs = new LinkedList<>();
     private Queue<Orb> firedOrbs = new LinkedList<>();
     private boolean frozen = false;
+    private boolean cannonDisabled = false;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -44,6 +45,7 @@ public class PlayerData implements Serializable {
     private boolean defeatedChanged = false;
     private boolean ammunitionOrbsChanged = false;
     private boolean frozenChanged = false;
+    private boolean cannonDisabledChanged = false;
 
     // Counter for how many frames the local ammunitionOrbs list has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -79,6 +81,7 @@ public class PlayerData implements Serializable {
         team = other.getTeam();
         defeated = other.getDefeated();
         frozen = other.getFrozen();
+        cannonDisabled = other.getCannonDisabled();
 
         ammunitionOrbs = deepCopyOrbList(other.getAmmunition());
         firedOrbs = deepCopyOrbQueue(other.getFiredOrbs());
@@ -92,6 +95,7 @@ public class PlayerData implements Serializable {
         defeatedChanged = other.isDefeatedChanged();
         ammunitionOrbsChanged = other.isAmmunitionChanged();
         frozenChanged = other.isFrozenChanged();
+        cannonDisabledChanged = other.isCannonDisabledChanged();
     }
 
     // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
@@ -177,6 +181,10 @@ public class PlayerData implements Serializable {
         frozen = newVal;
         frozenChanged = true;
     }
+    public void changeCannonDisabled(boolean newVal){
+        cannonDisabled = newVal;
+        cannonDisabledChanged = true;
+    }
 
     // set the positions of the 1st and second shooting orbs for this player
     public void positionAmmunitionOrbs(){
@@ -240,6 +248,9 @@ public class PlayerData implements Serializable {
     public void setFrozen(boolean newVal){
         frozen = newVal;
     }
+    public void setCannonDisabled(boolean newVal){
+        cannonDisabled = newVal;
+    }
 
     public void resetFlags(){
         bubbleDataChanged = false;
@@ -251,6 +262,7 @@ public class PlayerData implements Serializable {
         defeatedChanged = false;
         firedOrbs.clear();
         frozenChanged = false;
+        cannonDisabledChanged = false;
     }
 
     /* Change Getters: These are called to see whether the sending party has changed the data. They are always
@@ -282,6 +294,9 @@ public class PlayerData implements Serializable {
     }
     public boolean isFrozenChanged(){
         return frozenChanged;
+    }
+    public boolean isCannonDisabledChanged(){
+        return cannonDisabledChanged;
     }
 
     /* Direct Getters: These are called to get the actual player data*/
@@ -321,6 +336,9 @@ public class PlayerData implements Serializable {
     public boolean getFrozen(){
         return frozen;
     }
+    public boolean getCannonDisabled(){
+        return cannonDisabled;
+    }
 
     public void checkForConsistency(PlayerData other){
         List<Orb> hostAmmunition = other.getAmmunition();
@@ -329,14 +347,18 @@ public class PlayerData implements Serializable {
             if(ammunitionOrbs.get(i).getOrbEnum() != hostAmmunition.get(i).getOrbEnum()) inconsistent = true;
         }
         if(frozen != other.getFrozen()) inconsistent = true;
+        if(cannonDisabled != other.getCannonDisabled()) inconsistent = true;
+        if(defeated != other.getDefeated()) inconsistent = true;
 
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE) {
-            System.err.println("Client ammunitionOrbs list is inconsistent with the host! overriding ammunitionOrbs...");
+            System.err.println("Client playerData is inconsistent with the host! overriding client's data...");
             setAmmunitionOrbs(hostAmmunition);
-            frozen = other.getFrozen();
+            setFrozen(other.getFrozen());
+            setCannonDisabled(other.getCannonDisabled());
+            setDefeated(other.getDefeated());
             inconsistencyCounter = 0;
         }
     }

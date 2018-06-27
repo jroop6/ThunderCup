@@ -102,7 +102,7 @@ public abstract class Player {
         return latencyLabel;
     }
 
-    public void incrementCharacterEnum(){
+    private void incrementCharacterEnum(){
         CharacterImages nextType = playerData.getCharacterEnum().next();
         if (this instanceof LocalPlayer){
             while(!nextType.isPlayable()){
@@ -117,7 +117,7 @@ public abstract class Player {
         playerData.changeCharacter(nextType); // updates model
         character.setCharacterEnum(nextType); // updates view
     }
-    public void incrementCannonEnum(){
+    private void incrementCannonEnum(){
         CannonImages nextType = playerData.getCannonEnum().next();
         while(!nextType.isSelectable()){
             nextType = nextType.next();
@@ -126,15 +126,21 @@ public abstract class Player {
         cannon.setCannonEnum(nextType); // updates view
     }
 
-    public void resignPlayer(){
+    public void changeResignPlayer(){
         playerData.changeDefeated(true); // updates model
-        playerData.changeFrozen(true);
+        playerData.changeFrozen(true); // updates model
+        playerData.changeCannonDisabled(true); // updates model
         freezePlayer(); // updates view (GameScene)
         // in the MultiplayerSceneSelection, the view is updated in either the deleteRemovedPlayer() or
         // processPacketAsClient() methods, for host and clients respectively.
     }
 
-    public void freezePlayer(){
+    public void changeDisableCannon(){
+        playerData.changeCannonDisabled(true); // updates model
+        // There is no change to the view, other than the fact that the player is no longer able to fire.
+    }
+
+    private void freezePlayer(){
         character.freeze(); // updates view (GameScene)
         cannon.freeze();// updates view (GameScene)
     }
@@ -177,7 +183,7 @@ public abstract class Player {
     }
 
     public void changeFireCannon(){
-        if(playerData.getDefeated()) return;
+        if(playerData.getCannonDisabled()) return;
         int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
         Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), randomOrdinal); // updates Player model
         Queue<Orb> firedOrbList = new LinkedList<>();

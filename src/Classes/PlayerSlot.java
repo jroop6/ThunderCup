@@ -163,7 +163,7 @@ public class PlayerSlot extends StackPane{
             switch (buttonEnum) {
                 case REMOVE_PLAYER:
                     System.out.println("Clicked Remove Player.");
-                    player.resignPlayer();
+                    player.changeResignPlayer();
                     break;
             }
         });

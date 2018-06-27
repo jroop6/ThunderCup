@@ -34,4 +34,9 @@ public class VisualFlourish {
     public void drawSelf(GraphicsContext orbDrawer){
         animationEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, currentFrame);
     }
+
+    public void relocate(double xPos, double yPos){
+        this.xPos = xPos;
+        this.yPos = yPos;
+    }
 }
