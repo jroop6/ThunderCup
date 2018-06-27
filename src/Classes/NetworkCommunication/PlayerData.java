@@ -160,7 +160,7 @@ public class PlayerData implements Serializable {
         ammunitionOrbs.add(newOrb);
         ammunitionOrbsChanged = true;
     }
-    public Orb changeFire(double angle, int newOrdinal){
+    public Orb changeFire(double angle, OrbImages newEnum){
         // Remove the first ammunition orb and fire it
         Orb firedOrb = ammunitionOrbs.remove(0);
         firedOrb.setRawTimestamp(System.nanoTime());
@@ -169,11 +169,10 @@ public class PlayerData implements Serializable {
         firedOrbs.add(firedOrb);
         firing = true;
 
-        positionAmmunitionOrbs();
-
         // Add a new ammunition orb to the end of the list
-        OrbImages orbImage = OrbImages.values()[newOrdinal];
-        ammunitionOrbs.add(new Orb(orbImage,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+
+        positionAmmunitionOrbs();
 
         return firedOrb;
     }
@@ -202,18 +201,13 @@ public class PlayerData implements Serializable {
         this.ammunitionOrbsChanged = ammunitionOrbsChanged;
     }
 
-    public void setFire(int newOrdinal){
+    public void setFire(OrbImages newEnum){
         ammunitionOrbs.remove(0);
 
-        // update the positions of the next 2 ammunition orbs
-        ammunitionOrbs.get(0).setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(0).setYPos(CANNON_Y_POS);
-        ammunitionOrbs.get(1).setXPos(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(1).setYPos(CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
-
         // Add a new ammunition orb to the end of the list
-        OrbImages orbImage = OrbImages.values()[newOrdinal];
-        ammunitionOrbs.add(new Orb(orbImage,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+
+        positionAmmunitionOrbs();
     }
 
     /* Setters: These are called when a client simply wants to update locally-stored player information without

@@ -4,18 +4,16 @@ fix multiplayer de-synch problems
     sometimes it seems that the host doesn't pick up that a client has fired.
     Some computers have a tough time hosting despite not using all their CPU power. What's the issue?
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
-If the same music is played in 2 scenes, don't restart the music when switching scenes.
 
 -------important features-------
-new ammunition orb colors should somewhat match the orbs remaining on the board.
-create a "lose" flourish for players who have lost.
-load manual puzzles
+puzzle data should specify how many shots cause a new row to appear.
 implement the Vs Computer game mode
 when a game begins, the program should move the camera so that it is centered on your character and maybe have some visual flourish indicate which character is yours.
 character animations
 character voices/sound effects
-respond to defeat and victory conditions
 smarter bots
+slightly nicer visuals for the puzzle selector buttons
+more puzzles!
 
 -------moderate refactoring-------
 There are several places where I have a createButton method that are all nearly identical. Consider putting it in a static utility class.

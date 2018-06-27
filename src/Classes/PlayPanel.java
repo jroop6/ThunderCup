@@ -797,6 +797,50 @@ public class PlayPanel extends Pane {
         playPanelData.changeAddTransferInOrbs(transferOutOrbs,randomTransferOrbGenerator);
     }
 
+    // todo: this is horribly inefficient. Can I make it faster? It is somewhat amortized, though...
+    public OrbImages getNextShooterOrbEnum(double randomNumber){
+        // Count the number of each type of orb in the orbArray.
+        LinkedHashMap<OrbImages,Double> counts = new LinkedHashMap<>();
+        Orb[][] orbArray = playPanelData.getOrbArray();
+        for(int i=0; i<ARRAY_HEIGHT; i++){
+            for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                if(orbArray[i][j]==NULL) continue;
+                else if(counts.containsKey(orbArray[i][j].getOrbEnum())){
+                    counts.replace(orbArray[i][j].getOrbEnum(),counts.get(orbArray[i][j].getOrbEnum())+1);
+                }
+                else{
+                    counts.put(orbArray[i][j].getOrbEnum(),1.0);
+                }
+            }
+        }
+
+        // Normalize the counts and make them cumulative
+        double total = 0.0;
+        for(Double amount : counts.values()){
+            total += amount;
+        }
+        System.out.println("there are " + total + " orbs");
+        double cumulativeSum = 0.0;
+        for(OrbImages orbImage : counts.keySet()){
+            cumulativeSum += counts.get(orbImage);
+            System.out.println("the fraction of " + orbImage.getSymbol() + " is " + cumulativeSum/total);
+            counts.replace(orbImage, cumulativeSum/total);
+        }
+
+        OrbImages chosenEnum = OrbImages.BLACK_ORB; // initializing to make the compiler happy.
+        for(OrbImages orbImage : counts.keySet()){
+            if(randomNumber<counts.get(orbImage)){
+                chosenEnum = orbImage;
+                break;
+            }
+        }
+        System.out.println("chose " + chosenEnum.getSymbol() + " for a random number " + randomNumber);
+
+        return chosenEnum;
+
+
+    }
+
     private class Collision{
         public Orb shooterOrb;
         public Orb arrayOrb;

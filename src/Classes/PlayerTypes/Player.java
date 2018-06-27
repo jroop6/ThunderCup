@@ -176,16 +176,16 @@ public abstract class Player {
 
     private void setFireCannon(){
         if(playerData.getDefeated()) return;
-        int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        playerData.setFire(randomOrdinal); // updates Player model
+        OrbImages newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        playerData.setFire(newShooterOrbEnum); // updates Player model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
         // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
     }
 
     public void changeFireCannon(){
         if(playerData.getCannonDisabled()) return;
-        int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-        Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), randomOrdinal); // updates Player model
+        OrbImages newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), newShooterOrbEnum); // updates Player model
         Queue<Orb> firedOrbList = new LinkedList<>();
         firedOrbList.add(firedOrb);
         playPanel.getPlayPanelData().changeAddShootingOrbs(firedOrbList); // updates PlayPanel model
@@ -354,7 +354,7 @@ public abstract class Player {
             }
         }
         // Add random Orbs to the ammunitionOrbs Queue after that:
-        while(ammunitionOrbs.size()<10){
+        while(ammunitionOrbs.size()<2){
             System.out.println();
             int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
             OrbImages orbImage = OrbImages.values()[randomOrdinal];
