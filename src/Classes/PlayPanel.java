@@ -830,7 +830,7 @@ public class PlayPanel extends Pane {
                 specializedStatistic = "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n";
                 break;
             case PUZZLE_CLEARED:
-                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN, 0, 0, true);
+                visualFlourish = new VisualFlourish(MiscAnimations.CLEAR_SCREEN, 0, 0, true);
                 specializedStatistic = "Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n";
                 break;
             case PUZZLE_FAILED:
@@ -847,7 +847,7 @@ public class PlayPanel extends Pane {
         visualFlourish.relocate(PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100);
         visualFlourishes.add(visualFlourish);
 
-        // Display statistics for this playpanel
+        // Display statistics for this PlayPanel
         statistics = new Text("total orbs fired: " + playPanelData.getCumulativeShotsFired() + "\n" +
                 "Orbs burst: " + playPanelData.getCumulativeOrbsBurst() + "\n" +
                 specializedStatistic +

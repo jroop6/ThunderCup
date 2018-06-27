@@ -11,7 +11,8 @@ public enum MiscAnimations {
     EXCLAMATION_MARK("res/animations/misc/highRes/exclamationMark_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
     MAGIC_TELEPORTATION("res/animations/misc/highRes/magicTeleportation_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
     WIN_SCREEN("res/animations/misc/highRes/winScreen_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
-    LOSE_SCREEN("res/animations/misc/highRes/loseScreen_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png");
+    LOSE_SCREEN("res/animations/misc/highRes/loseScreen_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png"),
+    CLEAR_SCREEN("res/animations/misc/highRes/clearScreen_spritesheet.png", "res/animations/misc/lowRes/null_spritesheet.png");
 
     private SpriteSheet spriteSheet;
 
