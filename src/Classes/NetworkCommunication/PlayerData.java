@@ -54,7 +54,7 @@ public class PlayerData implements Serializable {
     // default values for everything else.
     public PlayerData(String username, long playerID){
         //BubbleData = new BubbleData();
-        cannonAngle = 80.0;
+        cannonAngle = -80.0; // recall that JavaFx rotates things clockwise instead of counterclockwise
         this.username = username;
         this.playerID = playerID;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)

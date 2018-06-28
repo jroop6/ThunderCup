@@ -57,7 +57,7 @@ public class GameScene extends Scene {
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
     private boolean initializing = true;
-    static final int ANIMATION_FRAME_RATE = 24;
+    public static final int ANIMATION_FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds)
 
     // Variables related to network communications:
@@ -190,12 +190,6 @@ public class GameScene extends Scene {
                     initializing = false;
                 }
 
-                // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
-                // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
-                // suppose I could just make sure they use the same random number generator, but having the host do it
-                // is also just easier and prevents clients from cheating by coding their own robot).
-                if(!gameData.getPause() && isHost) processBots();
-
                 // Incoming packets are processed every frame, if there are any:
                 int[] packetsProcessingInfo;
                 if(isHost) packetsProcessingInfo = processPacketsAsHost(gameData.getPause());
@@ -204,8 +198,14 @@ public class GameScene extends Scene {
                 numberOfPacketsRemaining += packetsProcessingInfo[1];
                 ++MSSCalls;
 
-                // Character and Orb animations are updated 24 times per second:
+                // Character and Orb animations are updated 24 times per second. Bots are also update at this time:
                 if(now>nextAnimationFrameInstance){
+                    // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
+                    // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
+                    // suppose I could just make sure they use the same random number generator, but having the host do it
+                    // is also just easier and prevents clients from cheating by coding their own robot).
+                    if(!gameData.getPause() && isHost) processBots();
+
                     if(!gameData.getPause()){
                         // update each PlayPanel:
                         for(PlayPanel playPanel: playPanelMap.values()){

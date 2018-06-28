@@ -63,6 +63,7 @@ public class Cannon {
         return movingPart.getyPos();
     }
     public double getAngle(){
+        System.out.println("angle is " + movingPart.getAngle());
         return movingPart.getAngle();
     }
 

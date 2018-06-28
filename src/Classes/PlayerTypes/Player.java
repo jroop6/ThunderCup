@@ -161,13 +161,13 @@ public abstract class Player {
         if(playerData.getDefeated()) return;
         Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
         double mouseRelativeX = localLoc.getX() - cannon.getPosX();
-        double mouseRelativeY = -(localLoc.getY() - cannon.getPosY()); // recall that the y-axis points down.
+        double mouseRelativeY = localLoc.getY() - cannon.getPosY(); // recall that the y-axis points down.
         double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
         double newAngleDeg = newAngleRad*180.0/Math.PI; // 0 degrees points to the right, 90 degrees points straight up.
         pointCannon(newAngleDeg); // updates model and view.
     }
 
-    // Points the cannon at a given angle, in degrees (0 degrees points straight up)
+    // Points the cannon at a given angle, in degrees (0 degrees points to the right)
     public void pointCannon(double angle){
         if(playerData.getDefeated()) return;
         playerData.changeCannonAngle(angle); // updates model

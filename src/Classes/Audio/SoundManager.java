@@ -150,6 +150,7 @@ public class SoundManager {
     }
 
     public static void unMuteMusic(){
+        currentMusic.getMediaPlayer().setVolume(MUSIC_VOLUME);
         currentMusic.getMediaPlayer().play();
         muted = false;
     }

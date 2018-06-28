@@ -611,7 +611,7 @@ public class MultiplayerSelectionScene extends Scene {
                     ((HostConnectionManager)connectionManager).addOpenSlot();
                     break;
                 case ADD_BOT:
-                    playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(),isHost));
+                    playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(BotPlayer.Difficulty.EASY),isHost));
                     break;
                 case START:
                     // Todo: check whether there are any unclaimed open spots before starting the game.

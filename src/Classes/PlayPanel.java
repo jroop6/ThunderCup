@@ -284,6 +284,7 @@ public class PlayPanel extends Pane {
     // recursive calls are over, all shooting orbs will have been advanced one full frame.
     // Returns a list of all orbs that will attempt to snap; some of them may end up bursting instead during the call to
     // snapOrbs if (and only if) s-s collisions are turned off.
+    // Note: recall that the y-axis points downward and shootingOrb.getAngle() returns a negative value.
     private List<Collision> advanceShootingOrbs(double timeRemainingInFrame) {
 
         // Put all possible collisions in here. If a shooter orb's path this frame would put it on a collision course

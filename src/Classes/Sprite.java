@@ -49,7 +49,7 @@ public class Sprite extends ImageView{
         SpriteSheet.FrameBound frameBound = spriteSheet.getFrameBound(index);
         rotater.setPivotX(frameBound.getAnchorPoint().getX());
         rotater.setPivotY(frameBound.getAnchorPoint().getY());
-        rotater.setAngle(-angle); // Angle is flipped because JavaFX rotates clockwise by default instead of counterclockwise. I prefer thinking counterclockwise.
+        rotater.setAngle(angle);
     }
 
     public void scale(double scaleFactor, int index){

@@ -164,7 +164,7 @@ public class SceneManager extends Application {
         // add a player and a bot, each with the same puzzle:
         List<Player> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
-        BotPlayer botPlayer = new BotPlayer();
+        BotPlayer botPlayer = new BotPlayer(BotPlayer.Difficulty.EASY);
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 
