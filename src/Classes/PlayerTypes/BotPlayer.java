@@ -1,7 +1,10 @@
 package Classes.PlayerTypes;
 
 import Classes.*;
+import Classes.Animation.MiscAnimations;
 import Classes.Animation.OrbImages;
+import Classes.Audio.SoundEffect;
+import Classes.Audio.SoundManager;
 import Classes.Character;
 import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
@@ -9,11 +12,10 @@ import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
 import jdk.internal.org.objectweb.asm.util.CheckAnnotationAdapter;
 
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
+import static Classes.GameScene.ANIMATION_FRAME_RATE;
+import static Classes.Orb.NULL;
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
@@ -127,21 +129,71 @@ public class BotPlayer extends Player {
      */
     private void retarget(){
         System.out.println("******RETARGETING*****");
-        LinkedList<Outcome> choices = new LinkedList<>();
+
+        // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
+        Orb[][] orbArray = playPanel.getPlayPanelData().getOrbArray();
+        boolean empty = true;
+        for (Orb[] row: orbArray) {
+            for (Orb orb : row){
+                if(orb!=NULL){
+                    empty = false;
+                    break;
+                }
+            }
+            if(!empty) break;
+        }
+        if(empty){
+            target = 1;
+            return;
+        }
 
         // determine the outcome for a variety of shooting angles:
-        for(double angle = -40.0; angle>-135.0; angle-=0.5){
-            // Find out where the orb would land if we shot it at this angle:
+        LinkedList<Outcome> choices = new LinkedList<>();
+        for(double angle = -40.0; angle>-135.0; angle-=2){
+            /*-- Simulate the outcome if we were to fire at this angle --*/
+            // First, create a hypothetical shooter orb, fired at this angle:
             OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
             Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
             hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
             hypotheticalOrb.setYPos(CANNON_Y_POS);
             hypotheticalOrb.setAngle(Math.toRadians(angle));
-            PointInt landingPoint = playPanel.predictLandingPoint(hypotheticalOrb);
+            hypotheticalOrb.setSpeed(hypotheticalOrb.getOrbEnum().getOrbSpeed());
 
-            // Assign a score to the landing point:
-            hypotheticalOrb.setIJ(landingPoint.i, landingPoint.j);
-            int score = assignScore(hypotheticalOrb, angle);
+            // Now create copies of the existing shooting orbs, orbArray, and deathOrbs:
+            List<Orb> shootingOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbList(playPanel.getPlayPanelData().getShootingOrbs());
+            shootingOrbsCopy.add(hypotheticalOrb);
+            Orb[][] orbArrayCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
+            Orb[] deathOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());
+
+            // create an EnumSet that must be passed to the methods:
+            Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+
+            // Simulate the shot, advancing orbs a short distance at a time until the hypothetical orb snaps to a location:
+            List<PointInt> arrayOrbsToBurst = new LinkedList<>();
+            List<PointInt> orbsToDrop = new LinkedList<>();
+            List<Orb> orbsToTransfer = new LinkedList<>();
+            do{
+                // Advance shooting orbs and deal with all their collisions:
+                List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbsCopy, orbArrayCopy,1/(double)ANIMATION_FRAME_RATE, soundEffectsToPlay);
+
+                // Snap any landed shooting orbs into place:
+                List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
+
+                // Remove the snapped shooting orbs from the shootingOrbs list
+                for(PlayPanel.Collision collision : orbsToSnap) shootingOrbsCopy.remove(collision.shooterOrb);
+
+                // Determine whether any of the snapped orbs cause any orbs to burst:
+                List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
+                arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArray, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
+                orbsToTransfer.addAll(newOrbsToTransfer);
+
+                // Find floating orbs and drop them:
+                Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
+                orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArray));
+            } while(shootingOrbsCopy.contains(hypotheticalOrb));
+
+            // Assign a score to the outcome:
+            int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArray);
 
             // Add the Outcome to the list of possible choices:
             choices.add(new Outcome(angle,score));
@@ -164,27 +216,34 @@ public class BotPlayer extends Player {
 
         //target = -180.0*(new Random().nextDouble()); // recall that JavaFx rotates clockwise instead of counterclockwise
         target = choice.angle;
-
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
     }
 
-    private int assignScore(Orb hypotheticalOrb, double angle){
+    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<PointInt> orbsToDrop, List<PointInt> arrayOrbsToBurst, Orb[][] orbArray){
         int score = 0;
 
-        // determine whether the Orb would land next to any Orbs of the same color
-        List<PointInt> neighbors = playPanel.getPlayPanelData().depthFirstSearch(hypotheticalOrb, PlayPanelData.FilterOption.SAME_COLOR);
-        score += 3*neighbors.size();
+        // transferring Orbs is a very good thing:
+        score += 3*(orbsToTransfer.size() + orbsToDrop.size());
+
+        // bursting Orbs is also great:
+        score += 2*arrayOrbsToBurst.size();
+
+        // Otherwise, it is good if the orb is placed next to another Orb of the same color:
+        List<PointInt> neighbors = playPanel.getPlayPanelData().getNeighbors(new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
+        int matchesFound = 0;
+        for(PointInt point : neighbors){
+            if(orbArray[point.i][point.j].getOrbEnum()==hypotheticalOrb.getOrbEnum()) ++matchesFound;
+        }
+        if(matchesFound==1) ++ score; // note: if matches > 1, the orbs have already been accounted for, in arrayOrbsToBurst.
 
         // It is undesirable for the orb to hit the ceiling:
-        if (hypotheticalOrb.getI()==0) score-=2;
+        if (hypotheticalOrb.getI()==0) --score;
 
         // It looks nicer if the computer doesn't keep shooting in the same direction:
         if((cannon.getAngle()<-90 && angle<-90) || (cannon.getAngle()>-90 && angle>-90)) --score;
 
-        // determine whether the Orb would cause other Orbs to drop
-
-        // If the orb brings us closer to death, it is unfavorable
+        // Todo: If the orb brings us closer to the death line, it is unfavorable
 
         return score;
     }

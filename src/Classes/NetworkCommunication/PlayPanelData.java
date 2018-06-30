@@ -19,7 +19,7 @@ public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
-    public static final int SHOTS_BETWEEN_DROPS = 999*ARRAY_WIDTH_PER_CHARACTER; // After the player shoots this many times, a new row of orbs appears at the top.
+    public static final int SHOTS_BETWEEN_DROPS = 15*ARRAY_WIDTH_PER_CHARACTER; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private Random randomPuzzleGenerator;
 
@@ -82,15 +82,7 @@ public class PlayPanelData implements Serializable {
         numPlayers = other.getNumPlayers();
         shotsUntilNewRow = other.getShotsUntilNewRow();
 
-        orbArray = new Orb[ARRAY_HEIGHT][ARRAY_WIDTH_PER_CHARACTER*other.getNumPlayers()];
-        Orb[][] otherOrbArray = other.getOrbArray();
-        //todo: don't copy NULL. Just set the reference to NULL.
-        for(int i=0; i<ARRAY_HEIGHT; i++){
-            // System.arraycopy(other.getOrbArray()[i],0,orbArray[i],0,orbArray[i].length); // Unfortunately, System.arraycopy doesn't work because it only copies references to the orbs. Hence, the orbs might get modified before they are sent over the socket connection.
-            for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                orbArray[i][j] = new Orb(otherOrbArray[i][j]);
-            }
-        }
+        orbArray = deepCopyOrbArray(other.getOrbArray());
 
         //todo: don't copy NULL. Just set the reference to NULL.
         deathOrbs = new Orb[ARRAY_WIDTH_PER_CHARACTER*numPlayers];
@@ -115,6 +107,37 @@ public class PlayPanelData implements Serializable {
         transferOutOrbsChanged = other.isTransferOutOrbsChanged();
         victoriousChanged = other.isVictoriousChanged();
         deathOrbsChanged = other.isDeathOrbsChanged();
+    }
+
+    public Orb[] deepCopyOrbArray(Orb[] other){
+        Orb[] copiedArray = new Orb[other.length];
+        for(int j=0; j<other.length; j++){
+            if(other[j].equals(NULL)) copiedArray[j] = NULL;
+            else other[j] = new Orb(other[j]);
+        }
+        return copiedArray;
+    }
+
+    // todo: This doesn't work and I can't figure out why. An alternative implementation that does work is given below.
+    /*public Orb[][] deepCopyOrbArray(Orb[][] other){
+        Orb[][] copiedArray = new Orb[other.length][];
+        // deep copy one row at a time:
+        for(int i=0; i<other.length; i++){
+            copiedArray[i] = deepCopyOrbArray(other[i]);
+        }
+        return copiedArray;
+    }*/
+
+    public Orb[][] deepCopyOrbArray(Orb[][] other){
+        Orb[][] copiedArray = new Orb[other.length][other[0].length];
+        // deep copy one row at a time:
+        for(int i=0; i<other.length; i++){
+            for(int j=0; j<other[0].length; j++){
+                if(other[i][j].equals(NULL)) copiedArray[i][j] = NULL;
+                else copiedArray[i][j] = new Orb(other[i][j]);
+            }
+        }
+        return copiedArray;
     }
 
     public List<Orb> deepCopyOrbList(List<Orb> other){
@@ -155,7 +178,7 @@ public class PlayPanelData implements Serializable {
         List<PointInt> openSpots = new LinkedList<>();
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=offset + i%2 - 2*offset*i%2; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j+=2){
-                if(orbArray[i][j]==NULL && (!getNeighbors(new PointInt(i,j)).isEmpty() || i==0) && !isTransferInOrbOccupyingPosition(i,j)){
+                if(orbArray[i][j]==NULL && (!getNeighbors(new PointInt(i,j), orbArray).isEmpty() || i==0) && !isTransferInOrbOccupyingPosition(i,j)){
                     openSpots.add(new PointInt(i,j));
                 }
             }
@@ -187,18 +210,18 @@ public class PlayPanelData implements Serializable {
         burstingOrbsChanged = true;
         shootingOrbsChanged = true;
     }
-    public void changeBurstArrayOrbs(List<PointInt> newBurstingOrbs){
+    public void changeBurstArrayOrbs(List<PointInt> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
         for(PointInt point : newBurstingOrbs){
             Orb orb;
             if(validOrbArrayCoordinates(point)){
                 orb = orbArray[point.i][point.j];
                 orbArray[point.i][point.j] = NULL;
-                orbArrayChanged = true;
+                if(orbArray == this.orbArray) orbArrayChanged = true; // to prevent a simulated shot from setting this value to true.
             }
             else if(validDeathOrbsCoordinates(point)){
                 orb = deathOrbs[point.j];
                 deathOrbs[point.j] = NULL;
-                deathOrbsChanged = true;
+                if(deathOrbs == this.deathOrbs) deathOrbsChanged = true; // to prevent a simulated shot from setting this value to true.
             }
             // We've already made sure that invalid snap coordinates are discarded and that offending orbs are burst
             // (see snapOrbs() method in PlayPanel) But, it doesn't hurt much to double-check.
@@ -209,8 +232,10 @@ public class PlayPanelData implements Serializable {
             orb.setAnimationEnum(Orb.BubbleAnimationType.IMPLODING);
             burstingOrbs.add(orb);
         }
-        cumulativeOrbsBurst += newBurstingOrbs.size();
-        burstingOrbsChanged = true;
+        if(burstingOrbs == this.burstingOrbs){ // to prevent a simulated shot from setting these values.
+            cumulativeOrbsBurst += newBurstingOrbs.size();
+            burstingOrbsChanged = true;
+        }
     }
     public void changeDropArrayOrbs(List<PointInt> newDroppingOrbs){
         for(PointInt point : newDroppingOrbs){
@@ -236,7 +261,6 @@ public class PlayPanelData implements Serializable {
 
     public void decrementShotsUntilNewRow(int amountToDecrement){
         shotsUntilNewRow-=amountToDecrement;
-        if(amountToDecrement>0 && shotsUntilNewRow==1) SoundManager.playSoundEffect(SoundEffect.ALMOST_NEW_ROW);
     }
 
     /* Setters: These are called by clients when they are updating their data according to data from the host*/
@@ -403,8 +427,8 @@ public class PlayPanelData implements Serializable {
 
     }
 
-    // Todo: to be deprecated in favorr of getNeightbors(Orb sourceOrb)
-    public List<PointInt> getNeighbors(PointInt source){
+    // Todo: to be deprecated in favor of getNeighbors(Orb sourceOrb)
+    public List<PointInt> getNeighbors(PointInt source, Orb[][] orbArray){
         int i = source.i;
         int j = source.j;
         List<PointInt> neighbors = new LinkedList<>();
@@ -435,7 +459,7 @@ public class PlayPanelData implements Serializable {
     }
 
     // todo: to be deprecated in favor of depthFirstSearch(Orb sourceOrb, FilterOption filter)
-    public List<PointInt> depthFirstSearch(PointInt source, FilterOption filter) {
+    public List<PointInt> depthFirstSearch(PointInt source, Orb[][] orbArray, FilterOption filter) {
 
         List<PointInt> matches = new LinkedList<>();
 
@@ -453,7 +477,7 @@ public class PlayPanelData implements Serializable {
         while (!active.isEmpty()) {
             PointInt activeOrb = active.pop();
             matches.add(new PointInt(activeOrb.i, activeOrb.j));
-            List<PointInt> neighbors = getNeighbors(activeOrb);
+            List<PointInt> neighbors = getNeighbors(activeOrb, orbArray);
             for (PointInt neighbor : neighbors) {
                 if (!examined[neighbor.i][neighbor.j]) {
                     // apply the filter option
@@ -536,21 +560,21 @@ public class PlayPanelData implements Serializable {
         return matches;
     }
 
-    public Set<PointInt> findConnectedOrbs(){
+    public Set<PointInt> findConnectedOrbs(Orb[][] orbArray){
         Set<PointInt> connectedOrbs = new HashSet<>();
 
         // find all orbs connected to the ceiling:
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
             PointInt sourcePoint = new PointInt(0, j);
             if(orbArray[0][j]==NULL) continue;
-            connectedOrbs.addAll(depthFirstSearch(sourcePoint, FilterOption.ALL));
+            connectedOrbs.addAll(depthFirstSearch(sourcePoint, orbArray, FilterOption.ALL));
         }
 
         return connectedOrbs;
     }
 
     // Finds floating orbs and drops them. Also checks for victory conditions
-    public List<PointInt> findFloatingOrbs(Set<PointInt> connectedOrbs){
+    public List<PointInt> findFloatingOrbs(Set<PointInt> connectedOrbs, Orb[][] orbArray){
         List<PointInt> orbsToDrop = new LinkedList<>();
 
         // any remaining orbs in the array should be dropped.
