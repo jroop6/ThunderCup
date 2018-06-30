@@ -138,7 +138,6 @@ public class PlayPanelData implements Serializable {
     public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
         transferOutOrbs.addAll(newTransferOrbs);
         cumulativeOrbsTransferred += newTransferOrbs.size();
-        System.out.println("transferring " + newTransferOrbs.size() + " orbs. New sum is " + cumulativeOrbsTransferred);
         transferOutOrbsChanged = true;
     }
     public void changeAddTransferInOrbs(List<Orb> transferOutOrbs, Random miscRandomGenerator){
@@ -404,6 +403,7 @@ public class PlayPanelData implements Serializable {
 
     }
 
+    // Todo: to be deprecated in favorr of getNeightbors(Orb sourceOrb)
     public List<PointInt> getNeighbors(PointInt source){
         int i = source.i;
         int j = source.j;
@@ -419,6 +419,22 @@ public class PlayPanelData implements Serializable {
         return neighbors;
     }
 
+    public List<Orb> getNeighbors(Orb sourceOrb){
+        int i = sourceOrb.getI();
+        int j = sourceOrb.getJ();
+        List<Orb> neighbors = new LinkedList<>();
+        //test all possible neighbors for valid coordinates
+        int[] iTests = {i-1, i-1, i, i, i+1, i+1};
+        int[] jTests = {j-1, j+1, j-2, j+2, j-1, j+1};
+        for(int k=0; k<iTests.length; k++){
+            if(validOrbArrayCoordinates(new PointInt(iTests[k],jTests[k])) && orbArray[iTests[k]][jTests[k]]!=NULL){
+                neighbors.add(orbArray[iTests[k]][jTests[k]]);
+            }
+        }
+        return neighbors;
+    }
+
+    // todo: to be deprecated in favor of depthFirstSearch(Orb sourceOrb, FilterOption filter)
     public List<PointInt> depthFirstSearch(PointInt source, FilterOption filter) {
 
         List<PointInt> matches = new LinkedList<>();
@@ -474,6 +490,52 @@ public class PlayPanelData implements Serializable {
         return matches;
     }
 
+    public List<PointInt> depthFirstSearch(Orb sourceOrb, FilterOption filter) {
+        List<PointInt> matches = new LinkedList<>();
+
+        // A boolean array that has the same size as the orbArray, to mark orbs as "examined"
+        boolean examined[][] = new boolean[PlayPanelData.ARRAY_HEIGHT][PlayPanelData.ARRAY_WIDTH_PER_CHARACTER * numPlayers];
+
+        // A stack containing the "active" elements to be examined next
+        Deque<Orb> active = new LinkedList<>();
+
+        // Add the collision's shooter orb to the active list and mark it as "examined"
+        active.push(sourceOrb);
+        if(validOrbArrayCoordinates(new PointInt(sourceOrb.getI(),sourceOrb.getJ()))){
+            examined[sourceOrb.getI()][sourceOrb.getJ()] = true; // deathOrbs have "invalid" coordinates.
+        }
+
+        // Do a depth-first search
+        while (!active.isEmpty()) {
+            Orb activeOrb = active.pop();
+            matches.add(new PointInt(activeOrb.getI(), activeOrb.getJ()));
+            List<Orb> neighbors = getNeighbors(activeOrb);
+            for (Orb neighbor : neighbors) {
+                if (!examined[neighbor.getI()][neighbor.getJ()]) {
+                    // apply the filter option
+                    boolean passesFilter = false;
+                    switch(filter){
+                        case ALL:
+                            if(validOrbArrayCoordinates(new PointInt(neighbor.getI(),neighbor.getJ())) || validDeathOrbsCoordinates(new PointInt(neighbor.getI(),neighbor.getJ()))) passesFilter = true;
+                            else{// This shouldn't ever happen, but checking anyways. // Todo: consider eliminating the previous check for performance.
+                                System.err.println("depth-first search somehow encountered a PointInt with invalid coordinates");
+                                passesFilter = false;
+                            }
+                            break;
+                        case SAME_COLOR:
+                            if(orbArray[neighbor.getI()][neighbor.getJ()].getOrbEnum() == sourceOrb.getOrbEnum()) passesFilter = true;
+                            break;
+                    }
+                    if(passesFilter){
+                        active.add(neighbor);
+                        examined[neighbor.getI()][neighbor.getJ()] = true;
+                    }
+                }
+            }
+        }
+        return matches;
+    }
+
     public Set<PointInt> findConnectedOrbs(){
         Set<PointInt> connectedOrbs = new HashSet<>();
 
@@ -505,6 +567,8 @@ public class PlayPanelData implements Serializable {
         return orbsToDrop;
     }
 
+
+    // Todo: overload with validOrbArrayCoordinates(Orb sourceOrb)
     public boolean validOrbArrayCoordinates(PointInt testPoint)
     {
         return (testPoint.i>=0 && testPoint.i< ARRAY_HEIGHT && testPoint.j>=0 && testPoint.j <ARRAY_WIDTH_PER_CHARACTER*numPlayers);
