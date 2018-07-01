@@ -401,10 +401,10 @@ public class PlayPanel extends Pane {
 
         // Find the *soonest* collision among the list of possible collisions.
         Collision soonestCollision = null;
-        long soonestCollisionTime = Long.MAX_VALUE;
+        double soonestCollisionTime = Long.MAX_VALUE;
         for (Collision collision : possibleCollisionPoints) {
             if (collision.timeToCollision <= soonestCollisionTime) {
-                soonestCollisionTime = (long) collision.timeToCollision;
+                soonestCollisionTime = collision.timeToCollision;
                 soonestCollision = collision;
             }
         }
@@ -416,7 +416,7 @@ public class PlayPanel extends Pane {
                 double angle = shootingOrb.getAngle();
                 double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
                 double y0 = shootingOrb.getYPos(); // y-position of the shooting orb before it is advanced.
-                double distanceToTravel = speed * (soonestCollisionTime / 1000000000.0);
+                double distanceToTravel = speed * soonestCollisionTime;
                 double x1 = x0 + distanceToTravel * Math.cos(angle);
                 double y1 = y0 + distanceToTravel * Math.sin(angle);
                 shootingOrb.setXPos(x1);

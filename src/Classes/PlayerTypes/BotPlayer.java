@@ -18,6 +18,7 @@ import static Classes.GameScene.ANIMATION_FRAME_RATE;
 import static Classes.Orb.NULL;
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
+import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 import static java.lang.Math.PI;
 
@@ -92,8 +93,14 @@ public class BotPlayer extends Player {
             currentFrame = 0;
             switch(currentPhase){
                 case THINKING:
-                    currentPhase = Phase.PRE_MOVEMENT;
-                    transitionFrame = difficulty.getPreMovementFrames();
+                    if(target<0){
+                        currentPhase = Phase.PRE_MOVEMENT;
+                        transitionFrame = difficulty.getPreMovementFrames();
+                    }
+                    else{
+                        // The bot does not see any orbs on the orb array. Perhaps the next puzzle is still being loaded. Wait a bit.
+                        System.out.println("No Orbs detected. Re-running thinking phase...");
+                    }
                     break;
                 case PRE_MOVEMENT:
                     currentPhase = Phase.BROAD_MOVEMENT;
@@ -149,7 +156,7 @@ public class BotPlayer extends Player {
 
         // determine the outcome for a variety of shooting angles:
         LinkedList<Outcome> choices = new LinkedList<>();
-        for(double angle = -40.0; angle>-135.0; angle-=2){
+        for(double angle = -40.0; angle>-135.0; angle-=0.5){
             /*-- Simulate the outcome if we were to fire at this angle --*/
             // First, create a hypothetical shooter orb, fired at this angle:
             OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
@@ -168,29 +175,38 @@ public class BotPlayer extends Player {
             // create an EnumSet that must be passed to the methods:
             Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
-            // Simulate the shot, advancing orbs a short distance at a time until the hypothetical orb snaps to a location:
+            // Determine the maximum time over which the hypothetical Orb could possibly travel:
+            double maxYDistance = hypotheticalOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
+            double maxXDistance = maxYDistance/Math.tan(Math.toRadians(angle));
+            double maxDistanceSquared = Math.pow(maxXDistance, 2.0) + Math.pow(maxYDistance, 2.20);
+            double maxDistance = Math.sqrt(maxDistanceSquared);
+            double maxTime = maxDistance/hypotheticalOrb.getOrbEnum().getOrbSpeed();
+
+            //**** Simulate the shot ****//
+
             List<PointInt> arrayOrbsToBurst = new LinkedList<>();
             List<PointInt> orbsToDrop = new LinkedList<>();
             List<Orb> orbsToTransfer = new LinkedList<>();
-            do{
-                // Advance shooting orbs and deal with all their collisions:
-                List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbsCopy, orbArrayCopy,1/(double)ANIMATION_FRAME_RATE, soundEffectsToPlay);
 
-                // Snap any landed shooting orbs into place:
-                List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
+            // Advance shooting orbs and deal with all their collisions:
+            List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbsCopy, orbArrayCopy, maxTime, soundEffectsToPlay);
 
-                // Remove the snapped shooting orbs from the shootingOrbs list
-                for(PlayPanel.Collision collision : orbsToSnap) shootingOrbsCopy.remove(collision.shooterOrb);
+            // Snap any landed shooting orbs into place:
+            List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
 
-                // Determine whether any of the snapped orbs cause any orbs to burst:
-                List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
-                arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArray, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
-                orbsToTransfer.addAll(newOrbsToTransfer);
+            // Remove the snapped shooting orbs from the shootingOrbs list
+            for(PlayPanel.Collision collision : orbsToSnap) shootingOrbsCopy.remove(collision.shooterOrb);
 
-                // Find floating orbs and drop them:
-                Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
-                orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArray));
-            } while(shootingOrbsCopy.contains(hypotheticalOrb));
+            // Determine whether any of the snapped orbs cause any orbs to burst:
+            List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
+            arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArray, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
+            orbsToTransfer.addAll(newOrbsToTransfer);
+
+            // Find floating orbs and drop them:
+            Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
+            orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArray));
+
+
 
             // Assign a score to the outcome:
             int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArray);
