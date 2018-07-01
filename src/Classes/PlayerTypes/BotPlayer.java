@@ -27,6 +27,7 @@ public class BotPlayer extends Player {
     private Difficulty difficulty;
 
     // Targeting
+    private final double ANGLE_INCREMENT = 0.5; // The resolution of the bot's simulated shots. Smaller == higher resolution but more computation.
     private double startingAngle;
     private double target;
     private double broadMovementOffset;
@@ -139,7 +140,7 @@ public class BotPlayer extends Player {
 
         // determine the outcome for a variety of shooting angles:
         LinkedList<Outcome> choices = new LinkedList<>();
-        for(double angle = -40.0; angle>-135.0; angle-=0.25){
+        for(double angle = -40.0; angle>-135.0; angle-=ANGLE_INCREMENT){
             if (Math.abs(angle + 90)<0.0001) angle+=0.001;
             /*-- Simulate the outcome if we were to fire at this angle --*/
             // First, create a hypothetical shooter orb, fired at this angle:
@@ -258,10 +259,9 @@ public class BotPlayer extends Player {
 
         // sort the possible choices by score, and choose one of the better ones (tempered by stupidity level):
         // Todo: sort the choices into bins of choices with the same score. Or just use a <Score, Choice> treemap
-        choices.sort(Comparator.comparingInt(Outcome::getNegativeScore));
-        System.out.println("best choice: " + choices.get(0).score + " worst choice: " + choices.getLast().score);
-        Outcome choice = choices.get((int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity()));
-        System.out.println("picked " + choice.score + " which uses an angle of " + choice.angle);
+        LinkedList<OutcomeBin> choiceBins = binSort(choices);
+        OutcomeBin chosenBin = choiceBins.get((int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity()));
+        Outcome choice = chosenBin.selectChoice(difficulty.getStupidity());
 
         // temporary, for debugging
         /*OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
@@ -276,6 +276,23 @@ public class BotPlayer extends Player {
         target = choice.angle;
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+    }
+
+    private LinkedList<OutcomeBin> binSort(List<Outcome> choices){
+        Map<Integer,OutcomeBin> lookupMap = new HashMap<>();
+
+        // Sort the choices into bins:
+        OutcomeBin binChoices;
+        for(Outcome choice : choices){
+            binChoices = lookupMap.get(choice.score);
+            if(binChoices==null) lookupMap.put(choice.score, new OutcomeBin(choice));
+            else binChoices.add(choice);
+        }
+
+        // Sort the list of bins:
+        LinkedList<OutcomeBin> bins = new LinkedList<>(lookupMap.values());
+        bins.sort(Comparator.comparingInt(OutcomeBin::getNegativeScore));
+        return bins;
     }
 
     private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<PointInt> orbsToDrop, List<PointInt> arrayOrbsToBurst, Orb[][] orbArray){
@@ -313,9 +330,46 @@ public class BotPlayer extends Player {
             this.angle = angle;
             this.score = score;
         }
+        double getAngle(){
+            return angle;
+        }
+    }
+
+    private class OutcomeBin{
+        List<Outcome> binChoices = new LinkedList<>();
+        OutcomeBin(Outcome choice){
+            add(choice);
+        }
+        void add(Outcome outcome){
+            binChoices.add(outcome);
+        }
         // for sorting in reverse
         int getNegativeScore(){
-            return -score;
+            return -binChoices.get(0).score;
+        }
+
+        Outcome selectChoice(double stupidity){
+            // First, sort the choices by angle:
+            binChoices.sort(Comparator.comparingDouble(Outcome::getAngle));
+
+            // Now put the choices into bins, based on angle:
+            List<List<Outcome>> bins = new LinkedList<>();
+            List<Outcome> currentBin = new LinkedList<>();
+            double previousAngle = 90;
+            double adjustedAngleIncrement = ANGLE_INCREMENT*3/2;
+            for(Outcome choice : binChoices){
+                if(Math.abs(choice.angle-previousAngle)>adjustedAngleIncrement) {
+                    currentBin = new LinkedList<>();
+                    bins.add(currentBin);
+                }
+                currentBin.add(choice);
+            }
+
+            // Pick one of the bins at random and then pick its middlemost choice:
+            List<Outcome> chosenBin = bins.get(offsetGenerator.nextInt(bins.size()));
+            // todo: the bot doesn't seem to always pick the middlemost choice. investigate this.
+            //chosenBin.sort(Comparator.comparingDouble(Outcome::getAngle));
+            return chosenBin.get(chosenBin.size()/2);
         }
     }
 
