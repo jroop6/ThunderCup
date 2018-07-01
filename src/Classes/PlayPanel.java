@@ -168,6 +168,7 @@ public class PlayPanel extends Pane {
         Orb[][] orbArray = playPanelData.getOrbArray();
         List<Orb> burstingOrbs = playPanelData.getBurstingOrbs();
         List<Orb> shootingOrbs = playPanelData.getShootingOrbs();
+        List<Orb> droppingOrbs = playPanelData.getDroppingOrbs();
         Orb[] deathOrbs = playPanelData.getDeathOrbs();
 
         // Other data that will be affected by side-effects:
@@ -186,20 +187,27 @@ public class PlayPanel extends Pane {
         List<Orb> orbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
         List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, orbArray, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer);
 
+        // Burst new orbs:
+        if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
+            soundEffectsToPlay.add(SoundEffect.EXPLOSION);
+            playPanelData.changeBurstShootingOrbs(shootingOrbsToBurst, shootingOrbs, burstingOrbs);
+            playPanelData.changeBurstArrayOrbs(arrayOrbsToBurst,orbArray,deathOrbs,burstingOrbs);
+        }
+
         // Find floating orbs and drop them:
         Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
         List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs, orbArray);
+        playPanelData.changeDropArrayOrbs(orbsToDrop, droppingOrbs, orbArray);
 
         //---- Note: We don't care about the following lines for simulations ----//
 
-        // If orbs were dropped, add visual flourishes for thsm:
+        // If orbs were dropped, add visual flourishes for them:
         if(!orbsToDrop.isEmpty()){
             soundEffectsToPlay.add(SoundEffect.DROP);
             for(PointInt orbToDrop : orbsToDrop){
                 Orb orb = orbArray[orbToDrop.i][orbToDrop.j];
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
             }
-            playPanelData.changeDropArrayOrbs(orbsToDrop);
         }
 
         // Advance the animation frame of the existing visual flourishes:
@@ -212,13 +220,6 @@ public class PlayPanel extends Pane {
         // Advance the animation frame of existing bursting orbs:
         List<Orb> orbsToRemove = advanceBurstingOrbs(burstingOrbs);
         if(!orbsToRemove.isEmpty()) burstingOrbs.removeAll(orbsToRemove);
-
-        // Burst new orbs:
-        if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
-            soundEffectsToPlay.add(SoundEffect.EXPLOSION);
-            playPanelData.changeBurstShootingOrbs(shootingOrbsToBurst);
-            playPanelData.changeBurstArrayOrbs(arrayOrbsToBurst,orbArray,deathOrbs,burstingOrbs);
-        }
 
         // Advance the animation frame of the electrified orbs:
         advanceElectrifyingOrbs();

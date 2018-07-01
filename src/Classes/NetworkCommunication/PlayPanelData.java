@@ -201,27 +201,28 @@ public class PlayPanelData implements Serializable {
         transferInOrbs.addAll(newTransferOrbs);
         transferInOrbsChanged = true;
     }
-    public void changeBurstShootingOrbs(List<Orb> newBurstingOrbs){
+    public void changeBurstShootingOrbs(List<Orb> newBurstingOrbs, List<Orb> shootingOrbs, List<Orb> burstingOrbs){
         shootingOrbs.removeAll(newBurstingOrbs);
         burstingOrbs.addAll(newBurstingOrbs);
         for(Orb orb : newBurstingOrbs){
             orb.setAnimationEnum(Orb.BubbleAnimationType.IMPLODING);
         }
-        burstingOrbsChanged = true;
-        shootingOrbsChanged = true;
+        if(burstingOrbs == this.burstingOrbs) burstingOrbsChanged = true; // to prevent a simulated shot from setting this value to true
+        if(shootingOrbs == this.shootingOrbs) shootingOrbsChanged = true; // to prevent a simulated shot from setting this value to true
     }
+
     public void changeBurstArrayOrbs(List<PointInt> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
         for(PointInt point : newBurstingOrbs){
             Orb orb;
             if(validOrbArrayCoordinates(point)){
                 orb = orbArray[point.i][point.j];
                 orbArray[point.i][point.j] = NULL;
-                if(orbArray == this.orbArray) orbArrayChanged = true; // to prevent a simulated shot from setting this value to true.
+                if(orbArray == this.orbArray) orbArrayChanged = true; // to prevent a simulated shot from setting this value to true
             }
             else if(validDeathOrbsCoordinates(point)){
                 orb = deathOrbs[point.j];
                 deathOrbs[point.j] = NULL;
-                if(deathOrbs == this.deathOrbs) deathOrbsChanged = true; // to prevent a simulated shot from setting this value to true.
+                if(deathOrbs == this.deathOrbs) deathOrbsChanged = true; // to prevent a simulated shot from setting this value to true
             }
             // We've already made sure that invalid snap coordinates are discarded and that offending orbs are burst
             // (see snapOrbs() method in PlayPanel) But, it doesn't hurt much to double-check.
@@ -237,16 +238,20 @@ public class PlayPanelData implements Serializable {
             burstingOrbsChanged = true;
         }
     }
-    public void changeDropArrayOrbs(List<PointInt> newDroppingOrbs){
+    public void changeDropArrayOrbs(List<PointInt> newDroppingOrbs, List<Orb> droppingOrbs, Orb[][] orbArray){
+        if(newDroppingOrbs.isEmpty()) return; // quick getaway
         for(PointInt point : newDroppingOrbs){
             Orb orb = orbArray[point.i][point.j];
             droppingOrbs.add(orb);
             orbArray[point.i][point.j] = NULL;
         }
-        cumulativeOrbsDropped += newDroppingOrbs.size();
-        System.out.println("dropping " + newDroppingOrbs.size() + " orbs");
-        droppingOrbsChanged = true;
-        orbArrayChanged = true;
+        if(orbArray == this.orbArray){ // to prevent a simulated shot from setting this value
+            orbArrayChanged = true;
+        }
+        if(droppingOrbs == this.droppingOrbs){ // to prevent a simulated shot from setting these values.
+            cumulativeOrbsDropped += newDroppingOrbs.size();
+            droppingOrbsChanged = true;
+        }
     }
     public void changeAddDeathOrb(Orb orb){
         deathOrbs[orb.getJ()] = orb;
