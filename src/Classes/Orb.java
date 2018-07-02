@@ -152,7 +152,7 @@ public class Orb implements Serializable{
     public double getYPos(){
         return yPos;
     }
-    double getAngle(){
+    public double getAngle(){
         return angle;
     }
     double getSpeed(){

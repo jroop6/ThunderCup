@@ -138,29 +138,104 @@ public class BotPlayer extends Player {
     private void retarget(){
         System.out.println("******RETARGETING*****");
 
+        // Create copies of the existing orbArray and deathOrbs:
+        Orb[][] orbArrayCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
+        Orb[] deathOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());
+        List<Orb> droppingOrbsCopy = new LinkedList<>();
+        List<Orb> burstingOrbsCopy = new LinkedList<>();
+
+        // create an EnumSet that must be passed to the methods:
+        Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+
+        // Create placeholders for important things
+        List<PointInt> arrayOrbsToBurst = new LinkedList<>();
+        List<PointInt> orbsToDrop = new LinkedList<>();
+        List<Orb> orbsToTransfer = new LinkedList<>();
+
+        // Advance all existing shooter orbs, one at a time in order.
+        // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
+        // be clearing the path for the next orb. If all the shooting orbs are computed simultaneously, this fact
+        // won't be simulated, and the 2nd shooting orb will get blocked in its simulation. This still isn't perfect
+        // (for example, a more recently-fired shot might actually reach its target before a previous shot) but should
+        // be pretty good.
+        for(Orb shootingOrb : playPanel.getPlayPanelData().getShootingOrbs()){
+            // Create a temporary shootingOrbs list that contains a copy of only one of the current shooting orbs:
+            List<Orb> shootingOrbCopy = new LinkedList<>();
+            shootingOrbCopy.add(new Orb(shootingOrb));
+
+            // Determine the maximum time over which this shooting Orb could possibly travel:
+            double maxYDistance = shootingOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
+            double maxXDistance = maxYDistance/Math.tan(Math.toRadians(shootingOrb.getAngle()));
+            double maxDistanceSquared = Math.pow(maxXDistance, 2.0) + Math.pow(maxYDistance, 2.0);
+            double maxDistance = Math.sqrt(maxDistanceSquared);
+            double maxTime = maxDistance/shootingOrb.getOrbEnum().getOrbSpeed();
+
+            // Advance the shooting orb and deal with all of its collisions along the way:
+            List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbCopy, orbArrayCopy, maxTime, soundEffectsToPlay);
+
+            // Snap the shooting orb into place:
+            List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
+
+            // Determine whether any orbs burst:
+            List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
+            arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopy, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
+            orbsToTransfer.addAll(newOrbsToTransfer);
+
+            // Burst new orbs:
+            if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
+                playPanel.getPlayPanelData().changeBurstShootingOrbs(shootingOrbsToBurst, shootingOrbCopy, burstingOrbsCopy);
+                playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopy,deathOrbsCopy, burstingOrbsCopy);
+            }
+
+            // Find floating orbs and drop them:
+            Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
+            orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopy));
+            playPanel.getPlayPanelData().changeDropArrayOrbs(orbsToDrop, droppingOrbsCopy, orbArrayCopy);
+        }
+
+        // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
+        boolean empty = true;
+        for (Orb[] row: orbArrayCopy) {
+            for (Orb orb : row){
+                if(orb!=NULL){
+                    empty = false;
+                    break;
+                }
+            }
+            if(!empty) break;
+        }
+        if(empty){
+            target = 1;
+            return;
+        }
+
+        // Create a hypothetical shooter orb for the simulated shot:
+        OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
+        Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
+
         // determine the outcome for a variety of shooting angles:
+        // todo: multithread this, for speed.
         LinkedList<Outcome> choices = new LinkedList<>();
         for(double angle = -40.0; angle>-135.0; angle-=ANGLE_INCREMENT){
-            if (Math.abs(angle + 90)<0.0001) angle+=0.001;
+            if (Math.abs(angle + 90)<0.0001) angle+=0.001; // todo: if the angle is exactly -90, then weird things happen. Look into this and fix it.
+
             /*-- Simulate the outcome if we were to fire at this angle --*/
-            // First, create a hypothetical shooter orb, fired at this angle:
-            OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
-            Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
+
+            // reset important stats for the hypothetical Orb:
+            hypotheticalOrb.setAnimationEnum(Orb.BubbleAnimationType.STATIC);
             hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
             hypotheticalOrb.setYPos(CANNON_Y_POS);
             hypotheticalOrb.setAngle(Math.toRadians(angle));
             hypotheticalOrb.setSpeed(hypotheticalOrb.getOrbEnum().getOrbSpeed());
 
-            // Now create copies of the existing shooting orbs, orbArray and deathOrbs:
-            List<Orb> shootingOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbList(playPanel.getPlayPanelData().getShootingOrbs());
-            Orb[][] orbArrayCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
-            Orb[] deathOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());
-            // todo: may not need copies of the following two. Empty lists should do:
-            List<Orb> droppingOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbList(playPanel.getPlayPanelData().getDroppingOrbs());
-            List<Orb> burstingOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbList(playPanel.getPlayPanelData().getBurstingOrbs());
+            // Create copies of the simulated orbArray and deathOrbs:
+            Orb[][] orbArrayCopyTemp = playPanel.getPlayPanelData().deepCopyOrbArray(orbArrayCopy);
+            Orb[] deathOrbsCopyTemp = playPanel.getPlayPanelData().deepCopyOrbArray(deathOrbsCopy);
 
-            // create an EnumSet that must be passed to the methods:
-            Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+            // clear the placeholders for important things
+            arrayOrbsToBurst.clear();
+            orbsToDrop.clear();
+            orbsToTransfer.clear();
 
             // Determine the maximum time over which the hypothetical Orb could possibly travel:
             double maxYDistance = hypotheticalOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
@@ -169,110 +244,33 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/hypotheticalOrb.getOrbEnum().getOrbSpeed();
 
-            //**** Simulate the shot in 2 steps ****//
+            // Advance the hypothetical Orb and deal with all of its collisions:
+            List<Orb> shootingOrbCopy = new LinkedList<>();
+            shootingOrbCopy.add(hypotheticalOrb);
+            List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbCopy, orbArrayCopyTemp, maxTime, soundEffectsToPlay);
 
-            // Create placeholders for important things
-            List<PointInt> arrayOrbsToBurst = new LinkedList<>();
-            List<PointInt> orbsToDrop = new LinkedList<>();
-            List<Orb> orbsToTransfer = new LinkedList<>();
+            // Snap the hypothetical Orb into place:
+            List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopyTemp, deathOrbsCopyTemp, soundEffectsToPlay);
 
-            // The first step advances all the existing shooter orbs
-            {
-                // Advance shooting orbs and deal with all their collisions:
-                List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbsCopy, orbArrayCopy, maxTime, soundEffectsToPlay);
+            // Determine whether any of the snapped orbs cause any orbs to burst:
+            arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopyTemp, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer));
 
-                // Snap any landed shooting orbs into place:
-                List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
-
-                // Remove the snapped shooting orbs from the shootingOrbs list
-                for(PlayPanel.Collision collision : orbsToSnap) shootingOrbsCopy.remove(collision.shooterOrb);
-
-                // Determine whether any of the snapped orbs cause any orbs to burst:
-                List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
-                arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopy, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
-                orbsToTransfer.addAll(newOrbsToTransfer);
-
-                // Burst new orbs:
-                if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
-                    soundEffectsToPlay.add(SoundEffect.EXPLOSION);
-                    playPanel.getPlayPanelData().changeBurstShootingOrbs(shootingOrbsToBurst, shootingOrbsCopy, burstingOrbsCopy);
-                    playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopy,deathOrbsCopy, burstingOrbsCopy);
-                }
-
-                // Find floating orbs and drop them:
-                Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
-                orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopy));
-                playPanel.getPlayPanelData().changeDropArrayOrbs(orbsToDrop, droppingOrbsCopy, orbArrayCopy);
-
-            }
-
-            // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
-            boolean empty = true;
-            for (Orb[] row: orbArrayCopy) {
-                for (Orb orb : row){
-                    if(orb!=NULL){
-                        empty = false;
-                        break;
-                    }
-                }
-                if(!empty) break;
-            }
-            if(empty){
-                target = 1;
-                return;
-            }
-
-            // The second step determines the outcome of the hypothetical orb
-            {
-                arrayOrbsToBurst.clear();
-                orbsToDrop.clear();
-                orbsToTransfer.clear();
-
-                // Advance the hypothetical Orb and deal with all of its collisions:
-                shootingOrbsCopy.clear();
-                shootingOrbsCopy.add(hypotheticalOrb);
-                List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbsCopy, orbArrayCopy, maxTime, soundEffectsToPlay);
-
-                // Snap the hypothetical Orb into place:
-                List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
-
-                // Remove the snapped shooting orbs from the shootingOrbs list
-                for(PlayPanel.Collision collision : orbsToSnap) shootingOrbsCopy.remove(collision.shooterOrb);
-
-                // Determine whether any of the snapped orbs cause any orbs to burst:
-                List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
-                arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopy, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
-                orbsToTransfer.addAll(newOrbsToTransfer);
-
-                // Find floating orbs and drop them:
-                Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
-                orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopy));
-            }
-
+            // Find floating orbs:
+            Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopyTemp); // orbs that are connected to the ceiling.
+            orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopyTemp));
 
             // Assign a score to the outcome:
-            int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopy);
+            int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp);
 
             // Add the Outcome to the list of possible choices:
             choices.add(new Outcome(angle,score));
         }
 
         // sort the possible choices by score, and choose one of the better ones (tempered by stupidity level):
-        // Todo: sort the choices into bins of choices with the same score. Or just use a <Score, Choice> treemap
         LinkedList<OutcomeBin> choiceBins = binSort(choices);
         OutcomeBin chosenBin = choiceBins.get((int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity()));
         Outcome choice = chosenBin.selectChoice(difficulty.getStupidity());
 
-        // temporary, for debugging
-        /*OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
-        Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
-        hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
-        hypotheticalOrb.setYPos(CANNON_Y_POS);
-        hypotheticalOrb.setAngle(Math.toRadians(choice.angle));
-        PointInt landingPoint = playPanel.predictLandingPoint(hypotheticalOrb);
-        System.out.println("Predicted landing point is ("+landingPoint.i+","+landingPoint.j+")");*/
-
-        //target = -180.0*(new Random().nextDouble()); // recall that JavaFx rotates clockwise instead of counterclockwise
         target = choice.angle;
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
@@ -363,12 +361,11 @@ public class BotPlayer extends Player {
                     bins.add(currentBin);
                 }
                 currentBin.add(choice);
+                previousAngle = choice.angle;
             }
 
             // Pick one of the bins at random and then pick its middlemost choice:
             List<Outcome> chosenBin = bins.get(offsetGenerator.nextInt(bins.size()));
-            // todo: the bot doesn't seem to always pick the middlemost choice. investigate this.
-            //chosenBin.sort(Comparator.comparingDouble(Outcome::getAngle));
             return chosenBin.get(chosenBin.size()/2);
         }
     }
@@ -384,7 +381,7 @@ public class BotPlayer extends Player {
     {
         EASY(2.0, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 3.0, 10),
         MEDIUM(1.5, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 1.5, 4),
-        HARD(0.15, 0.05, .25, 0.05, 0.25, 0.1, 10.0, 0.000, 0.000);
+        HARD(0.10, 0.10, .20, 0.10, 0.15, 0.10, 10.0, 0.000, 0.000);
 
         private int thinkingFrames;
         private int preMovementFrames;
