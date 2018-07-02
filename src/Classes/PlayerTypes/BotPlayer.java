@@ -209,19 +209,17 @@ public class BotPlayer extends Player {
             return;
         }
 
-        // Create a hypothetical shooter orb for the simulated shot:
-        OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
-        Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
-
         // determine the outcome for a variety of shooting angles:
-        // todo: multithread this, for speed.
+        // todo: multithread this, for speed. Just evenly divide the work into ranges of angles and make sure to use a thread-safe list.
         LinkedList<Outcome> choices = new LinkedList<>();
         for(double angle = -40.0; angle>-135.0; angle-=ANGLE_INCREMENT){
             if (Math.abs(angle + 90)<0.0001) angle+=0.001; // todo: if the angle is exactly -90, then weird things happen. Look into this and fix it.
 
             /*-- Simulate the outcome if we were to fire at this angle --*/
 
-            // reset important stats for the hypothetical Orb:
+            // Create a hypothetical shooter orb for the simulated shot:
+            OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
+            Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
             hypotheticalOrb.setAnimationEnum(Orb.BubbleAnimationType.STATIC);
             hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
             hypotheticalOrb.setYPos(CANNON_Y_POS);
