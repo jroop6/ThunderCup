@@ -27,7 +27,7 @@ public class BotPlayer extends Player {
     private Difficulty difficulty;
 
     // Targeting
-    private final double ANGLE_INCREMENT = 0.5; // The resolution of the bot's simulated shots. Smaller == higher resolution but more computation.
+    private final double ANGLE_INCREMENT = 1.0; // The resolution of the bot's simulated shots. Smaller == higher resolution but more computation.
     private double startingAngle;
     private double target;
     private double broadMovementOffset;
@@ -379,7 +379,7 @@ public class BotPlayer extends Player {
     {
         EASY(2.0, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 3.0, 10),
         MEDIUM(1.5, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 1.5, 4),
-        HARD(0.10, 0.10, .20, 0.10, 0.15, 0.10, 10.0, 0.000, 0.000);
+        HARD(0.15, 0.15, .25, 0.15, 0.20, 0.15, 10.0, 0.500, 0.000);
 
         private int thinkingFrames;
         private int preMovementFrames;
@@ -390,6 +390,7 @@ public class BotPlayer extends Player {
         private double broadMovementOffset; // degrees
         private double fineMovementOffset; // degrees
         private double stupidity; // higher number means the computer is more likely to make bad choices.
+        private Random rand = new Random();
 
         Difficulty(double thinkingTime, double preMovementTime, double broadMovementTime, double intercessionTime, double fineMovementTime, double firingTime, double broadMovementOffset, double fineMovementOffset, double stupidity){
             thinkingFrames = (int)Math.round(thinkingTime*GameScene.ANIMATION_FRAME_RATE);
@@ -404,7 +405,8 @@ public class BotPlayer extends Player {
         }
 
         public int getThinkingFrames(){
-            return thinkingFrames;
+            // randomize the amount of thinking time a little:
+            return (int)Math.round(thinkingFrames*2*rand.nextDouble() + 1);
         }
         public int getPreMovementFrames(){
             return preMovementFrames;

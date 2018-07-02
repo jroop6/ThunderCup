@@ -57,6 +57,7 @@ public class SceneManager extends Application {
         /* Fullscreen mode is annoying for development, so use these settings for now*/
         primaryStage.setHeight(primaryScreenBounds.getHeight()*0.666);
         primaryStage.setWidth((primaryScreenBounds.getWidth())*0.666);
+        primaryStage.setMaximized(true);
 
         /* Use these settings for the final release */
         /*primaryStage.setHeight(primaryScreenBounds.getHeight());

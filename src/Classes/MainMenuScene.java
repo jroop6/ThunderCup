@@ -13,22 +13,28 @@ import javafx.animation.Interpolator;
 import javafx.animation.TranslateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Scale;
 import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
+import java.awt.*;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static Classes.GameScene.ANIMATION_FRAME_RATE;
@@ -43,7 +49,7 @@ public class MainMenuScene extends Scene {
     private final int BUTTONS_HORIZONTAL_STARTING_POSITION = 1480;
     private final int BUTTON_HEIGHT = 82;
     private final int EXIT_BUTTON_SEPARATION_DISTANCE = 30;
-    private final String PROGRAMMER_WEBSITE_URL = "jonathanroop.wordpress.com";
+    private final String PROGRAMMER_WEBSITE_URL = "https://jonathanroop.wordpress.com/";
     private final String COMPOSER_WEBSITE_URL = "https://alllevelsatonce.com";
 
     private Pane scaledRoot;
@@ -222,7 +228,7 @@ public class MainMenuScene extends Scene {
                 case RANDOM_PUZZLE:
                     System.out.println("clicked random puzzle mode");
                     animationTimer.stop();
-                    SceneManager.switchToPuzzleMode(-1);
+                    SceneManager.switchToPuzzleMode(-5);
                     break;
                 case MULTIPLAYER:
                     System.out.println("clicked multiplayer mode");
@@ -387,28 +393,98 @@ public class MainMenuScene extends Scene {
         return username;
     }
 
-    // Todo: Some of the sound effects were uploaded with an attribution license which requires me to link to a copy of the license. Others are published under CC0. Figure out a good way to handle these different cases without being too wordy. For now, people can look up the individual users and probably find the sounds I used.
     private void showCreditsDialog(){
         Alert creditsDialog = new Alert(Alert.AlertType.CONFIRMATION);
         creditsDialog.initOwner(SceneManager.getPrimaryStage());
         creditsDialog.setTitle("Credits");
-        creditsDialog.setHeaderText(
-                "Thunder Cup is a bubble breaker-style game programmed by Jonathan Roop as part of \n" +
-                "his 2018 portfolio. All art and animation used in the game were also created by \n" +
-                "him. Character styles were inspired by the television series My Little Pony: \n" +
-                "Friendship is Magic. To check out Jonathan's other works, please visit \n" +
-                PROGRAMMER_WEBSITE_URL + ". \n\n" +
-                "The music used in the game was created by AllLevelsAtOnce. Many of the tracks were \n" +
-                "based on songs from the My Little Pony: Friendship is Magic television series. \n" +
-                "For more works by AllLevelsAtOnce, please visit " + COMPOSER_WEBSITE_URL + "\n\n" +
-                "Sound effects were downloaded from freeSound.org and then modified. Many thanks \n" +
-                "to the original uploaders: Arctura, Figowitz, LittleRobotSoundFactory, Timbre,\n" +
-                "suntemple, Bykgames, suonho, Benboncan, Komit, and noirenex. \n\n" +
-                "Disclaimer: Thunder Cup and its contributors are not affiliated with Hasbro or \n" +
+        creditsDialog.setHeaderText("");
+        VBox vBox = new VBox();
+        FlowPane credits1 = new FlowPane();
+        Label label1 = new Label("Thunder Cup is a bubble breaker-style game programmed by Jonathan Roop as " +
+                "part of his 2018 portfolio. All art and animation used in the game were also created by " +
+                "him. Character styles were inspired by the television series My Little Pony: " +
+                "Friendship is Magic.");
+        label1.setWrapText(true);
+        label1.setPrefWidth(500);
+        label1.setTextAlignment(TextAlignment.JUSTIFY);
+        Hyperlink programmerWebsite = new Hyperlink("Check out Jonathan's other works on his portfolio website");
+        programmerWebsite.setOnAction((event -> {
+            try{
+                Desktop.getDesktop().browse(new URI(PROGRAMMER_WEBSITE_URL));
+            }
+            catch(URISyntaxException | IOException e){
+                e.printStackTrace();
+            }
+        }));
+        Label label2 = new Label("\n\nThe music used in the game was created by AllLevelsAtOnce. Many of the " +
+                "tracks were based on songs from the My Little Pony: Friendship is Magic television series. ");
+        label2.setWrapText(true);
+        label2.setPrefWidth(500);
+        label2.setTextAlignment(TextAlignment.JUSTIFY);
+        Hyperlink composerWebsite = new Hyperlink("Visit alllevelsatonce.com for more works by the composer.");
+        composerWebsite.setOnAction((event -> {
+            try{
+                Desktop.getDesktop().browse(new URI(COMPOSER_WEBSITE_URL));
+            }
+            catch(URISyntaxException | IOException e){
+                e.printStackTrace();
+            }
+        }));
+        Label label3 = new Label("\n\nSound effects were downloaded from freeSound.org and modified. Many thanks " +
+                "to the original uploaders: Arctura, Figowitz, LittleRobotSoundFactory, Timbre, " +
+                "suntemple, Bykgames, suonho, Benboncan, Komit, and noirenex. Various permissive " +
+                "licenses were used by these contributors; links to these licenses can be found below: ");
+        label3.setWrapText(true);
+        label3.setPrefWidth(500);
+        label3.setTextAlignment(TextAlignment.JUSTIFY);
+
+        credits1.getChildren().addAll(label1, programmerWebsite, label2, composerWebsite, label3);
+
+
+        HBox links = new HBox();
+        Hyperlink attrLicLink = new Hyperlink("Attribution License");
+        attrLicLink.setOnAction((event)->{
+            try{
+                Desktop.getDesktop().browse(new URI("https://creativecommons.org/licenses/by/3.0/"));
+            }
+            catch(URISyntaxException | IOException e){
+                e.printStackTrace();
+            }
+        });
+        Label linkSeparator1 = new Label(" || ");
+        Hyperlink cc0LicLink = new Hyperlink("CC0 License");
+        cc0LicLink.setOnAction((event)->{
+            try{
+                Desktop.getDesktop().browse(new URI("https://creativecommons.org/publicdomain/zero/1.0/"));
+            }
+            catch(URISyntaxException | IOException e){
+                e.printStackTrace();
+            }
+        });
+        Label linkSeparator2 = new Label(" || ");
+        Hyperlink attrNCLicLink = new Hyperlink("Attribution NonCommercial License");
+        attrNCLicLink.setOnAction((event)->{
+            try{
+                Desktop.getDesktop().browse(new URI("https://creativecommons.org/licenses/by-nc/3.0/"));
+            }
+            catch(URISyntaxException | IOException e){
+                e.printStackTrace();
+            }
+        });
+        links.getChildren().addAll(attrLicLink, linkSeparator1, cc0LicLink, linkSeparator2, attrNCLicLink);
+        links.setAlignment(Pos.CENTER);
+        Label credits2 = new Label(
+                "\nDisclaimer: Thunder Cup and its contributors are not affiliated with Hasbro or \n" +
                 "the My Little Pony brand. This game was created for the purpose of showcasing the \n" +
                 "programmer's Java coding ability and also as a labor of love for the incredible \n" +
-                "brony fandom."
+                "brony fandom.\n\n"
         );
+        HBox versionContainer = new HBox();
+        Label version = new Label("version 0.2 - Development Release");
+        versionContainer.getChildren().add(version);
+        versionContainer.setAlignment(Pos.CENTER);
+        vBox.getChildren().addAll(credits1, links, credits2, versionContainer);
+        creditsDialog.getDialogPane().contentProperty().set(vBox);
         ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         creditsDialog.getButtonTypes().setAll(returnBtn);
         creditsDialog.setGraphic(null);
