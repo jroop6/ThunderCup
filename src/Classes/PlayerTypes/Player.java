@@ -208,7 +208,6 @@ public abstract class Player {
         if(newPlayerData.isFiring()){
             getPlayerData().getFiredOrbs().addAll(newPlayerData.getFiredOrbs()); // updates model
             getPlayerData().changeFiringFlag(true); // marks data as updated
-            System.out.println("HOST: player's firing flag has been set to " + getPlayerData().isFiring());
             for(int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon(); // updates model
             getPlayerData().changeAmmunitionFlag(true); // marks data as updated
             // note: view will be updated in the PlayPanel's repaint() method.

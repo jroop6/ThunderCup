@@ -32,7 +32,8 @@ public class VisualFlourish {
     }
 
     public void drawSelf(GraphicsContext orbDrawer){
-        animationEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, currentFrame);
+        int err= animationEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, currentFrame);
+        if(err!=0) System.err.println("visualFlourish");
     }
 
     public void relocate(double xPos, double yPos){

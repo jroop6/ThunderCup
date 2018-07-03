@@ -80,9 +80,7 @@ public class SoundManager {
         currentSoundEffects.add(newSoundEffect);
         newSoundEffect.setOnEndOfMedia(()->{
             currentSoundEffects.remove(newSoundEffect);
-            System.out.println("removing sound effect");
         });
-        System.out.println("playing sound effect");
         newSoundEffect.setVolume(SOUND_EFFECTS_VOLUME);
         newSoundEffect.play();
         return newSoundEffect;
@@ -114,7 +112,6 @@ public class SoundManager {
         if(mediaPlayerToStop==null) return;
         mediaPlayerToStop.setVolume(0.0);
         currentSoundEffects.remove(mediaPlayerToStop);
-        System.out.println("removing looping sound effect");
     }
 
     public static void stopMusic(){

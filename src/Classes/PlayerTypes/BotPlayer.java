@@ -136,8 +136,6 @@ public class BotPlayer extends Player {
      *    fineMovementOffset - How far off the bot will be from the target angle at the end of the fine movement phase
      */
     private void retarget(){
-        System.out.println("******RETARGETING*****");
-
         // Create copies of the existing orbArray and deathOrbs:
         Orb[][] orbArrayCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
         Orb[] deathOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());

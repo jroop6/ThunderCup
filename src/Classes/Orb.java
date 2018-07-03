@@ -204,14 +204,13 @@ public class Orb implements Serializable{
                 break; // note: The Orb's physical location is changed in PlayPanel because we don't know the size of the playpanel here in the Orb class (so we wouldn't know when it goes off the bottom edge of the PlayPanel).
             case IMPLODING:
                 currentFrame++;
-                if(currentFrame >orbEnum.getSpriteSheet().getMaxFrameIndex()){
+                if(currentFrame > orbEnum.getSpriteSheet().getMaxFrameIndex()){
                     setAnimationEnum(BubbleAnimationType.BURSTING);
                 }
                 break;
             case BURSTING:
                 currentFrame++;
-                if(currentFrame >orbExplosion.getSpriteSheet().getMaxFrameIndex()){
-                    System.out.println("bubble has finished bursting. Removing,");
+                if(currentFrame > orbExplosion.getSpriteSheet().getMaxFrameIndex()){
                     return true;
                 }
                 break;
@@ -243,23 +242,29 @@ public class Orb implements Serializable{
 
     public void drawSelf(GraphicsContext orbDrawer, double vibrationOffset){
         if(this == NULL) return; // null orbs are not drawn.
+        int err;
         switch(animationEnum){
             case STATIC:
             case DROPPING:
             case IMPLODING:
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                if(err!=0) System.err.println("imploding");
                 break;
             case BURSTING:
-                orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                if(err!=0) System.err.println("bursting");
                 break;
             case ELECTRIFYING:
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
-                orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
+                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                if(err!=0) System.err.println("electrifying - orbEnum");
+                err = orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
+                if(err!=0) System.err.println("electrifying - orbElectrification");
                 break;
             case TRANSFERRING:
                 // draw the orb at 50% transparency:
                 orbDrawer.setGlobalAlpha(0.5);
-                orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, 0);
+                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, 0);
+                if(err!=0) System.err.println("transferring");
                 orbDrawer.setGlobalAlpha(1.0);
                 // draw an outline that shows how much time is left before the transfer is complete:
                 orbDrawer.setStroke(Color.rgb(0,255,255));

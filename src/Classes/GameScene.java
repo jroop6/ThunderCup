@@ -147,7 +147,6 @@ public class GameScene extends Scene {
         addEventHandler(MouseEvent.MOUSE_PRESSED, (event) ->{
             localPlayer.pointCannon(event.getX(), event.getY());
             localPlayer.changeFireCannon();
-            System.out.println("cannon fired!");
         });
         addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)->{
             localPlayer.pointCannon(event.getX(), event.getY());

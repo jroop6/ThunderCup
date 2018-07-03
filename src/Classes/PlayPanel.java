@@ -245,7 +245,7 @@ public class PlayPanel extends Pane {
 
         // Advance the transfer orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
-        snapTransferOrbs(transferOrbsToSnap, orbArray);
+        snapTransferOrbs(transferOrbsToSnap, orbArray, soundEffectsToPlay);
 
         // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
         if(connectedOrbs.isEmpty()){
@@ -720,6 +720,7 @@ public class PlayPanel extends Pane {
             }
             // If the snap coordinates are somehow off the edge of the array in a different fashion, then just burst
             // the orb. This should never happen, but... you never know.
+            // Todo: this error message actually printed. There is indeed an edge case somewhere. Find it. Note: it may have happened in the botPlayer's simulation.
             else if(!playPanelData.validOrbArrayCoordinates(new PointInt(iSnap, jSnap))){
                 System.err.println("Invalid snap coordinates detected. Bursting orb.");
                 orbsToBurst.add(snap.shooterOrb);
@@ -755,13 +756,13 @@ public class PlayPanel extends Pane {
             List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), orbArray, PlayPanelData.FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
 
-            // If there are a sufficient number grouped together, then add a transfer out orb of the same color, as well as a visual flourish:
+            // If there are a sufficient number grouped together, then add a transfer out orb of the same color:
             int numTransferOrbs;
             if((numTransferOrbs = (connectedOrbs.size()-3)/2) > 0) {
                 soundEffectsToPlay.add(SoundEffect.DROP);
                 for(int k=0; k<numTransferOrbs; k++){
                     PointInt orbToTransfer = connectedOrbs.get(k);
-                    orbsToTransfer.add(orbArray[orbToTransfer.i][orbToTransfer.j]);
+                    orbsToTransfer.add(new Orb(orbArray[orbToTransfer.i][orbToTransfer.j])); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
                 }
             }
             if(orbArray == playPanelData.getOrbArray() && connectedOrbs.size()>playPanelData.getLargestGroupExplosion()){
@@ -825,13 +826,8 @@ public class PlayPanel extends Pane {
         List<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
         List<Orb> transferOrbsToSnap = new LinkedList<>();
         for(Orb orb : transferInOrbs){
-            if(playPanelData.getTeam()==2) System.out.println("ticking a transfer orb with animationEnum " + orb.getAnimationEnum());
             if (orb.animationTick()){
-                if(playPanelData.getTeam()==2) System.out.println("tick returned true. animationEnum is now " + orb.getAnimationEnum());
                 transferOrbsToSnap.add(orb);
-            }
-            else {
-                if(playPanelData.getTeam()==2) System.out.println("tick returned false. animationEnum is still " + orb.getAnimationEnum());
             }
         }
         return transferOrbsToSnap;
@@ -850,7 +846,7 @@ public class PlayPanel extends Pane {
 
 
 
-    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray){
+    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<SoundEffect> soundEffectsToPlay){
         // Find all array points that are connected to the ceiling
         boolean playSoundEffect = false;
         List<PointInt> connectedOrbs = new LinkedList<>();
@@ -866,16 +862,13 @@ public class PlayPanel extends Pane {
             List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()), orbArray);
             if((!Collections.disjoint(neighbors,connectedOrbs) || orb.getI()==0) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
-                playSoundEffect = true;
+                soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), false));
             }
         }
 
         // remove the snapped transfer orbs from the inbound transfer orbs list
         playPanelData.getTransferInOrbs().removeAll(transferOrbsToSnap);
-
-        // play a sound effect, if appropriate:
-        if(playSoundEffect) SoundManager.playSoundEffect(SoundEffect.MAGIC_TINKLE);
     }
 
     private List<Orb> advanceDroppingOrbs(){
@@ -984,11 +977,9 @@ public class PlayPanel extends Pane {
         for(Double amount : counts.values()){
             total += amount;
         }
-        System.out.println("there are " + total + " orbs");
         double cumulativeSum = 0.0;
         for(OrbImages orbImage : counts.keySet()){
             cumulativeSum += counts.get(orbImage);
-            System.out.println("the fraction of " + orbImage.getSymbol() + " is " + cumulativeSum/total);
             counts.replace(orbImage, cumulativeSum/total);
         }
 
@@ -999,7 +990,6 @@ public class PlayPanel extends Pane {
                 break;
             }
         }
-        System.out.println("chose " + chosenEnum.getSymbol() + " for a random number " + randomNumber);
 
         return chosenEnum;
 

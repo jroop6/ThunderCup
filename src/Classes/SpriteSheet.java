@@ -121,12 +121,12 @@ public class SpriteSheet extends Image {
     }
 
     // For drawing directly on a GraphicsContext
-    public void drawSprite(GraphicsContext graphicsContext, double anchorX, double anchorY, int frameIndex){
+    public int drawSprite(GraphicsContext graphicsContext, double anchorX, double anchorY, int frameIndex){
         // First, a sanity check
         if(frameIndex >= frameBounds.size()){
             System.err.println("frame index " + frameIndex + " exceeds the maximum sprite index in spritesheet "
                     + this + ", which has only " + frameBounds.size() + "sprites. Note: frames are 0-indexed.");
-            return;
+            return 1;
         }
 
         // Determine where the top-left corner of the sprite should be:
@@ -146,5 +146,7 @@ public class SpriteSheet extends Image {
                 topLeftY,                     // destination y
                 spritePosAndDim.getWidth(),   // destination width
                 spritePosAndDim.getHeight()); // destination height
+
+        return 0;
     }
 }

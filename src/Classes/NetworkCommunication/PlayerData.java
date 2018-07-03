@@ -335,11 +335,18 @@ public class PlayerData implements Serializable {
     }
 
     public void checkForConsistency(PlayerData other){
-        List<Orb> hostAmmunition = other.getAmmunition();
         boolean inconsistent = false;
-        for(int i=0; i<ammunitionOrbs.size(); i++){
-            if(ammunitionOrbs.get(i).getOrbEnum() != hostAmmunition.get(i).getOrbEnum()) inconsistent = true;
+
+        // check for consistency in the ammunition Orbs:
+        List<Orb> hostAmmunition = other.getAmmunition();
+        if(ammunitionOrbs.size() != hostAmmunition.size()) inconsistent = true;
+        else{
+            for(int i=0; i<ammunitionOrbs.size(); i++){
+                if(ammunitionOrbs.get(i).getOrbEnum() != hostAmmunition.get(i).getOrbEnum()) inconsistent = true;
+            }
         }
+
+        // check for consistency in disabling flags:
         if(frozen != other.getFrozen()) inconsistent = true;
         if(cannonDisabled != other.getCannonDisabled()) inconsistent = true;
         if(defeated != other.getDefeated()) inconsistent = true;
@@ -349,10 +356,15 @@ public class PlayerData implements Serializable {
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE) {
             System.err.println("Client playerData is inconsistent with the host! overriding client's data...");
+
+            // Make the ammunition Orbs consistent:
             setAmmunitionOrbs(hostAmmunition);
+
+            // Make the disabling flags consistent:
             setFrozen(other.getFrozen());
             setCannonDisabled(other.getCannonDisabled());
             setDefeated(other.getDefeated());
+
             inconsistencyCounter = 0;
         }
     }

@@ -18,7 +18,7 @@ import static Classes.Orb.NULL;
 public class PlayPanelData implements Serializable {
     public static final int ARRAY_HEIGHT = 20;
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30;
-    private static final int NUM_FRAMES_ERROR_TOLERANCE = 12; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
+    private static final int NUM_FRAMES_ERROR_TOLERANCE = 24; // the number of frames for which orbArray data that is inconsistent with the host is tolerated. After this many frames, the orbArray is overwritten with the host's data.
     public static final int SHOTS_BETWEEN_DROPS = 15*ARRAY_WIDTH_PER_CHARACTER; // After the player shoots this many times, a new row of orbs appears at the top.
 
     private Random randomPuzzleGenerator;
@@ -159,6 +159,9 @@ public class PlayPanelData implements Serializable {
         shotsFiredChanged = true;
     }
     public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
+        for(Orb orb : newTransferOrbs){
+            orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
+        }
         transferOutOrbs.addAll(newTransferOrbs);
         cumulativeOrbsTransferred += newTransferOrbs.size();
         transferOutOrbsChanged = true;
@@ -192,8 +195,6 @@ public class PlayPanelData implements Serializable {
             int index = miscRandomGenerator.nextInt(openSpots.size());
             PointInt openSpot = openSpots.get(index);
             orb.setIJ(openSpot.i,openSpot.j);
-            orb.setAnimationEnum(Orb.BubbleAnimationType.TRANSFERRING);
-            System.out.println("size of openSpots is " + openSpots.size());
             openSpots.remove(index);
         }
 
@@ -278,6 +279,9 @@ public class PlayPanelData implements Serializable {
         droppingOrbs.add(newOrb);
     }
     public void setAddThunderOrbs(List<Orb> newThunderOrbs){
+        for(Orb orb: newThunderOrbs){
+            orb.setAnimationEnum(Orb.BubbleAnimationType.THUNDERING);
+        }
         thunderOrbs.addAll(newThunderOrbs);
     }
     public void setOrbArray(Orb[][] newOrbArray){
@@ -627,26 +631,21 @@ public class PlayPanelData implements Serializable {
             for (int j=0; j < ARRAY_WIDTH_PER_CHARACTER * numPlayers; j++) {
                 if (otherArray[i][j].equals(NULL) && !(orbArray[i][j] == NULL)){ // note: cannot use == in the first clause because the host has a different instance of Orb.NULL than we do.
                     inconsistent = true;
-                    System.out.println("orbArray["+i+"]["+j+"] is null but otherArray[i][j] is not null");
                 }
                 else if (orbArray[i][j].getOrbEnum() != otherArray[i][j].getOrbEnum()){
                     inconsistent = true;
-                    System.out.println("array enums at ["+i+"]["+j+"] do not match");
                 }
             }
         }
 
         // Check that the deathOrbs array is consistent between the two sets of data:
-        inconsistent = false;
         Orb[] otherDeathOrbs = other.getDeathOrbs();
         for (int j=0; j < ARRAY_WIDTH_PER_CHARACTER * numPlayers; j++) {
             if (otherDeathOrbs[j].equals(NULL) && !(deathOrbs[j] == NULL)){ // note: cannot use == in the first clause because the host has a different instance of Orb.NULL than we do.
                 inconsistent = true;
-                System.out.println("deathOrbs["+j+"] is null but otherDeathOrbs[j] is not null");
             }
             else if (otherDeathOrbs[j].getOrbEnum() != deathOrbs[j].getOrbEnum()){
                 inconsistent = true;
-                System.out.println("deathOrb enums at ["+j+"] do not match");
             }
         }
 
