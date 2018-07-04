@@ -765,7 +765,8 @@ public class PlayPanel extends Pane {
                 soundEffectsToPlay.add(SoundEffect.DROP);
                 for(int k=0; k<numTransferOrbs; k++){
                     PointInt orbToTransfer = connectedOrbs.get(k);
-                    orbsToTransfer.add(new Orb(orbArray[orbToTransfer.i][orbToTransfer.j])); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
+                    if(playPanelData.validOrbArrayCoordinates(orbToTransfer)) orbsToTransfer.add(new Orb(orbArray[orbToTransfer.i][orbToTransfer.j])); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
+                    else orbsToTransfer.add(new Orb(playPanelData.getDeathOrbs()[j]));
                 }
             }
             if(orbArray == playPanelData.getOrbArray() && connectedOrbs.size()>playPanelData.getLargestGroupExplosion()){
