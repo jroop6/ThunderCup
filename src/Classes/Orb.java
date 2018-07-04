@@ -35,7 +35,7 @@ public class Orb implements Serializable{
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbImage because we only have 1 instance of this orb instead of literally hundreds.
-    public static final Orb NULL = new Orb(OrbImages.BLACK_ORB, 0, 0, BubbleAnimationType.STATIC);
+    public static final Orb NULL = new Orb(OrbImages.BLACK_ORB, -1, -1, BubbleAnimationType.STATIC);
 
     // Cached constant for better performance:
     private static final double ROOT3 = Math.sqrt(3.0);
@@ -277,10 +277,9 @@ public class Orb implements Serializable{
     // results will be doubles, not round integers.
     // Todo: Uh... why did I do this way, again? Seems like this should take 2 doubles as arguments and arrayOrbs should already be keeping track of their (i,j) coordinates. Consider a refactor.
     public Point2D xyToIj() {
-        double iCoordinate = (yPos-ORB_RADIUS)/(ORB_RADIUS*ROOT3);
-        double jCoordinate = (xPos-ORB_RADIUS)/(ORB_RADIUS);
-        Point2D ijCoordinates = new Point2D(iCoordinate, jCoordinate);
-        return ijCoordinates;
+        double jCoordinate = (xPos - ORB_RADIUS)/ORB_RADIUS;
+        double iCoordinate = (yPos-ORB_RADIUS)/PlayPanel.ROW_HEIGHT;
+        return new Point2D(iCoordinate, jCoordinate);
     }
 
     // returns the four closest Orb snap locations centers in (i, j) space. The coordinates returned are NOT guaranteed to be valid!

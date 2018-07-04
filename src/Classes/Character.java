@@ -45,6 +45,10 @@ public class Character {
         setScale(scale); // restore scaling, using new anchor point
     }
 
+    public CharacterImages getCharacterEnum(){
+        return characterEnum;
+    }
+
     public Sprite getSprite(){
         return sprite;
     }

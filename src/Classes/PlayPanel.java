@@ -1,7 +1,6 @@
 package Classes;
 
 import Classes.Animation.MiscAnimations;
-import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Animation.OrbImages;
@@ -672,6 +671,8 @@ public class PlayPanel extends Pane {
                 Point2D arrayOrbLoc = snap.arrayOrb.xyToIj();
                 int iArrayOrb = (int)Math.round(arrayOrbLoc.getX());
                 int jArrayOrb = (int)Math.round(arrayOrbLoc.getY());
+                //int iArrayOrb = snap.arrayOrb.getI();
+                //int jArrayOrb = snap.arrayOrb.getJ();
 
                 // Recompute the collision angle:
                 double collisionAngleDegrees = Math.atan2(snap.shooterOrb.getYPos()-snap.arrayOrb.getYPos(),
@@ -720,9 +721,11 @@ public class PlayPanel extends Pane {
             }
             // If the snap coordinates are somehow off the edge of the array in a different fashion, then just burst
             // the orb. This should never happen, but... you never know.
-            // Todo: this error message actually printed. There is indeed an edge case somewhere. Find it. Note: it may have happened in the botPlayer's simulation.
+            // Todo: this error message actually printed. There is indeed an edge case somewhere. Find it.
             else if(!playPanelData.validOrbArrayCoordinates(new PointInt(iSnap, jSnap))){
-                System.err.println("Invalid snap coordinates detected. Bursting orb.");
+                System.err.println("Invalid snap coordinates [" + iSnap + ", " + jSnap + "] detected. Bursting orb.");
+                System.err.println("   shooter orb info: " + snap.shooterOrb.getOrbEnum() + " " + snap.shooterOrb.getAnimationEnum() + " x=" + snap.shooterOrb.getXPos() + " y=" + snap.shooterOrb.getYPos() + " speed=" + snap.shooterOrb.getSpeed());
+                System.err.println("   array orb info: " + snap.arrayOrb.getOrbEnum() + " " + snap.arrayOrb.getAnimationEnum() + "i=" + snap.arrayOrb.getI() + " j=" + snap.arrayOrb.getJ() + " x=" + snap.arrayOrb.getXPos() + " y=" + snap.arrayOrb.getYPos());
                 orbsToBurst.add(snap.shooterOrb);
             }
             // If s-s collisions are turned off, it is possible for two shooter orbs to try to snap to the same location.
@@ -862,6 +865,7 @@ public class PlayPanel extends Pane {
             List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()), orbArray);
             if((!Collections.disjoint(neighbors,connectedOrbs) || orb.getI()==0) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
+                if(orb.getYPos()>1080) System.err.println("SETTING INVALID Y COORDINATE");
                 soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), false));
             }

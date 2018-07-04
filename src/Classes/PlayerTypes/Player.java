@@ -110,9 +110,10 @@ public abstract class Player {
             }
         }
         else{ // player must be an instance of BotPlayer
-            while(!nextType.isBot()){
+            while(nextType.getBotDifficulty()==null){
                 nextType = nextType.next();
             }
+            changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
         }
         playerData.changeCharacter(nextType); // updates model
         character.setCharacterEnum(nextType); // updates view
@@ -337,7 +338,7 @@ public abstract class Player {
                 // Add the Orbs specified in the file to the ammunitionOrbs Queue:
                 int nextOrbSymbol;
                 int temp = 0;
-                while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n'){
+                while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n' && nextOrbSymbol!='\r'){
                     OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol((char)nextOrbSymbol);
                     if(orbEnum==null){
                         System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");

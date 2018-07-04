@@ -2,6 +2,7 @@ package Classes;
 
 import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
+import Classes.Images.CharacterImages;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
 import Classes.PlayerTypes.BotPlayer;
@@ -57,7 +58,7 @@ public class SceneManager extends Application {
         /* Fullscreen mode is annoying for development, so use these settings for now*/
         primaryStage.setHeight(primaryScreenBounds.getHeight()*0.666);
         primaryStage.setWidth((primaryScreenBounds.getWidth())*0.666);
-        primaryStage.setMaximized(true);
+        // primaryStage.setMaximized(true);
 
         /* Use these settings for the final release */
         /*primaryStage.setHeight(primaryScreenBounds.getHeight());
@@ -165,7 +166,7 @@ public class SceneManager extends Application {
         // add a player and a bot, each with the same puzzle:
         List<Player> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
-        BotPlayer botPlayer = new BotPlayer(BotPlayer.Difficulty.HARD);
+        BotPlayer botPlayer = new BotPlayer(CharacterImages.FILLY_BOT_HARD);
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 

@@ -1,30 +1,21 @@
 package Classes.PlayerTypes;
 
 import Classes.*;
-import Classes.Animation.MiscAnimations;
 import Classes.Animation.OrbImages;
 import Classes.Audio.SoundEffect;
-import Classes.Audio.SoundManager;
 import Classes.Character;
 import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
-import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
-import jdk.internal.org.objectweb.asm.util.CheckAnnotationAdapter;
 
 import java.util.*;
 
-import static Classes.GameScene.ANIMATION_FRAME_RATE;
 import static Classes.Orb.NULL;
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
-import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
-import static java.lang.Math.PI;
 
 public class BotPlayer extends Player {
-
-    private Difficulty difficulty;
 
     // Targeting
     private final double ANGLE_INCREMENT = 1.0; // The resolution of the bot's simulated shots. Smaller == higher resolution but more computation.
@@ -39,7 +30,7 @@ public class BotPlayer extends Player {
     private int currentFrame = 0;
     private int transitionFrame;
 
-    public BotPlayer(Difficulty difficulty){
+    public BotPlayer(CharacterImages characterEnum){
         // create a (probably) unique player ID:
         long playerID;
         do{
@@ -48,16 +39,15 @@ public class BotPlayer extends Player {
         } while (playerID == 0 || playerID == -1); // A non-host player absolutely cannot have an ID of 0 or -1. These are reserved for the host and unclaimed player slots, respectively.
 
         // initialize model:
-        this.playerData = new PlayerData("FillyBot [easy]",playerID);
+        this.playerData = new PlayerData("fillyBot [" + characterEnum.getBotDifficulty() +"]", playerID);
+        playerData.setCharacter(characterEnum);
         playerData.setCannon(CannonImages.BOT_CANNON);
-        playerData.setCharacter(CharacterImages.FILLY_BOT);
-        this.difficulty = difficulty;
-        transitionFrame = difficulty.getThinkingFrames();
+        transitionFrame = characterEnum.getBotDifficulty().getThinkingFrames();
 
         // initialize views:
         this.cannon = new Cannon(playerData);
         this.character = new Character(playerData);
-        character.setCharacterEnum(CharacterImages.FILLY_BOT); // character initializes with a default player, so change it to a bot, here.
+        character.setCharacterEnum(characterEnum); // character initializes with a default player, so change it to a bot, here.
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }
@@ -96,7 +86,7 @@ public class BotPlayer extends Player {
                 case THINKING:
                     if(target<0){
                         currentPhase = Phase.PRE_MOVEMENT;
-                        transitionFrame = difficulty.getPreMovementFrames();
+                        transitionFrame = character.getCharacterEnum().getBotDifficulty().getPreMovementFrames();
                     }
                     else{
                         // The bot does not see any orbs on the orb array. Perhaps the next puzzle is still being loaded. Wait a bit.
@@ -105,22 +95,22 @@ public class BotPlayer extends Player {
                     break;
                 case PRE_MOVEMENT:
                     currentPhase = Phase.BROAD_MOVEMENT;
-                    transitionFrame = difficulty.getBroadMovementFrames();
+                    transitionFrame = character.getCharacterEnum().getBotDifficulty().getBroadMovementFrames();
                     break;
                 case BROAD_MOVEMENT:
                     currentPhase = Phase.INTERCESSION;
-                    transitionFrame = difficulty.getIntercessionFrames();
+                    transitionFrame = character.getCharacterEnum().getBotDifficulty().getIntercessionFrames();
                 case INTERCESSION:
                     currentPhase = Phase.FINE_MOVEMENT;
-                    transitionFrame = difficulty.getFineMovementFrames();
+                    transitionFrame = character.getCharacterEnum().getBotDifficulty().getFineMovementFrames();
                     break;
                 case FINE_MOVEMENT:
                     currentPhase = Phase.FIRING;
-                    transitionFrame = difficulty.getFiringFrames();
+                    transitionFrame = character.getCharacterEnum().getBotDifficulty().getFiringFrames();
                     break;
                 case FIRING:
                     currentPhase = Phase.THINKING;
-                    transitionFrame = difficulty.getThinkingFrames();
+                    transitionFrame = character.getCharacterEnum().getBotDifficulty().getThinkingFrames();
                     break;
             }
         }
@@ -264,12 +254,16 @@ public class BotPlayer extends Player {
 
         // sort the possible choices by score, and choose one of the better ones (tempered by stupidity level):
         LinkedList<OutcomeBin> choiceBins = binSort(choices);
-        OutcomeBin chosenBin = choiceBins.get((int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity()));
-        Outcome choice = chosenBin.selectChoice(difficulty.getStupidity());
+        int binChoice;
+        do{
+            binChoice = (int)Math.round(offsetGenerator.nextDouble()*character.getCharacterEnum().getBotDifficulty().getStupidity());
+        } while(binChoice>=choiceBins.size());
+        OutcomeBin chosenBin = choiceBins.get(binChoice);
+        Outcome choice = chosenBin.selectChoice(character.getCharacterEnum().getBotDifficulty().getStupidity());
 
         target = choice.angle;
-        broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
-        fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+        broadMovementOffset = character.getCharacterEnum().getBotDifficulty().getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+        fineMovementOffset = character.getCharacterEnum().getBotDifficulty().getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
     }
 
     private LinkedList<OutcomeBin> binSort(List<Outcome> choices){
@@ -375,9 +369,9 @@ public class BotPlayer extends Player {
 
     public enum Difficulty
     {
-        EASY(2.0, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 3.0, 10),
-        MEDIUM(1.5, 0.25, 1.0, 0.25, 1.0, 0.5, 10.0, 1.5, 4),
-        HARD(0.15, 0.15, .25, 0.15, 0.20, 0.15, 10.0, 0.500, 0.000);
+        EASY(0.75, 0.45, 1.0, 0.25, 0.4, 0.30, 15.0, 2.00, 4.0),
+        MEDIUM(0.3, 0.30, 0.5, 0.20, 0.25, 0.15, 10.0, 1.25, 2.0),
+        HARD(0.15, 0.15, .25, 0.15, 0.20, 0.15, 10.0, 0.500, 0.0);
 
         private int thinkingFrames;
         private int preMovementFrames;

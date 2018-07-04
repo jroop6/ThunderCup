@@ -1,9 +1,8 @@
 *******Priority items, copied from below*******
 fix multiplayer de-synch problems
-smarter bots
 more puzzles!
-slightly nicer visuals for the puzzle selector buttons
 character animations
+ability to select bot difficulty
 
 -------Bugs-------
 fix multiplayer de-synch problems
@@ -14,12 +13,13 @@ fix multiplayer de-synch problems
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 
 -------important features-------
+ability to select random puzzles or a specific puzzle in competitive multiplayer mode.
 puzzle data should specify how many shots cause a new row to appear.
 implement the Vs Computer game mode
+ability to select bot difficulty
 when a game begins, the program should move the camera so that it is centered on your character and maybe have some visual flourish indicate which character is yours.
 character animations
 character voices/sound effects
-smarter bots
 slightly nicer visuals for the puzzle selector buttons
 more puzzles!
 

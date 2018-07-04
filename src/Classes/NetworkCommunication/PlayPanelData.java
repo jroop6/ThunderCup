@@ -190,16 +190,18 @@ public class PlayPanelData implements Serializable {
         // Now pick one spot for each orb:
         //todo: if the orbArray is full, put transfer orbs in the deathOrbs list
         //todo: if there are otherwise not enough open, connected spots, then place transferOrbs in secondary and tertiary locations.
+        List<Orb> addedTransferOrbs = new LinkedList<>();
         for(Orb orb : newTransferOrbs){
             if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0). In the future, place transferOrbs in secondary and tertiary locations.
             int index = miscRandomGenerator.nextInt(openSpots.size());
             PointInt openSpot = openSpots.get(index);
             orb.setIJ(openSpot.i,openSpot.j);
             openSpots.remove(index);
+            addedTransferOrbs.add(orb);
         }
 
         // now, finally add them to the appropriate Orb list:
-        transferInOrbs.addAll(newTransferOrbs);
+        transferInOrbs.addAll(addedTransferOrbs);
         transferInOrbsChanged = true;
     }
     public void changeBurstShootingOrbs(List<Orb> newBurstingOrbs, List<Orb> shootingOrbs, List<Orb> burstingOrbs){
@@ -780,7 +782,7 @@ public class PlayPanelData implements Serializable {
                 }
                 // fill the rest of the orb array with NULL orbs:
                 for(/*i is already set*/; i<ARRAY_HEIGHT; i++){
-                    for(j=0; j<ARRAY_WIDTH_PER_CHARACTER; j++){
+                    for(j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                         orbArray[i][j] = NULL;
                     }
                 }
