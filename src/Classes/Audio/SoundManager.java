@@ -93,9 +93,7 @@ public class SoundManager {
         MediaPlayer mediaPlayer = playSoundEffect(soundEffect);
         if(mediaPlayer == null) return null;
         mediaPlayer.setOnEndOfMedia(()-> {
-            //System.out.println("media has ended. loopForever = " + loopForever + " passed time(millis) = " +  (System.currentTimeMillis()-startTime));
             if(!loopForever && System.currentTimeMillis()-startTime > 60000){
-                System.err.println("IN HERE");
                 stopLoopingSoundEffect(mediaPlayer);
             }
             else mediaPlayer.seek(Duration.ZERO);

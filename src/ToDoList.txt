@@ -1,10 +1,12 @@
 *******Priority items, copied from below*******
+PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
+improve efficiency for slower computers
 fix multiplayer de-synch problems
 more puzzles!
 character animations
-ability to select bot difficulty
 
 -------Bugs-------
+PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
 fix multiplayer de-synch problems
     transferInOrbs eventually go out of synch every time.
     sometimes it seems that the host doesn't pick up that a client has fired.
@@ -13,6 +15,7 @@ fix multiplayer de-synch problems
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 
 -------important features-------
+improve efficiency for slower computers
 ability to select random puzzles or a specific puzzle in competitive multiplayer mode.
 puzzle data should specify how many shots cause a new row to appear.
 implement the Vs Computer game mode

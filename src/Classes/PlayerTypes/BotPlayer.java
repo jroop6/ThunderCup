@@ -136,8 +136,8 @@ public class BotPlayer extends Player {
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
         // Create placeholders for important things
-        List<PointInt> arrayOrbsToBurst = new LinkedList<>();
-        List<PointInt> orbsToDrop = new LinkedList<>();
+        List<Orb> arrayOrbsToBurst = new LinkedList<>();
+        List<Orb> orbsToDrop = new LinkedList<>();
         List<Orb> orbsToTransfer = new LinkedList<>();
 
         // Advance all existing shooter orbs, one at a time in order.
@@ -170,27 +170,23 @@ public class BotPlayer extends Player {
             orbsToTransfer.addAll(newOrbsToTransfer);
 
             // Burst new orbs:
-            if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
-                playPanel.getPlayPanelData().changeBurstShootingOrbs(shootingOrbsToBurst, shootingOrbCopy, burstingOrbsCopy);
+            if(!arrayOrbsToBurst.isEmpty()){
                 playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopy,deathOrbsCopy, burstingOrbsCopy);
             }
 
             // Find floating orbs and drop them:
-            Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
+            Set<Orb> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
             orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopy));
-            playPanel.getPlayPanelData().changeDropArrayOrbs(orbsToDrop, droppingOrbsCopy, orbArrayCopy);
+            if(!orbsToDrop.isEmpty()) playPanel.getPlayPanelData().changeDropArrayOrbs(orbsToDrop, droppingOrbsCopy, orbArrayCopy);
         }
 
         // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
         boolean empty = true;
-        for (Orb[] row: orbArrayCopy) {
-            for (Orb orb : row){
-                if(orb!=NULL){
-                    empty = false;
-                    break;
-                }
+        for (Orb orb : orbArrayCopy[0]){ // only need to check for Orbs along the ceiling
+            if(orb!=NULL){
+                empty = false;
+                break;
             }
-            if(!empty) break;
         }
         if(empty){
             target = 1;
@@ -208,7 +204,6 @@ public class BotPlayer extends Player {
             // Create a hypothetical shooter orb for the simulated shot:
             OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
             Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
-            hypotheticalOrb.setAnimationEnum(Orb.BubbleAnimationType.STATIC);
             hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
             hypotheticalOrb.setYPos(CANNON_Y_POS);
             hypotheticalOrb.setAngle(Math.toRadians(angle));
@@ -226,7 +221,7 @@ public class BotPlayer extends Player {
             // Determine the maximum time over which the hypothetical Orb could possibly travel:
             double maxYDistance = hypotheticalOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
             double maxXDistance = maxYDistance/Math.tan(Math.toRadians(angle));
-            double maxDistanceSquared = Math.pow(maxXDistance, 2.0) + Math.pow(maxYDistance, 2.20);
+            double maxDistanceSquared = Math.pow(maxXDistance, 2.0) + Math.pow(maxYDistance, 2.0);
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/hypotheticalOrb.getOrbEnum().getOrbSpeed();
 
@@ -241,8 +236,13 @@ public class BotPlayer extends Player {
             // Determine whether any of the snapped orbs cause any orbs to burst:
             arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopyTemp, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer));
 
+            // Burst new orbs:
+            if(!arrayOrbsToBurst.isEmpty()){
+                playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopyTemp, deathOrbsCopyTemp, burstingOrbsCopy);
+            }
+
             // Find floating orbs:
-            Set<PointInt> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopyTemp); // orbs that are connected to the ceiling.
+            Set<Orb> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopyTemp); // orbs that are connected to the ceiling.
             orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopyTemp));
 
             // Assign a score to the outcome:
@@ -283,7 +283,7 @@ public class BotPlayer extends Player {
         return bins;
     }
 
-    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<PointInt> orbsToDrop, List<PointInt> arrayOrbsToBurst, Orb[][] orbArray){
+    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray){
         int score = 0;
 
         // transferring Orbs is a very good thing:
@@ -296,7 +296,7 @@ public class BotPlayer extends Player {
         List<PointInt> neighbors = playPanel.getPlayPanelData().getNeighbors(new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
         int matchesFound = 0;
         for(PointInt point : neighbors){
-            if(orbArray[point.i][point.j].getOrbEnum()==hypotheticalOrb.getOrbEnum()) ++matchesFound;
+            if(orbArray[point.getI()][point.getJ()].getOrbEnum()==hypotheticalOrb.getOrbEnum()) ++matchesFound;
         }
         if(matchesFound==1) ++ score; // note: if matches > 1, the orbs have already been accounted for, in arrayOrbsToBurst.
 

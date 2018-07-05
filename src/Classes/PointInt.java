@@ -1,12 +1,24 @@
 package Classes;
 
 // My own implementation of a point with integer coordinates. I'm implementing it myself here instead of using
-// java.awt.Point in order to avoid mixing the awt and JavaFX libraries. The fields are public for convenience, and the
-// getter and setter methods would do nothing more than just make the fields effectively public anyways.
+// java.awt.Point in order to avoid mixing the awt and JavaFX libraries.
 public class PointInt {
-    public int i;
-    public int j;
+    protected int i;
+    protected int j;
+
     public PointInt(int i, int j){
+        this.i = i;
+        this.j = j;
+    }
+
+    public int getI(){
+        return i;
+    }
+    public int getJ(){
+        return j;
+    }
+
+    protected void setIJ(int i, int j){
         this.i = i;
         this.j = j;
     }

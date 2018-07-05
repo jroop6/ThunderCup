@@ -18,7 +18,7 @@ import static Classes.GameScene.ANIMATION_FRAME_RATE;
 /**
  * Created by HydrusBeta on 8/16/2017.
  */
-public class Orb implements Serializable{
+public class Orb extends PointInt implements Serializable{
     private OrbImages orbEnum;
     private OrbElectrification orbElectrification; // enum used for displaying electrification animation.
     private OrbExplosion orbExplosion; // enum used for displaying burst animation.
@@ -46,10 +46,6 @@ public class Orb implements Serializable{
     private double angle; // angle of travel, radians
     private double speed; // current speed, pixels per second
 
-    // If the orb is on the array, it also knows its index:
-    private int iPos;
-    private int jPos;
-
     // The Orb's current animation frames:
     private int currentFrame = 0;
     private int electrificationAnimationFrame = 0; // electrification frame index is maintained separately.
@@ -60,6 +56,7 @@ public class Orb implements Serializable{
 
 
     public Orb(OrbImages orbEnum, int iPos, int jPos, BubbleAnimationType animationEnum){
+        super(iPos, jPos);
         this.orbEnum = orbEnum;
         setIJ(iPos, jPos);
         setAnimationEnum(animationEnum);
@@ -67,6 +64,7 @@ public class Orb implements Serializable{
 
     /* Copy Constructor */
     public Orb(Orb other){
+        super(other.getI(), other.getJ());
         orbEnum = other.getOrbEnum();
         orbElectrification = other.getOrbElectrification();
         orbExplosion = other.getOrbExplosion();
@@ -77,8 +75,6 @@ public class Orb implements Serializable{
         yPos = other.getYPos();
         angle = other.getAngle();
         speed = other.getSpeed();
-        iPos = other.getI();
-        jPos = other.getJ();
 
         currentFrame = other.getCurrentFrame();
         electrificationAnimationFrame = other.getElectrificationAnimationFrame();
@@ -130,11 +126,12 @@ public class Orb implements Serializable{
                 currentFrame = 0;
         }
     }
+    @Override
     public void setIJ(int i, int j){
-        iPos = i;
-        jPos = j;
-        xPos = ORB_RADIUS + ORB_RADIUS *(jPos);
-        yPos = ORB_RADIUS + iPos*PlayPanel.ROW_HEIGHT;
+        this.i = i;
+        this.j = j;
+        xPos = ORB_RADIUS + ORB_RADIUS *(j);
+        yPos = ORB_RADIUS + i*PlayPanel.ROW_HEIGHT;
     }
     public void setCurrentFrame(int newIndex){
         currentFrame = newIndex;
@@ -166,12 +163,6 @@ public class Orb implements Serializable{
     }
     public BubbleAnimationType getAnimationEnum(){
         return animationEnum;
-    }
-    public int getI(){
-        return iPos;
-    }
-    public int getJ(){
-        return jPos;
     }
     public OrbImages getOrbEnum(){
         return orbEnum;

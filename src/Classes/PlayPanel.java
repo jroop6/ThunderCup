@@ -163,28 +163,28 @@ public class PlayPanel extends Pane {
 
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
     void tick(){
-        // Existing data that will be affected by side-effects:
+        // Existing data that will be affected via side-effects:
         Orb[][] orbArray = playPanelData.getOrbArray();
         List<Orb> burstingOrbs = playPanelData.getBurstingOrbs();
         List<Orb> shootingOrbs = playPanelData.getShootingOrbs();
         List<Orb> droppingOrbs = playPanelData.getDroppingOrbs();
         Orb[] deathOrbs = playPanelData.getDeathOrbs();
 
-        // Other data that will be affected by side-effects:
+        // New Sets and lists that will be filled via side-effects:
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+        List<Orb> orbsToTransfer = new LinkedList<>();
 
-        // Advance shooting orbs and deal with all their collisions:
-        List<Collision> orbsToSnap = advanceShootingOrbs(shootingOrbs, orbArray,1/(double)ANIMATION_FRAME_RATE, soundEffectsToPlay); // Updates model
+        // Advance shooting orbs and detect collisions:
+        List<Collision> collisions = advanceShootingOrbs(shootingOrbs, orbArray,1/(double)ANIMATION_FRAME_RATE, soundEffectsToPlay); // Updates model
 
-        // Snap any landed shooting orbs into place:
-        List<Orb> shootingOrbsToBurst = snapOrbs(orbsToSnap, orbArray, deathOrbs,soundEffectsToPlay);
+        // Snap any landed shooting orbs into place on the orbArray (or deathOrbs array):
+        List<Orb> shootingOrbsToBurst = snapOrbs(collisions, orbArray, deathOrbs,soundEffectsToPlay);
 
-        // Remove the snapped shooting orbs from the shootingOrbs list
-        for(Collision collision : orbsToSnap) shootingOrbs.remove(collision.shooterOrb);
+        // Remove the collided shooting orbs from the shootingOrbs list
+        for(Collision collision : collisions) shootingOrbs.remove(collision.shooterOrb);
 
         // Determine whether any of the snapped orbs cause any orbs to burst:
-        List<Orb> orbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
-        List<PointInt> arrayOrbsToBurst = findPatternCompletions(orbsToSnap, orbArray, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer);
+        List<Orb> arrayOrbsToBurst = findPatternCompletions(collisions, orbArray, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer);
 
         // Burst new orbs:
         if(!shootingOrbsToBurst.isEmpty() || !arrayOrbsToBurst.isEmpty()){
@@ -194,31 +194,30 @@ public class PlayPanel extends Pane {
         }
 
         // Find floating orbs and drop them:
-        Set<PointInt> connectedOrbs = playPanelData.findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
-        List<PointInt> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs, orbArray);
+        Set<Orb> connectedOrbs = playPanelData.findConnectedOrbs(orbArray); // orbs that are connected to the ceiling.
+        List<Orb> orbsToDrop = playPanelData.findFloatingOrbs(connectedOrbs, orbArray);
         playPanelData.changeDropArrayOrbs(orbsToDrop, droppingOrbs, orbArray);
 
         //---- Note: We don't care about the following lines for simulations ----//
-
-        // If orbs were dropped, add visual flourishes for them:
-        if(!orbsToDrop.isEmpty()){
-            soundEffectsToPlay.add(SoundEffect.DROP);
-            for(PointInt orbToDrop : orbsToDrop){
-                Orb orb = orbArray[orbToDrop.i][orbToDrop.j];
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
-            }
-        }
 
         // Advance the animation frame of the existing visual flourishes:
         List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes();
         visualFlourishes.removeAll(flourishesToRemove);
 
-        // add new visual flourishes over the orbs that are about to be transferred:
-        for(Orb orb : orbsToTransfer) visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
+        // If orbs were dropped or a sufficient number were burst, add visual flourishes for the orbs to be transferred:
+        if(!orbsToDrop.isEmpty() || !orbsToTransfer.isEmpty()){
+            soundEffectsToPlay.add(SoundEffect.DROP);
+            for(Orb orb : orbsToDrop){
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
+            }
+            for(Orb orb : orbsToTransfer){
+                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
+            }
+        }
 
         // Advance the animation frame of existing bursting orbs:
         List<Orb> orbsToRemove = advanceBurstingOrbs(burstingOrbs);
-        if(!orbsToRemove.isEmpty()) burstingOrbs.removeAll(orbsToRemove);
+        burstingOrbs.removeAll(orbsToRemove);
 
         // Advance the animation frame of the electrified orbs:
         advanceElectrifyingOrbs();
@@ -233,18 +232,16 @@ public class PlayPanel extends Pane {
 
         // If orbs dropped off the bottom of the PlayPanel, add them to the orbsToTransfer list AND the thunderOrbs list.
         if(!orbsToThunder.isEmpty()){
-            for(Orb orb: orbsToThunder){
-                orbsToTransfer.add(new Orb(orb)); // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
-            }
+            for(Orb orb: orbsToThunder) orbsToTransfer.add(new Orb(orb)); // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
             playPanelData.setAddThunderOrbs(orbsToThunder);
         }
 
-        // Finally add all of the transfer orbs to the transferOutOrbs list:
+        // Add all of the transfer orbs to the transferOutOrbs list:
         if(!orbsToTransfer.isEmpty()) playPanelData.changeAddTransferOutOrbs(orbsToTransfer);
 
-        // Advance the transfer orbs, adding visual flourishes if they're done:
+        // Advance the existing transfer-in Orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
-        snapTransferOrbs(transferOrbsToSnap, orbArray, soundEffectsToPlay);
+        snapTransferOrbs(transferOrbsToSnap, orbArray, connectedOrbs, soundEffectsToPlay);
 
         // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
         if(connectedOrbs.isEmpty()){
@@ -272,7 +269,7 @@ public class PlayPanel extends Pane {
         if(playPanelData.getShotsUntilNewRow()<=0) playPanelData.setShotsUntilNewRow(SHOTS_BETWEEN_DROPS*numPlayers + playPanelData.getShotsUntilNewRow());
 
         // If the player has fired a sufficient number of times, then add a new row of orbs:
-        playPanelData.decrementShotsUntilNewRow(orbsToSnap.size());
+        playPanelData.decrementShotsUntilNewRow(collisions.size());
         if(playPanelData.getShotsUntilNewRow()==1) soundEffectsToPlay.add(SoundEffect.ALMOST_NEW_ROW);
         else if(playPanelData.getShotsUntilNewRow()<=0){
             playPanelData.addNewRow();
@@ -280,9 +277,7 @@ public class PlayPanel extends Pane {
         }
 
         // Play sound effects:
-        for(SoundEffect soundEffect : soundEffectsToPlay){
-            SoundManager.playSoundEffect(soundEffect);
-        }
+        for(SoundEffect soundEffect : soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
 
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!getPlayPanelData().isDeathOrbsEmpty()){
@@ -312,7 +307,7 @@ public class PlayPanel extends Pane {
         List<Collision> possibleCollisionPoints = new LinkedList<>();
 
         // Container for orbs to snap.
-        List<Collision> orbsToSnap = new LinkedList<>();
+        List<Collision> collisions = new LinkedList<>();
 
         for (Orb shootingOrb : shootingOrbs) {
             double speed = shootingOrb.getSpeed();
@@ -436,23 +431,23 @@ public class PlayPanel extends Pane {
                 // Todo: do this.
             }
 
-            // If the collision was with the ceiling, set that orb's speed to zero and add it to the orbsToSnap list.
+            // If the collision was with the ceiling, set that orb's speed to zero and add it to the collisions list.
             else if(soonestCollision.arrayOrb == Orb.CEILING){
                 soonestCollision.shooterOrb.setSpeed(0.0);
-                orbsToSnap.add(soonestCollision);
+                collisions.add(soonestCollision);
             }
 
             // If the collision is between a shooter orb and an array orb, set that orb's speed to zero and add it to
-            // the orbsToSnap list.
+            // the collisions list.
             else {
                 soonestCollision.shooterOrb.setSpeed(0.0);
-                orbsToSnap.add(soonestCollision);
+                collisions.add(soonestCollision);
             }
 
             // Recursively call this function.
-            List<Collision> moreOrbsToSnap = advanceShootingOrbs(shootingOrbs,orbArray, timeRemainingInFrame - soonestCollisionTime, soundEffectsToPlay);
-            orbsToSnap.addAll(moreOrbsToSnap);
-            return orbsToSnap;
+            List<Collision> moreCollisions = advanceShootingOrbs(shootingOrbs,orbArray, timeRemainingInFrame - soonestCollisionTime, soundEffectsToPlay);
+            collisions.addAll(moreCollisions);
+            return collisions;
         }
 
         // If there are no more collisions, just advance all orbs to the end of the frame.
@@ -468,179 +463,8 @@ public class PlayPanel extends Pane {
                 shootingOrb.setXPos(x1);
                 shootingOrb.setYPos(y1);
             }
-            return orbsToSnap;
+            return collisions;
         }
-
-    }
-
-    // computes the Collision that would ultimately occur if a single orb were shot at the given angle from the given x
-    // and y coordinates. Assumes that nothing else changes while this orb is en route.
-    // todo: lots of duplicate code from advanceShootingorbs here. Break things down into smaller method calls.
-    public PointInt predictLandingPoint(Orb hypotheticalOrb){
-        double x0 = hypotheticalOrb.getXPos();
-        double y0 = hypotheticalOrb.getYPos();
-        double angle = hypotheticalOrb.getAngle();
-
-        Orb orbArray[][] = getPlayPanelData().getOrbArray();
-        List<Collision> possibleCollisionPoints = new LinkedList<>();
-
-        // Cycle through the entire Orb array and find all possible collision points along this shooting orb's path:
-        for (int i = 0; i < PlayPanelData.ARRAY_HEIGHT; i++) {
-            for (int j = 0; j < ARRAY_WIDTH_PER_CHARACTER * numPlayers; j ++) {
-                if (orbArray[i][j] != NULL) {
-                    double xAP = orbArray[i][j].getXPos() - x0;
-                    double yAP = orbArray[i][j].getYPos() - y0;
-                    double lhs = 4 * ORB_RADIUS * ORB_RADIUS * (1 + Math.pow(Math.tan(angle), 2.0));
-                    double rhs = Math.pow(Math.tan(angle) * xAP - yAP, 2.0);
-                    // Test whether collision is possible. If it is, then compute its 2 possible collision points.
-                    if (lhs > rhs) {
-                        // Compute the two possible intersection points, (xPP, yPP) and (xPN, yPN)
-                        double xPP;
-                        double yPP;
-                        double xPN;
-                        double yPN;
-
-                        // if the Orb is traveling nearly vertically, use a special solution to prevent a near-zero denominator:
-                        if ((Math.abs(angle)+PI/2)<0.01) {
-                            xPP = 0;
-                            xPN = 0;
-                            yPP = yAP + Math.sqrt(4 * ORB_RADIUS * ORB_RADIUS - xAP * xAP);
-                            yPN = yAP - Math.sqrt(4 * ORB_RADIUS * ORB_RADIUS - xAP * xAP);
-                        }
-                        else {
-                            double numerator1 = xAP + Math.tan(angle) * yAP;
-                            double numerator2 = Math.sqrt(lhs - rhs);
-                            double divisor = 1 + Math.pow(Math.tan(angle), 2.0);
-                            xPP = (numerator1 + numerator2) / divisor;
-                            yPP = xPP * Math.tan(angle);
-                            xPN = (numerator1 - numerator2) / divisor;
-                            yPN = xPN * Math.tan(angle);
-                        }
-
-                        // Add the closer collision point to the list of possible collisions.
-                        double distanceToCollisionSquared = Math.min(xPP * xPP + yPP * yPP, xPN * xPN + yPN * yPN);
-                        double distanceToCollision = Math.sqrt(distanceToCollisionSquared);
-                        possibleCollisionPoints.add(new Collision(hypotheticalOrb, orbArray[i][j], distanceToCollision));
-                    }
-                }
-            }
-        }
-
-        // Find the candidate wall collision:
-        double xRightWallP = (PLAYPANEL_WIDTH_PER_PLAYER * numPlayers + ORB_RADIUS) - ORB_RADIUS - x0;
-        double xLeftWallP = ORB_RADIUS - x0;
-        double yCeilingP = ORB_RADIUS - y0;
-        double xWallCollisionP;
-        double yWallCollisionP;
-        if(angle>-PI/2+0.01) { // the right wall is the only wall that can be intersected.
-            xWallCollisionP = xRightWallP;
-            yWallCollisionP = xRightWallP* Math.tan(angle);
-        }
-        else if(angle<-PI/2-0.01) { // the left wall is the only wall that can be intersected.
-            xWallCollisionP = xLeftWallP;
-            yWallCollisionP = xLeftWallP*Math.tan(angle);
-        }
-        else { // at ~ -90 degrees, the orb cannot hit a wall, so make the collision distance huge.
-            xWallCollisionP = xRightWallP-xLeftWallP;
-            yWallCollisionP = yCeilingP;
-        }
-        double distanceToCollisionSquared = Math.pow(xWallCollisionP,2.0) + Math.pow(yWallCollisionP,2.0);
-        possibleCollisionPoints.add(new Collision(hypotheticalOrb, WALL, Math.sqrt(distanceToCollisionSquared)));
-
-        // Find the candidate ceiling collision:
-        double xCollisionP = yCeilingP/Math.tan(angle);
-        distanceToCollisionSquared = Math.pow(xCollisionP,2.0) + Math.pow(yCeilingP,2.0);
-        possibleCollisionPoints.add(new Collision(hypotheticalOrb, Orb.CEILING, Math.sqrt(distanceToCollisionSquared)));
-
-        /*// for debugging
-        int numWalls = 0;
-        int numCeilings = 0;
-        for (Collision collision : possibleCollisionPoints) {
-            if (collision.arrayOrb == WALL) {
-                numWalls++;
-            }
-            else if (collision.arrayOrb == CEILING){
-                numCeilings++;
-            }
-        }
-        System.out.println(numWalls + " are walls");
-        System.out.println(numCeilings + " are ceilings");*/
-
-        // Find the *soonest* collision among the list of possible collisions:
-        Collision soonestCollision = null;
-        long soonestCollisionTime = Long.MAX_VALUE;
-        for (Collision collision : possibleCollisionPoints) {
-            if (collision.timeToCollision <= soonestCollisionTime) {
-                soonestCollisionTime = (long) collision.timeToCollision;
-                soonestCollision = collision;
-            }
-        }
-
-        // Advance the hypothetical orb to that collision point:
-        hypotheticalOrb.setXPos(x0 + soonestCollision.timeToCollision*Math.cos(angle));
-        hypotheticalOrb.setYPos(y0 + soonestCollision.timeToCollision*Math.sin(angle));
-
-        int iSnap;
-        int jSnap;
-
-        // If the collision was with a wall, then reflect the angle and recursively call this function.
-        if (soonestCollision.arrayOrb == Orb.WALL) {
-            hypotheticalOrb.setAngle(-PI-hypotheticalOrb.getAngle());
-            return predictLandingPoint(hypotheticalOrb);
-        }
-
-        // Compute snap coordinates for the case the the hypothetical Orb collided with the ceiling:
-        else if (soonestCollision.arrayOrb == Orb.CEILING){
-            int offset = 0;
-            for(int j=0; j<orbArray[0].length; j++){
-                if(orbArray[0][j] != NULL){
-                    offset = j%2;
-                    break;
-                }
-            }
-            double xPos = soonestCollision.shooterOrb.getXPos();
-            iSnap = 0;
-            jSnap = 2*((int) Math.round((xPos - ORB_RADIUS)/(2*ORB_RADIUS))) + offset;
-        }
-
-        // Compute snap coordinates for the case the the hypothetical Orb collided with an array Orb:
-        else{
-            Point2D arrayOrbLoc = soonestCollision.arrayOrb.xyToIj();
-            int iArrayOrb = (int)Math.round(arrayOrbLoc.getX());
-            int jArrayOrb = (int)Math.round(arrayOrbLoc.getY());
-
-            // Recompute the collision angle:
-            double collisionAngleDegrees = Math.atan2(soonestCollision.shooterOrb.getYPos()-soonestCollision.arrayOrb.getYPos(),
-                    soonestCollision.shooterOrb.getXPos()-soonestCollision.arrayOrb.getXPos())*180.0/PI;
-
-            // set snap coordinates based on angle:
-            if(collisionAngleDegrees<30 && collisionAngleDegrees>=-30){ // Collided with right side of array orb
-                iSnap = iArrayOrb;
-                jSnap = jArrayOrb+2;
-            }
-            else if(collisionAngleDegrees<90 && collisionAngleDegrees>=30){ // Collided with lower-right side of array orb
-                iSnap = iArrayOrb+1;
-                jSnap = jArrayOrb+1;
-            }
-            else if(collisionAngleDegrees<150 && collisionAngleDegrees>=90){ // Collided with lower-left side of array orb
-                iSnap = iArrayOrb+1;
-                jSnap = jArrayOrb-1;
-            }
-            else if(collisionAngleDegrees<-150 || collisionAngleDegrees>=150){ // Collided with left side of array orb
-                iSnap = iArrayOrb;
-                jSnap = jArrayOrb-2;
-            }
-            else if(collisionAngleDegrees<-90 && collisionAngleDegrees>=-150){ // Collided with upper-left side of array orb
-                iSnap = iArrayOrb-1;
-                jSnap = jArrayOrb-1;
-            }
-            else { // Collided with upper-right side of the array orb
-                iSnap = iArrayOrb-1;
-                jSnap = jArrayOrb+1;
-            }
-        }
-
-        return new PointInt(iSnap, jSnap);
 
     }
 
@@ -668,45 +492,39 @@ public class PlayPanel extends Pane {
 
             // Compute snap coordinates for orbs that collided with an array orb
             else{
-                Point2D arrayOrbLoc = snap.arrayOrb.xyToIj();
-                int iArrayOrb = (int)Math.round(arrayOrbLoc.getX());
-                int jArrayOrb = (int)Math.round(arrayOrbLoc.getY());
-                //int iArrayOrb = snap.arrayOrb.getI();
-                //int jArrayOrb = snap.arrayOrb.getJ();
-
                 // Recompute the collision angle:
-                double collisionAngleDegrees = Math.atan2(snap.shooterOrb.getYPos()-snap.arrayOrb.getYPos(),
-                        snap.shooterOrb.getXPos()-snap.arrayOrb.getXPos())*180.0/PI;
+                double collisionAngleDegrees = Math.toDegrees(Math.atan2(snap.shooterOrb.getYPos()-snap.arrayOrb.getYPos(),
+                        snap.shooterOrb.getXPos()-snap.arrayOrb.getXPos()));
 
                 // set snap coordinates based on angle:
                 if(collisionAngleDegrees<30 && collisionAngleDegrees>=-30){ // Collided with right side of array orb
-                    iSnap = iArrayOrb;
-                    jSnap = jArrayOrb+2;
+                    iSnap = snap.arrayOrb.getI();
+                    jSnap = snap.arrayOrb.getJ()+2;
                 }
                 else if(collisionAngleDegrees<90 && collisionAngleDegrees>=30){ // Collided with lower-right side of array orb
-                    iSnap = iArrayOrb+1;
-                    jSnap = jArrayOrb+1;
+                    iSnap = snap.arrayOrb.getI()+1;
+                    jSnap = snap.arrayOrb.getJ()+1;
                 }
                 else if(collisionAngleDegrees<150 && collisionAngleDegrees>=90){ // Collided with lower-left side of array orb
-                    iSnap = iArrayOrb+1;
-                    jSnap = jArrayOrb-1;
+                    iSnap = snap.arrayOrb.getI()+1;
+                    jSnap = snap.arrayOrb.getJ()-1;
                 }
                 else if(collisionAngleDegrees<-150 || collisionAngleDegrees>=150){ // Collided with left side of array orb
-                    iSnap = iArrayOrb;
-                    jSnap = jArrayOrb-2;
+                    iSnap = snap.arrayOrb.getI();
+                    jSnap = snap.arrayOrb.getJ()-2;
                 }
                 else if(collisionAngleDegrees<-90 && collisionAngleDegrees>=-150){ // Collided with upper-left side of array orb
-                    iSnap = iArrayOrb-1;
-                    jSnap = jArrayOrb-1;
+                    iSnap = snap.arrayOrb.getI()-1;
+                    jSnap = snap.arrayOrb.getJ()-1;
                 }
                 else { // Collided with upper-right side of the array orb
-                    iSnap = iArrayOrb-1;
-                    jSnap = jArrayOrb+1;
+                    iSnap = snap.arrayOrb.getI()-1;
+                    jSnap = snap.arrayOrb.getJ()+1;
                 }
             }
 
             // If the i coordinate is below the bottom of the array, then put the orb on the deathOrbs list.
-            if(playPanelData.validDeathOrbsCoordinates(new PointInt(iSnap, jSnap))){
+            if(playPanelData.validDeathOrbsCoordinates(iSnap, jSnap)){
                 // If s-s collisions are turned off, it is possible for two shooter orbs to try to snap to the same location
                 // on the deathOrbs array. If that's the case, then burst the second orb that attempts to snap
                 if(deathOrbs[jSnap] != NULL){
@@ -721,8 +539,7 @@ public class PlayPanel extends Pane {
             }
             // If the snap coordinates are somehow off the edge of the array in a different fashion, then just burst
             // the orb. This should never happen, but... you never know.
-            // Todo: this error message actually printed. There is indeed an edge case somewhere. Find it.
-            else if(!playPanelData.validOrbArrayCoordinates(new PointInt(iSnap, jSnap))){
+            else if(!playPanelData.validOrbArrayCoordinates(iSnap, jSnap)){
                 System.err.println("Invalid snap coordinates [" + iSnap + ", " + jSnap + "] detected. Bursting orb.");
                 System.err.println("   shooter orb info: " + snap.shooterOrb.getOrbEnum() + " " + snap.shooterOrb.getAnimationEnum() + " x=" + snap.shooterOrb.getXPos() + " y=" + snap.shooterOrb.getYPos() + " speed=" + snap.shooterOrb.getSpeed());
                 System.err.println("   array orb info: " + snap.arrayOrb.getOrbEnum() + " " + snap.arrayOrb.getAnimationEnum() + "i=" + snap.arrayOrb.getI() + " j=" + snap.arrayOrb.getJ() + " x=" + snap.arrayOrb.getXPos() + " y=" + snap.arrayOrb.getYPos());
@@ -743,20 +560,14 @@ public class PlayPanel extends Pane {
         return orbsToBurst;
     }
 
-    public List<PointInt> findPatternCompletions(List<Collision> orbsToSnap, Orb[][] orbArray, List<Orb> shootingOrbsToBurst, Set<SoundEffect> soundEffectsToPlay, List<Orb> orbsToTransfer){
-        List<PointInt> arrayOrbsToBurst = new LinkedList<>();
+    public List<Orb> findPatternCompletions(List<Collision> collisions, Orb[][] orbArray, List<Orb> shootingOrbsToBurst, Set<SoundEffect> soundEffectsToPlay, List<Orb> orbsToTransfer){
+        List<Orb> arrayOrbsToBurst = new LinkedList<>();
 
-        for(Collision collision : orbsToSnap){
-            Orb sourceOrb = collision.shooterOrb;
-            if(shootingOrbsToBurst.contains(sourceOrb)) continue; // Only consider orbs that are not already in the bursting orbs list
-
-            // Get the source orb's (i, j) coordinates.
-            Point2D arrayOrbLoc = sourceOrb.xyToIj();
-            int i = (int)Math.round(arrayOrbLoc.getX());
-            int j = (int)Math.round(arrayOrbLoc.getY());
+        for(Collision collision : collisions){
+            if(shootingOrbsToBurst.contains(collision.shooterOrb)) continue; // Only consider orbs that are not already in the bursting orbs list
 
             // find all connected orbs of the same color
-            List<PointInt> connectedOrbs = playPanelData.depthFirstSearch(new PointInt(i,j), orbArray, PlayPanelData.FilterOption.SAME_COLOR);
+            List<Orb> connectedOrbs = playPanelData.depthFirstSearch(collision.shooterOrb, orbArray, PlayPanelData.FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
 
             // If there are a sufficient number grouped together, then add a transfer out orb of the same color:
@@ -764,16 +575,14 @@ public class PlayPanel extends Pane {
             if((numTransferOrbs = (connectedOrbs.size()-3)/2) > 0) {
                 soundEffectsToPlay.add(SoundEffect.DROP);
                 for(int k=0; k<numTransferOrbs; k++){
-                    PointInt orbToTransfer = connectedOrbs.get(k);
-                    if(playPanelData.validOrbArrayCoordinates(orbToTransfer)) orbsToTransfer.add(new Orb(orbArray[orbToTransfer.i][orbToTransfer.j])); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
-                    else orbsToTransfer.add(new Orb(playPanelData.getDeathOrbs()[j]));
+                    Orb orbToTransfer = connectedOrbs.get(k);
+                    orbsToTransfer.add(new Orb(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
                 }
             }
             if(orbArray == playPanelData.getOrbArray() && connectedOrbs.size()>playPanelData.getLargestGroupExplosion()){
                 playPanelData.setLargestGroupExplosion(connectedOrbs.size());
             }
         }
-
         return arrayOrbsToBurst;
     }
 
@@ -850,23 +659,12 @@ public class PlayPanel extends Pane {
 
 
 
-    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<SoundEffect> soundEffectsToPlay){
-        // Find all array points that are connected to the ceiling
-        boolean playSoundEffect = false;
-        List<PointInt> connectedOrbs = new LinkedList<>();
-        for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-            PointInt sourcePoint = new PointInt(0, j);
-            if(orbArray[0][j]==Orb.NULL) continue;
-            connectedOrbs.addAll(playPanelData.depthFirstSearch(sourcePoint, orbArray, PlayPanelData.FilterOption.ALL));
-        }
-
-        // snap the transferringOrbs to the array
+    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay){
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
-            List<PointInt> neighbors = playPanelData.getNeighbors(new PointInt(orb.getI(),orb.getJ()), orbArray);
-            if((!Collections.disjoint(neighbors,connectedOrbs) || orb.getI()==0) && orbArray[orb.getI()][orb.getJ()] == NULL){
+            List<Orb> neighbors = playPanelData.getNeighbors(orb, orbArray);
+            if((orb.getI()==0 || !Collections.disjoint(neighbors,connectedOrbs)) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
-                if(orb.getYPos()>1080) System.err.println("SETTING INVALID Y COORDINATE");
                 soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
                 visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), false));
             }

@@ -195,7 +195,7 @@ public class PlayPanelData implements Serializable {
             if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0). In the future, place transferOrbs in secondary and tertiary locations.
             int index = miscRandomGenerator.nextInt(openSpots.size());
             PointInt openSpot = openSpots.get(index);
-            orb.setIJ(openSpot.i,openSpot.j);
+            orb.setIJ(openSpot.getI(),openSpot.getJ());
             openSpots.remove(index);
             addedTransferOrbs.add(orb);
         }
@@ -214,24 +214,15 @@ public class PlayPanelData implements Serializable {
         if(shootingOrbs == this.shootingOrbs) shootingOrbsChanged = true; // to prevent a simulated shot from setting this value to true
     }
 
-    public void changeBurstArrayOrbs(List<PointInt> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
-        for(PointInt point : newBurstingOrbs){
-            Orb orb;
-            if(validOrbArrayCoordinates(point)){
-                orb = orbArray[point.i][point.j];
-                orbArray[point.i][point.j] = NULL;
+    public void changeBurstArrayOrbs(List<Orb> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
+        for(Orb orb : newBurstingOrbs){
+            if(validOrbArrayCoordinates(orb)){
+                orbArray[orb.getI()][orb.getJ()] = NULL;
                 if(orbArray == this.orbArray) orbArrayChanged = true; // to prevent a simulated shot from setting this value to true
             }
-            else if(validDeathOrbsCoordinates(point)){
-                orb = deathOrbs[point.j];
-                deathOrbs[point.j] = NULL;
+            else{ // the Orb is on the deathOrbs array.
+                deathOrbs[orb.getJ()] = NULL;
                 if(deathOrbs == this.deathOrbs) deathOrbsChanged = true; // to prevent a simulated shot from setting this value to true
-            }
-            // We've already made sure that invalid snap coordinates are discarded and that offending orbs are burst
-            // (see snapOrbs() method in PlayPanel) But, it doesn't hurt much to double-check.
-            else{
-                System.err.println("Error. Attempted to burst an orb at an invalid location. (" + point.i + ", "+point.j + ")");
-                orb = new Orb(OrbImages.RED_ORB,0,0,Orb.BubbleAnimationType.IMPLODING); // to have something to call setAnimationEnum on.
             }
             orb.setAnimationEnum(Orb.BubbleAnimationType.IMPLODING);
             burstingOrbs.add(orb);
@@ -241,12 +232,10 @@ public class PlayPanelData implements Serializable {
             burstingOrbsChanged = true;
         }
     }
-    public void changeDropArrayOrbs(List<PointInt> newDroppingOrbs, List<Orb> droppingOrbs, Orb[][] orbArray){
-        if(newDroppingOrbs.isEmpty()) return; // quick getaway
-        for(PointInt point : newDroppingOrbs){
-            Orb orb = orbArray[point.i][point.j];
+    public void changeDropArrayOrbs(List<Orb> newDroppingOrbs, List<Orb> droppingOrbs, Orb[][] orbArray){
+        for(Orb orb: newDroppingOrbs){
             droppingOrbs.add(orb);
-            orbArray[point.i][point.j] = NULL;
+            orbArray[orb.getI()][orb.getJ()] = NULL;
         }
         if(orbArray == this.orbArray){ // to prevent a simulated shot from setting this value
             orbArrayChanged = true;
@@ -438,127 +427,65 @@ public class PlayPanelData implements Serializable {
 
     }
 
-    // Todo: to be deprecated in favor of getNeighbors(Orb sourceOrb)
-    public List<PointInt> getNeighbors(PointInt source, Orb[][] orbArray){
-        int i = source.i;
-        int j = source.j;
-        List<PointInt> neighbors = new LinkedList<>();
+    // Note to self: This still mostly works even if the orb is on the deathOrbs list. It will find all neightbors of
+    // that deathOrb that are in the orbArray. It will NOT, however, find its neighbors that are also on the deathOrbs array.
+    // The returned List does not contain the source object.
+    public <E extends PointInt> List<E> getNeighbors(E source, E[][] array){
+        int i = source.getI();
+        int j = source.getJ();
+        List<E> neighbors = new LinkedList<>();
+
         //test all possible neighbors for valid coordinates
         int[] iTests = {i-1, i-1, i, i, i+1, i+1};
         int[] jTests = {j-1, j+1, j-2, j+2, j-1, j+1};
         for(int k=0; k<iTests.length; k++){
-            if(validOrbArrayCoordinates(new PointInt(iTests[k],jTests[k])) && orbArray[iTests[k]][jTests[k]]!=NULL){
-                neighbors.add(new PointInt(iTests[k],jTests[k]));
+            if(validArrayCoordinates(iTests[k], jTests[k], array) && array[iTests[k]][jTests[k]]!=NULL){
+                neighbors.add(array[iTests[k]][jTests[k]]);
             }
         }
         return neighbors;
     }
 
-    public List<Orb> getNeighbors(Orb sourceOrb){
-        int i = sourceOrb.getI();
-        int j = sourceOrb.getJ();
-        List<Orb> neighbors = new LinkedList<>();
-        //test all possible neighbors for valid coordinates
-        int[] iTests = {i-1, i-1, i, i, i+1, i+1};
-        int[] jTests = {j-1, j+1, j-2, j+2, j-1, j+1};
-        for(int k=0; k<iTests.length; k++){
-            if(validOrbArrayCoordinates(new PointInt(iTests[k],jTests[k])) && orbArray[iTests[k]][jTests[k]]!=NULL){
-                neighbors.add(orbArray[iTests[k]][jTests[k]]);
-            }
-        }
-        return neighbors;
+    /**
+     * Checks whether the given indices are valid coordinates in the array. Works for any array of any type!
+     * @param i The first index (i-coordinate or row coordinate)
+     * @param j The second index (j-coordinate or column coordinate)
+     * @param array Any 2-dimensional array.
+     * @return true, if the coordinates are valid, false if they are outside the bounds of the array.
+     */
+    private <E> boolean validArrayCoordinates(int i, int j, E[][] array){
+        return (i>=0 && i<array.length && j>=0 && j<array[i].length);
     }
 
-    // todo: to be deprecated in favor of depthFirstSearch(Orb sourceOrb, FilterOption filter)
-    public List<PointInt> depthFirstSearch(PointInt source, Orb[][] orbArray, FilterOption filter) {
+    public List<Orb> depthFirstSearch(Orb source, Orb[][] orbArray, FilterOption filter) {
 
-        List<PointInt> matches = new LinkedList<>();
+        List<Orb> matches = new LinkedList<>();
 
-        // A boolean array that has the same size as the orbArray, to mark orbs as "examined"
-        boolean examined[][] = new boolean[PlayPanelData.ARRAY_HEIGHT][PlayPanelData.ARRAY_WIDTH_PER_CHARACTER * numPlayers];
-
-        // A stack containing the "active" elements to be examined next
-        Deque<PointInt> active = new LinkedList<>();
-
-        // Add the collision's shooter orb to the active list and mark it as "examined"
-        active.push(source);
-        if(validOrbArrayCoordinates(source)) examined[source.i][source.j] = true; // deathOrbs have "invalid" coordinates.
-
-        // Do a depth-first search
-        while (!active.isEmpty()) {
-            PointInt activeOrb = active.pop();
-            matches.add(new PointInt(activeOrb.i, activeOrb.j));
-            List<PointInt> neighbors = getNeighbors(activeOrb, orbArray);
-            for (PointInt neighbor : neighbors) {
-                if (!examined[neighbor.i][neighbor.j]) {
-                    // apply the filter option
-                    boolean passesFilter = false;
-                    switch(filter){
-                        case ALL:
-                            if(validOrbArrayCoordinates(source) || validDeathOrbsCoordinates(source)) passesFilter = true;
-                            else{// This shouldn't ever happen, but checking anyways. // Todo: consider eliminating the previous check for performance.
-                                System.err.println("depth-first search somehow encountered a PointInt with invalid coordinates");
-                                passesFilter = false;
-                            }
-                            break;
-                        case SAME_COLOR:
-                            Orb sourceOrb;
-                            if(validDeathOrbsCoordinates(source)){
-                                sourceOrb = deathOrbs[source.j];
-                            }
-                            else if(validOrbArrayCoordinates(source)) sourceOrb = orbArray[source.i][source.j];
-                            else{ // This shouldn't ever happen, but checking anyways. // Todo: consider turning the previous "else if" into an "else" for performance.
-                                System.err.println("depth-first search somehow encountered a PointInt with invalid coordinates");
-                                passesFilter = false;
-                                break;
-                            }
-                            if(orbArray[neighbor.i][neighbor.j].getOrbEnum() == sourceOrb.getOrbEnum()) passesFilter = true;
-                            break;
-                    }
-                    if(passesFilter){
-                        active.add(neighbor);
-                        examined[neighbor.i][neighbor.j] = true;
-                    }
-                }
-            }
-        }
-        return matches;
-    }
-
-    public List<PointInt> depthFirstSearch(Orb sourceOrb, FilterOption filter) {
-        List<PointInt> matches = new LinkedList<>();
-
-        // A boolean array that has the same size as the orbArray, to mark orbs as "examined"
+        // A boolean orbArray that has the same size as the orbArray, to mark orbs as "examined"
         boolean examined[][] = new boolean[PlayPanelData.ARRAY_HEIGHT][PlayPanelData.ARRAY_WIDTH_PER_CHARACTER * numPlayers];
 
         // A stack containing the "active" elements to be examined next
         Deque<Orb> active = new LinkedList<>();
 
-        // Add the collision's shooter orb to the active list and mark it as "examined"
-        active.push(sourceOrb);
-        if(validOrbArrayCoordinates(new PointInt(sourceOrb.getI(),sourceOrb.getJ()))){
-            examined[sourceOrb.getI()][sourceOrb.getJ()] = true; // deathOrbs have "invalid" coordinates.
-        }
+        // Add the source Orb to the active list and mark it as "examined"
+        active.push(source);
+        if(validOrbArrayCoordinates(source)) examined[source.getI()][source.getJ()] = true; // deathOrbs have "invalid" coordinates, so we have to check whether the coordinates are valid.
 
         // Do a depth-first search
         while (!active.isEmpty()) {
             Orb activeOrb = active.pop();
-            matches.add(new PointInt(activeOrb.getI(), activeOrb.getJ()));
-            List<Orb> neighbors = getNeighbors(activeOrb);
+            matches.add(activeOrb);
+            List<Orb> neighbors = getNeighbors(activeOrb, orbArray); // recall: neighbors does not contain any death Orbs. Only orbArray Orbs.
             for (Orb neighbor : neighbors) {
                 if (!examined[neighbor.getI()][neighbor.getJ()]) {
                     // apply the filter option
                     boolean passesFilter = false;
                     switch(filter){
                         case ALL:
-                            if(validOrbArrayCoordinates(new PointInt(neighbor.getI(),neighbor.getJ())) || validDeathOrbsCoordinates(new PointInt(neighbor.getI(),neighbor.getJ()))) passesFilter = true;
-                            else{// This shouldn't ever happen, but checking anyways. // Todo: consider eliminating the previous check for performance.
-                                System.err.println("depth-first search somehow encountered a PointInt with invalid coordinates");
-                                passesFilter = false;
-                            }
+                            passesFilter = true;
                             break;
                         case SAME_COLOR:
-                            if(orbArray[neighbor.getI()][neighbor.getJ()].getOrbEnum() == sourceOrb.getOrbEnum()) passesFilter = true;
+                            if(orbArray[neighbor.getI()][neighbor.getJ()].getOrbEnum() == source.getOrbEnum()) passesFilter = true;
                             break;
                     }
                     if(passesFilter){
@@ -571,31 +498,28 @@ public class PlayPanelData implements Serializable {
         return matches;
     }
 
-    public Set<PointInt> findConnectedOrbs(Orb[][] orbArray){
-        Set<PointInt> connectedOrbs = new HashSet<>();
+    public Set<Orb> findConnectedOrbs(Orb[][] orbArray){
+        Set<Orb> connectedOrbs = new HashSet<>();
 
         // find all orbs connected to the ceiling:
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-            PointInt sourcePoint = new PointInt(0, j);
             if(orbArray[0][j]==NULL) continue;
-            connectedOrbs.addAll(depthFirstSearch(sourcePoint, orbArray, FilterOption.ALL));
+            connectedOrbs.addAll(depthFirstSearch(orbArray[0][j], orbArray, FilterOption.ALL));
         }
 
         return connectedOrbs;
     }
 
     // Finds floating orbs and drops them. Also checks for victory conditions
-    public List<PointInt> findFloatingOrbs(Set<PointInt> connectedOrbs, Orb[][] orbArray){
-        List<PointInt> orbsToDrop = new LinkedList<>();
+    public List<Orb> findFloatingOrbs(Set<Orb> connectedOrbs, Orb[][] orbArray){
+        List<Orb> orbsToDrop = new LinkedList<>();
 
-        // any remaining orbs in the array should be dropped.
+        // any orbs in the array that are not among the connectedOrbs Set are floating.
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                if(orbArray[i][j]!=NULL){ // We only care about locations that have actual Orbs.
-                    PointInt orb = new PointInt(i,j);
-                    if(!connectedOrbs.contains(orb)){
-                        orbsToDrop.add(orb);
-                    }
+                Orb arrayOrb = orbArray[i][j];
+                if(arrayOrb!=NULL && !connectedOrbs.contains(arrayOrb)){
+                    orbsToDrop.add(arrayOrb);
                 }
             }
         }
@@ -603,14 +527,23 @@ public class PlayPanelData implements Serializable {
     }
 
 
-    // Todo: overload with validOrbArrayCoordinates(Orb sourceOrb)
     public boolean validOrbArrayCoordinates(PointInt testPoint)
     {
-        return (testPoint.i>=0 && testPoint.i< ARRAY_HEIGHT && testPoint.j>=0 && testPoint.j <ARRAY_WIDTH_PER_CHARACTER*numPlayers);
+        return (testPoint.getI()>=0 && testPoint.getI()< ARRAY_HEIGHT && testPoint.getJ()>=0 && testPoint.getJ() <ARRAY_WIDTH_PER_CHARACTER*numPlayers);
+    }
+
+    // Overloaded method to avoid the creation of a temporary object.
+    public boolean validOrbArrayCoordinates(int iCoordinate, int jCoordinate){
+        return (iCoordinate>=0 && iCoordinate<ARRAY_HEIGHT && jCoordinate>=0 && jCoordinate<ARRAY_WIDTH_PER_CHARACTER*numPlayers);
     }
 
     public boolean validDeathOrbsCoordinates(PointInt testPoint){
-        return (testPoint.i==ARRAY_HEIGHT && testPoint.j>=0 && testPoint.j<ARRAY_WIDTH_PER_CHARACTER*numPlayers);
+        return (testPoint.getI()==ARRAY_HEIGHT && testPoint.getJ()>=0 && testPoint.getJ()<ARRAY_WIDTH_PER_CHARACTER*numPlayers);
+    }
+
+    // Overloaded method to avoid the creation of a temporary object.
+    public boolean validDeathOrbsCoordinates(int iCoordinate, int jCoordinate){
+        return (iCoordinate==ARRAY_HEIGHT && jCoordinate>=0 && jCoordinate<ARRAY_WIDTH_PER_CHARACTER*numPlayers);
     }
 
     // Utility function for debugging
@@ -799,6 +732,7 @@ public class PlayPanelData implements Serializable {
     public void addNewRow(){
         System.out.println("ADDING NEW ROW");
 
+        // todo: use System.arrayCopy
         // Move the existing array down 1 index:
         int i = orbArray.length-1;
         for(int j=0; j<orbArray[i].length; j++){
