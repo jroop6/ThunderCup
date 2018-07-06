@@ -9,6 +9,7 @@ character animations
 PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
 fix multiplayer de-synch problems
     transferInOrbs eventually go out of synch every time.
+    If the player shoots an extra time at the end of one puzzle, the host will think they fired on the next puzzle.
     sometimes it seems that the host doesn't pick up that a client has fired.
     Some computers have a tough time hosting despite not using all their CPU power.
         The event dispatch thread might have too much work to do. consider multithreading.

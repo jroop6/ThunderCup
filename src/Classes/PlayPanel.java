@@ -636,7 +636,7 @@ public class PlayPanel extends Pane {
     }
 
     private List<Orb> advanceTransferringOrbs(){
-        List<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
+        Set<Orb> transferInOrbs = playPanelData.getTransferInOrbs();
         List<Orb> transferOrbsToSnap = new LinkedList<>();
         for(Orb orb : transferInOrbs){
             if (orb.animationTick()){

@@ -54,6 +54,7 @@ class ReceiverWorker extends Thread{
             } catch (IOException e){
                 // If an IOException occurred, assume this means that the player disconnected. For now, just shut down this ReceiverWorker
                 System.err.println("Player disconnect detected. Shutting down ReceiverWorker...");
+                e.printStackTrace();
                 shuttingDown = true;
                 //ToDo: Instead of just shutting down the ReceiverWoker, try pausing the game for a bit first to see whether the player reconnects?
             } catch (ClassNotFoundException e){

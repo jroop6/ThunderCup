@@ -1,8 +1,6 @@
 package Classes.NetworkCommunication;
 
 import Classes.Animation.OrbImages;
-import Classes.Audio.SoundEffect;
-import Classes.Audio.SoundManager;
 import Classes.Orb;
 import Classes.PointInt;
 
@@ -32,13 +30,13 @@ public class PlayPanelData implements Serializable {
     private List<Orb> burstingOrbs = new LinkedList<>();
     private List<Orb> droppingOrbs = new LinkedList<>();
     private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
-    private List<Orb> transferInOrbs = new LinkedList<>(); // orbs to be transferred from other players
+    private Set<Orb> transferInOrbs = new HashSet<>(); // orbs to be transferred from other players
     private List<Orb> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
     //Todo: make deathOrbs an array with width=PLAYPANLE_WIDTH_PER_PLAYER*numPlayers, for easier lookup by (i,j) coordinates
     private boolean victorious = false;
 
-    // cumulative data for this playpanel, for end-of-game statistics:
-    private int cumulativeShotsFired = 0; // involving all players of this playpanel.
+    // cumulative data for this PlayPanel, for end-of-game statistics:
+    private int cumulativeShotsFired = 0; // involving all players of this PlayPanel.
     private int cumulativeOrbsBurst = 0;
     private int cumulativeOrbsTransferred = 0;
     private int cumulativeOrbsDropped = 0;
@@ -95,7 +93,7 @@ public class PlayPanelData implements Serializable {
         shootingOrbs = deepCopyOrbList(other.getShootingOrbs());
         burstingOrbs = deepCopyOrbList(other.getBurstingOrbs());
         droppingOrbs = deepCopyOrbList(other.getDroppingOrbs());
-        transferInOrbs = deepCopyOrbList(other.getTransferInOrbs());
+        transferInOrbs = deepCopyOrbSet(other.getTransferInOrbs());
         transferOutOrbs = deepCopyOrbList(other.getTransferOutOrbs());
         victorious = other.getVictorious();
 
@@ -140,13 +138,31 @@ public class PlayPanelData implements Serializable {
         return copiedArray;
     }
 
-    public List<Orb> deepCopyOrbList(List<Orb> other){
+    // Failed attempt to be clever
+    /*public <E extends Collection<Orb>> E deepCopyOrbCollection(E other){
+        E copiedCollection = new E(); // does not work. Perhaps use clone???
+        for(Orb orb : other){
+            copiedCollection.add(new Orb(orb));
+        }
+        return copiedCollection;
+    }*/
+
+    private List<Orb> deepCopyOrbList(List<Orb> other){
         List<Orb> copiedList = new LinkedList<>();
         for(Orb orb : other){
             copiedList.add(new Orb(orb));
         }
         return copiedList;
     }
+
+    private Set<Orb> deepCopyOrbSet(Set<Orb> other){
+        Set<Orb> copiedSet = new HashSet<>();
+        for(Orb orb : other){
+            copiedSet.add(new Orb(orb));
+        }
+        return copiedSet;
+    }
+
 
     /* Changers: These are called when the host wants to notify the client that something has changed in the official
      * data (e.g. Orbs burst, dropped or fired). */
@@ -295,10 +311,11 @@ public class PlayPanelData implements Serializable {
     public void setShotsUntilNewRow(int newVal){
         shotsUntilNewRow = newVal;
     }
-    public void setOrbList(List<Orb> listToOverwrite, List<Orb> listToCopy){
-        listToOverwrite.clear();
+    public <E extends Collection<Orb>> void setOrbCollection(E collectionToOverwrite, E collectionToCopy){
+        System.out.println("setting an orb collection");
+        collectionToOverwrite.clear();
         // Using addAll() would be faster and cleaner, but may use more memory because the game would have to keep a reference to the entire PlayPanelData from the host.
-        for(Orb orb : listToCopy) listToOverwrite.add(new Orb(orb));
+        for(Orb orb : collectionToCopy) collectionToOverwrite.add(new Orb(orb));
     }
     public void setAddDeathOrbs(List<Orb> newDeathOrbs){
         for(Orb newDeathOrb : newDeathOrbs){
@@ -374,7 +391,7 @@ public class PlayPanelData implements Serializable {
     public List<Orb> getTransferOutOrbs(){
         return transferOutOrbs;
     }
-    public List<Orb> getTransferInOrbs(){
+    public Set<Orb> getTransferInOrbs(){
         return transferInOrbs;
     }
     public List<Orb> getThunderOrbs(){
@@ -598,22 +615,19 @@ public class PlayPanelData implements Serializable {
         if(other.getTransferOutOrbs().size() != transferOutOrbs.size()) inconsistent = true;
 
         // Check that the transferInOrbs list is consistent:
-        if(other.getTransferInOrbs().size() != transferInOrbs.size()) inconsistent=true;
+        if(!other.getTransferInOrbs().equals(transferInOrbs)){
+            inconsistent = true;
+            System.out.println("transferInOrbs are detected as inconsistent");
+        }
+        /*if(other.getTransferInOrbs().size() != transferInOrbs.size()) inconsistent=true;
         else{
             for(Orb transferInOrb : other.getTransferInOrbs()){
-                boolean matchFound = false;
-                for(Orb transferInOrb2 : transferInOrbs){
-                    if(transferInOrb.equals(transferInOrb2)){
-                        matchFound = true;
-                        break;
-                    }
-                }
-                if(!matchFound){
-                    inconsistent = true;
-                    System.out.println("the transferInOrbs lists are inconsistent");
+                if(!transferInOrbs.contains(transferInOrb)){
+                    inconsistent = false;
+                    break;
                 }
             }
-        }
+        }*/
 
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;
@@ -623,12 +637,12 @@ public class PlayPanelData implements Serializable {
             setOrbArray(other.getOrbArray());
             setDeathOrbs(other.getDeathOrbs());
             setShotsUntilNewRow(other.getShotsUntilNewRow());
-            setOrbList(transferInOrbs, other.getTransferInOrbs());
-            setOrbList(shootingOrbs, other.getShootingOrbs());
-            setOrbList(burstingOrbs, other.getBurstingOrbs());
-            setOrbList(droppingOrbs, other.getDroppingOrbs());
-            setOrbList(thunderOrbs, other.getThunderOrbs());
-            setOrbList(transferOutOrbs, other.getTransferOutOrbs());
+            setOrbCollection(transferInOrbs, other.getTransferInOrbs());
+            setOrbCollection(shootingOrbs, other.getShootingOrbs());
+            setOrbCollection(burstingOrbs, other.getBurstingOrbs());
+            setOrbCollection(droppingOrbs, other.getDroppingOrbs());
+            setOrbCollection(thunderOrbs, other.getThunderOrbs());
+            setOrbCollection(transferOutOrbs, other.getTransferOutOrbs());
             setCumulativeShotsFired(other.getCumulativeShotsFired());
             setCumulativeOrbsBurst(other.getCumulativeOrbsBurst());
             setCumulativeOrbsDropped(other.getCumulativeOrbsDropped());

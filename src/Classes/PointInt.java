@@ -1,8 +1,10 @@
 package Classes;
 
+import java.io.Serializable;
+
 // My own implementation of a point with integer coordinates. I'm implementing it myself here instead of using
 // java.awt.Point in order to avoid mixing the awt and JavaFX libraries.
-public class PointInt {
+public class PointInt implements Serializable {
     protected int i;
     protected int j;
 
