@@ -10,9 +10,12 @@ import Classes.NetworkCommunication.PlayerData;
 
 import java.util.*;
 
+import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
+import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.Orb.NULL;
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
+import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
 public class BotPlayer extends Player {
@@ -193,6 +196,9 @@ public class BotPlayer extends Player {
             return;
         }
 
+        // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
+        int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy);
+
         // determine the outcome for a variety of shooting angles:
         // todo: multithread this, for speed. Just evenly divide the work into ranges of angles and make sure to use a thread-safe list.
         LinkedList<Outcome> choices = new LinkedList<>();
@@ -246,7 +252,7 @@ public class BotPlayer extends Player {
             orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopyTemp));
 
             // Assign a score to the outcome:
-            int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp);
+            int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
 
             // Add the Outcome to the list of possible choices:
             choices.add(new Outcome(angle,score));
@@ -283,7 +289,7 @@ public class BotPlayer extends Player {
         return bins;
     }
 
-    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray){
+    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray, int lowestRow){
         int score = 0;
 
         // transferring Orbs is a very good thing:
@@ -301,12 +307,13 @@ public class BotPlayer extends Player {
         if(matchesFound==1) ++ score; // note: if matches > 1, the orbs have already been accounted for, in arrayOrbsToBurst.
 
         // It is undesirable for the orb to hit the ceiling:
-        if (hypotheticalOrb.getI()==0) --score;
+        if (hypotheticalOrb.getI()==0) score-=5;
 
         // It looks nicer if the computer doesn't keep shooting in the same direction:
         if((cannon.getAngle()<-90 && angle<-90) || (cannon.getAngle()>-90 && angle>-90)) --score;
 
-        // Todo: If the orb brings us closer to the death line, it is unfavorable
+        // If the orb brings us closer to the death line, it is unfavorable
+        if(hypotheticalOrb.getI() > lowestRow) score-=2;
 
         return score;
     }

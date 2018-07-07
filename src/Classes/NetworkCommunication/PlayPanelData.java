@@ -140,7 +140,8 @@ public class PlayPanelData implements Serializable {
 
     // Failed attempt to be clever
     /*public <E extends Collection<Orb>> E deepCopyOrbCollection(E other){
-        E copiedCollection = new E(); // does not work. Perhaps use clone???
+        E copiedCollection = Collections.checkedCollection(other, Orb.class); // Does not work, unfortunately...
+        copiedCollection.clear();
         for(Orb orb : other){
             copiedCollection.add(new Orb(orb));
         }
@@ -474,9 +475,7 @@ public class PlayPanelData implements Serializable {
         return (i>=0 && i<array.length && j>=0 && j<array[i].length);
     }
 
-    public List<Orb> depthFirstSearch(Orb source, Orb[][] orbArray, FilterOption filter) {
-
-        List<Orb> matches = new LinkedList<>();
+    public void cumulativeDepthFirstSearch(Orb source, Set<Orb> matches, Orb[][] orbArray, FilterOption filter) {
 
         // A boolean orbArray that has the same size as the orbArray, to mark orbs as "examined"
         boolean examined[][] = new boolean[PlayPanelData.ARRAY_HEIGHT][PlayPanelData.ARRAY_WIDTH_PER_CHARACTER * numPlayers];
@@ -487,6 +486,9 @@ public class PlayPanelData implements Serializable {
         // Add the source Orb to the active list and mark it as "examined"
         active.push(source);
         if(validOrbArrayCoordinates(source)) examined[source.getI()][source.getJ()] = true; // deathOrbs have "invalid" coordinates, so we have to check whether the coordinates are valid.
+
+        // Mark everything in the starting set as "examined"
+        for(Orb orb : matches) examined[orb.getI()][orb.getJ()] = true;
 
         // Do a depth-first search
         while (!active.isEmpty()) {
@@ -512,7 +514,6 @@ public class PlayPanelData implements Serializable {
                 }
             }
         }
-        return matches;
     }
 
     public Set<Orb> findConnectedOrbs(Orb[][] orbArray){
@@ -521,7 +522,7 @@ public class PlayPanelData implements Serializable {
         // find all orbs connected to the ceiling:
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
             if(orbArray[0][j]==NULL) continue;
-            connectedOrbs.addAll(depthFirstSearch(orbArray[0][j], orbArray, FilterOption.ALL));
+            cumulativeDepthFirstSearch(orbArray[0][j], connectedOrbs, orbArray, FilterOption.ALL);
         }
 
         return connectedOrbs;
@@ -791,5 +792,24 @@ public class PlayPanelData implements Serializable {
             }
             else orbArray[i][j] = NULL;
         }
+    }
+
+    public int getLowestOccupiedRow(Orb[][] orbArray) {
+        int lowestRow = 0;
+        boolean nonEmpty = false;
+        for (int i = ARRAY_HEIGHT-1; i>=0; i--) {
+            Orb[] row = orbArray[i];
+            for (int j = ARRAY_WIDTH_PER_CHARACTER*numPlayers-1; j>=0; j--) {
+                if (row[j] != NULL) {
+                    nonEmpty = true;
+                    break;
+                }
+            }
+            if (nonEmpty) {
+                lowestRow = i;
+                break;
+            }
+        }
+        return lowestRow;
     }
 }

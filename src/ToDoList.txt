@@ -4,8 +4,10 @@ improve efficiency for slower computers
 fix multiplayer de-synch problems
 more puzzles!
 character animations
+TransferInOrbs should be able to kill a player.
 
 -------Bugs-------
+(probable bug, also probably very minor) Does findFloatingOrbs detect floating orbs that are on the deathOrbs array?
 PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
 fix multiplayer de-synch problems
     transferInOrbs eventually go out of synch every time.
@@ -26,6 +28,8 @@ character animations
 character voices/sound effects
 slightly nicer visuals for the puzzle selector buttons
 more puzzles!
+Select secondary and tertiary locations for transferInOrbs?
+TransferInOrbs should be able to kill a player.
 
 -------moderate refactoring-------
 There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.

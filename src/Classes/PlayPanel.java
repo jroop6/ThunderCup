@@ -9,7 +9,6 @@ import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.LocalPlayer;
 import Classes.PlayerTypes.Player;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -567,15 +566,17 @@ public class PlayPanel extends Pane {
             if(shootingOrbsToBurst.contains(collision.shooterOrb)) continue; // Only consider orbs that are not already in the bursting orbs list
 
             // find all connected orbs of the same color
-            List<Orb> connectedOrbs = playPanelData.depthFirstSearch(collision.shooterOrb, orbArray, PlayPanelData.FilterOption.SAME_COLOR);
+            Set<Orb> connectedOrbs = new HashSet<>();
+            playPanelData.cumulativeDepthFirstSearch(collision.shooterOrb, connectedOrbs, orbArray, PlayPanelData.FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
 
             // If there are a sufficient number grouped together, then add a transfer out orb of the same color:
             int numTransferOrbs;
             if((numTransferOrbs = (connectedOrbs.size()-3)/2) > 0) {
                 soundEffectsToPlay.add(SoundEffect.DROP);
+                Iterator<Orb> orbIterator = connectedOrbs.iterator();
                 for(int k=0; k<numTransferOrbs; k++){
-                    Orb orbToTransfer = connectedOrbs.get(k);
+                    Orb orbToTransfer = orbIterator.next();
                     orbsToTransfer.add(new Orb(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
                 }
             }
