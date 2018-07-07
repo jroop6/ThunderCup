@@ -516,22 +516,16 @@ public class PlayPanelData implements Serializable {
         }
     }
 
-    public Set<Orb> findConnectedOrbs(Orb[][] orbArray){
-        Set<Orb> connectedOrbs = new HashSet<>();
-
+    public void findConnectedOrbs(Orb[][] orbArray, Set<Orb> connectedOrbs){
         // find all orbs connected to the ceiling:
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
             if(orbArray[0][j]==NULL) continue;
             cumulativeDepthFirstSearch(orbArray[0][j], connectedOrbs, orbArray, FilterOption.ALL);
         }
-
-        return connectedOrbs;
     }
 
     // Finds floating orbs and drops them. Also checks for victory conditions
-    public List<Orb> findFloatingOrbs(Set<Orb> connectedOrbs, Orb[][] orbArray){
-        List<Orb> orbsToDrop = new LinkedList<>();
-
+    public void findFloatingOrbs(Set<Orb> connectedOrbs, Orb[][] orbArray, List<Orb> orbsToDrop){
         // any orbs in the array that are not among the connectedOrbs Set are floating.
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
@@ -541,7 +535,6 @@ public class PlayPanelData implements Serializable {
                 }
             }
         }
-        return orbsToDrop;
     }
 
 

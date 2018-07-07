@@ -10,12 +10,9 @@ import Classes.NetworkCommunication.PlayerData;
 
 import java.util.*;
 
-import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
-import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.Orb.NULL;
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
-import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
 public class BotPlayer extends Player {
@@ -142,19 +139,19 @@ public class BotPlayer extends Player {
      *    fineMovementOffset - How far off the bot will be from the target angle at the end of the fine movement phase
      */
     private void retarget(){
-        // Create copies of the existing orbArray and deathOrbs:
+        // Create copies of the existing data:
         Orb[][] orbArrayCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
         Orb[] deathOrbsCopy = playPanel.getPlayPanelData().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());
-        List<Orb> droppingOrbsCopy = new LinkedList<>();
+
+        // New collections that will be affected by side-effects:
         List<Orb> burstingOrbsCopy = new LinkedList<>();
-
-        // create an EnumSet that must be passed to the methods:
+        List<Orb> droppingOrbsCopy = new LinkedList<>();
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
-
-        // Create placeholders for important things
         List<Orb> arrayOrbsToBurst = new LinkedList<>();
         List<Orb> orbsToDrop = new LinkedList<>();
         List<Orb> orbsToTransfer = new LinkedList<>();
+        List<PlayPanel.Collision> collisions = new LinkedList<>();
+        Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
 
         // Advance all existing shooter orbs, one at a time in order.
         // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
@@ -167,6 +164,13 @@ public class BotPlayer extends Player {
             List<Orb> shootingOrbCopy = new LinkedList<>();
             shootingOrbCopy.add(new Orb(shootingOrb));
 
+            // Clear the other lists
+            arrayOrbsToBurst.clear();
+            connectedOrbs.clear();
+            collisions.clear();
+            burstingOrbsCopy.clear();
+            droppingOrbsCopy.clear();
+
             // Determine the maximum time over which this shooting Orb could possibly travel:
             double maxYDistance = shootingOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
             double maxXDistance = maxYDistance/Math.tan(Math.toRadians(shootingOrb.getAngle()));
@@ -174,26 +178,7 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbEnum().getOrbSpeed();
 
-            // Advance the shooting orb and deal with all of its collisions along the way:
-            List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbCopy, orbArrayCopy, maxTime, soundEffectsToPlay);
-
-            // Snap the shooting orb into place:
-            List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopy, deathOrbsCopy, soundEffectsToPlay);
-
-            // Determine whether any orbs burst:
-            List<Orb> newOrbsToTransfer = new LinkedList<>(); // findPatternCompletions will fill this list as appropriate
-            arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopy, shootingOrbsToBurst, soundEffectsToPlay, newOrbsToTransfer));
-            orbsToTransfer.addAll(newOrbsToTransfer);
-
-            // Burst new orbs:
-            if(!arrayOrbsToBurst.isEmpty()){
-                playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopy,deathOrbsCopy, burstingOrbsCopy);
-            }
-
-            // Find floating orbs and drop them:
-            Set<Orb> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopy); // orbs that are connected to the ceiling.
-            orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopy));
-            if(!orbsToDrop.isEmpty()) playPanel.getPlayPanelData().changeDropArrayOrbs(orbsToDrop, droppingOrbsCopy, orbArrayCopy);
+            playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
         }
 
         // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
@@ -227,15 +212,21 @@ public class BotPlayer extends Player {
             hypotheticalOrb.setYPos(CANNON_Y_POS);
             hypotheticalOrb.setAngle(Math.toRadians(angle));
             hypotheticalOrb.setSpeed(hypotheticalOrb.getOrbEnum().getOrbSpeed());
+            List<Orb> shootingOrbCopy = new LinkedList<>();
+            shootingOrbCopy.add(hypotheticalOrb);
 
             // Create copies of the simulated orbArray and deathOrbs:
             Orb[][] orbArrayCopyTemp = playPanel.getPlayPanelData().deepCopyOrbArray(orbArrayCopy);
             Orb[] deathOrbsCopyTemp = playPanel.getPlayPanelData().deepCopyOrbArray(deathOrbsCopy);
 
-            // clear the placeholders for important things
+            // clear the other lists
             arrayOrbsToBurst.clear();
             orbsToDrop.clear();
             orbsToTransfer.clear();
+            connectedOrbs.clear();
+            collisions.clear();
+            burstingOrbsCopy.clear();
+            droppingOrbsCopy.clear();
 
             // Determine the maximum time over which the hypothetical Orb could possibly travel:
             double maxYDistance = hypotheticalOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
@@ -244,25 +235,7 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/hypotheticalOrb.getOrbEnum().getOrbSpeed();
 
-            // Advance the hypothetical Orb and deal with all of its collisions:
-            List<Orb> shootingOrbCopy = new LinkedList<>();
-            shootingOrbCopy.add(hypotheticalOrb);
-            List<PlayPanel.Collision> orbsToSnap = playPanel.advanceShootingOrbs(shootingOrbCopy, orbArrayCopyTemp, maxTime, soundEffectsToPlay);
-
-            // Snap the hypothetical Orb into place:
-            List<Orb> shootingOrbsToBurst = playPanel.snapOrbs(orbsToSnap, orbArrayCopyTemp, deathOrbsCopyTemp, soundEffectsToPlay);
-
-            // Determine whether any of the snapped orbs cause any orbs to burst:
-            arrayOrbsToBurst.addAll(playPanel.findPatternCompletions(orbsToSnap, orbArrayCopyTemp, shootingOrbsToBurst, soundEffectsToPlay, orbsToTransfer));
-
-            // Burst new orbs:
-            if(!arrayOrbsToBurst.isEmpty()){
-                playPanel.getPlayPanelData().changeBurstArrayOrbs(arrayOrbsToBurst,orbArrayCopyTemp, deathOrbsCopyTemp, burstingOrbsCopy);
-            }
-
-            // Find floating orbs:
-            Set<Orb> connectedOrbs = playPanel.getPlayPanelData().findConnectedOrbs(orbArrayCopyTemp); // orbs that are connected to the ceiling.
-            orbsToDrop.addAll(playPanel.getPlayPanelData().findFloatingOrbs(connectedOrbs, orbArrayCopyTemp));
+            playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
 
             // Assign a score to the outcome:
             int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
