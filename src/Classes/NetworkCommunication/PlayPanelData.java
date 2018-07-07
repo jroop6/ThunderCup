@@ -608,47 +608,34 @@ public class PlayPanelData implements Serializable {
             System.out.println("number of shots until new row appears is inconsistent between host and client");
         }
 
-        // Check that the number of shooting, bursting, dropping, thunder, and transferOut orbs are consistent:
+        // Check that the number of shooting Orbs are consistent:
         if(other.getShootingOrbs().size() != shootingOrbs.size()) inconsistent = true;
-        if(other.getBurstingOrbs().size() != burstingOrbs.size()) inconsistent = true;
-        if(other.getDroppingOrbs().size() != droppingOrbs.size()) inconsistent = true;
-        if(other.getThunderOrbs().size() != thunderOrbs.size()) inconsistent = true;
-        if(other.getTransferOutOrbs().size() != transferOutOrbs.size()) inconsistent = true;
 
         // Check that the transferInOrbs list is consistent:
         if(!other.getTransferInOrbs().equals(transferInOrbs)){
             inconsistent = true;
             System.out.println("transferInOrbs are detected as inconsistent");
         }
-        /*if(other.getTransferInOrbs().size() != transferInOrbs.size()) inconsistent=true;
-        else{
-            for(Orb transferInOrb : other.getTransferInOrbs()){
-                if(!transferInOrbs.contains(transferInOrb)){
-                    inconsistent = false;
-                    break;
-                }
-            }
-        }*/
 
         if(inconsistent) inconsistencyCounter++;
         else inconsistencyCounter = 0;
 
         if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE){
             System.err.println("Client data is inconsistent with the host! overriding client data...");
+            // Override the important data:
             setOrbArray(other.getOrbArray());
             setDeathOrbs(other.getDeathOrbs());
             setShotsUntilNewRow(other.getShotsUntilNewRow());
-            setOrbCollection(transferInOrbs, other.getTransferInOrbs());
             setOrbCollection(shootingOrbs, other.getShootingOrbs());
-            setOrbCollection(burstingOrbs, other.getBurstingOrbs());
-            setOrbCollection(droppingOrbs, other.getDroppingOrbs());
-            setOrbCollection(thunderOrbs, other.getThunderOrbs());
-            setOrbCollection(transferOutOrbs, other.getTransferOutOrbs());
+            setOrbCollection(transferInOrbs, other.getTransferInOrbs());
+
+            // Less important data:
             setCumulativeShotsFired(other.getCumulativeShotsFired());
             setCumulativeOrbsBurst(other.getCumulativeOrbsBurst());
             setCumulativeOrbsDropped(other.getCumulativeOrbsDropped());
             setCumulativeOrbsTransferred(other.getCumulativeOrbsTransferred());
             setLargestGroupExplosion(other.getLargestGroupExplosion());
+
             inconsistencyCounter = 0;
         }
     }
@@ -716,7 +703,7 @@ public class PlayPanelData implements Serializable {
                 int i;
                 int j;
                 for(i=0; !((line = reader.readLine()).trim().isEmpty()) && i<ARRAY_HEIGHT; i++){
-                    System.out.println("line is " + line);
+                    //System.out.println("line is " + line);
                     for (j=0; j<line.length() && j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                         char orbSymbol = line.charAt(j);
                         OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol(orbSymbol);

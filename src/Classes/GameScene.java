@@ -73,6 +73,7 @@ public class GameScene extends Scene {
     private int numberOfPacketsRemaining = 0;
     private int MSSCalls = 0;
     private long nextReport = 0; // The time at which miscellaneous debugging info will next be printed (nanoseconds).
+    private long[] playPanelTickTime = {0,0,Long.MAX_VALUE,0}; // number of times the tick() method has been called, the cumulative time (nanoseconds) for their executions, minimum execution time, maximum execution time.
 
     // for pause menu
     private Rectangle pauseOverlay;
@@ -202,13 +203,19 @@ public class GameScene extends Scene {
                     // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
                     // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
                     // suppose I could just make sure they use the same random number generator, but having the host do it
-                    // is also just easier and prevents clients from cheating by coding their own robot).
+                    // is just easier and reduces the overall amount of computation for the clients.
                     if(!gameData.getPause() && isHost) processBots();
 
                     if(!gameData.getPause()){
                         // update each PlayPanel:
                         for(PlayPanel playPanel: playPanelMap.values()){
+                            long time = System.nanoTime();
                             playPanel.tick();
+                            time = System.nanoTime() - time;
+                            playPanelTickTime[0]++;
+                            playPanelTickTime[1]+=time;
+                            if(time < playPanelTickTime[2]) playPanelTickTime[2] = time;
+                            if(time > playPanelTickTime[3]) playPanelTickTime[3] = time;
                         }
                         // process inter-PlayPanel events (transferring orbs and determining victory/defeat):
                         tick();
@@ -274,6 +281,23 @@ public class GameScene extends Scene {
         numberOfPacketsProcessed = 0;
         numberOfPacketsRemaining = 0;
         MSSCalls = 0;
+        System.out.println("PlayPanel.tick() called " + playPanelTickTime[0] + " times. Average: " + (playPanelTickTime[1]/1000)/playPanelTickTime[0] + " microseconds. minimum: " + playPanelTickTime[2]/1000 + " microseconds. maximum: " + playPanelTickTime[3]/1000 + " microseconds");
+
+        // compile all the individual bot retargeting times.
+        long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time.
+        for(PlayPanel playPanel : playPanelMap.values()){
+            for (Player player : playPanel.getPlayerList()){
+                if (player instanceof BotPlayer){
+                    long[] times = ((BotPlayer) player).getBotRetargetTime();
+                    botRetargetTime[0] += times[0];
+                    botRetargetTime[1] += times[1];
+                    if(times[2]<botRetargetTime[2]) botRetargetTime[2] = times[2];
+                    if(times[3]>botRetargetTime[3]) botRetargetTime[3] = times[3];
+                }
+            }
+        }
+        System.out.println("BotPlayer.retarget() called " + botRetargetTime[0] + " times. Average: " + (botRetargetTime[1]/1000)/Math.max(botRetargetTime[0],1) + " microseconds. minimum: " + botRetargetTime[2]/1000 + " microseconds. maximum: " + botRetargetTime[3]/1000 + " microseconds");
+
     }
 
     private int[] processPacketsAsHost(boolean isPaused){

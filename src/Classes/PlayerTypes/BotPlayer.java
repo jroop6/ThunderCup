@@ -33,6 +33,9 @@ public class BotPlayer extends Player {
     private int currentFrame = 0;
     private int transitionFrame;
 
+    // Misc, for debugging
+    private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
+
     public BotPlayer(CharacterImages characterEnum){
         // create a (probably) unique player ID:
         long playerID;
@@ -61,7 +64,17 @@ public class BotPlayer extends Player {
         // Handle the current frame:
         switch(currentPhase){
             case THINKING:
-                if(currentFrame == transitionFrame-1) retarget();
+                if(currentFrame == transitionFrame-1){
+                    long time = System.nanoTime();
+                    retarget();
+                    if(target<0){
+                        time = System.nanoTime() - time;
+                        botRetargetTime[0]++;
+                        botRetargetTime[1]+=time;
+                        if(time < botRetargetTime[2]) botRetargetTime[2] = time;
+                        if(time > botRetargetTime[3]) botRetargetTime[3] = time;
+                    }
+                }
                 break;
             case PRE_MOVEMENT:
                 break;
@@ -93,7 +106,7 @@ public class BotPlayer extends Player {
                     }
                     else{
                         // The bot does not see any orbs on the orb array. Perhaps the next puzzle is still being loaded. Wait a bit.
-                        System.out.println("No Orbs detected. Re-running thinking phase...");
+                        // System.out.println("No Orbs detected. Re-running thinking phase...");
                     }
                     break;
                 case PRE_MOVEMENT:
@@ -270,6 +283,10 @@ public class BotPlayer extends Player {
         target = choice.angle;
         broadMovementOffset = character.getCharacterEnum().getBotDifficulty().getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = character.getCharacterEnum().getBotDifficulty().getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+    }
+
+    public long[] getBotRetargetTime(){
+        return botRetargetTime;
     }
 
     private LinkedList<OutcomeBin> binSort(List<Outcome> choices){

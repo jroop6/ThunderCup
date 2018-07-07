@@ -348,7 +348,7 @@ public abstract class Player {
                     temp++;
                     // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
                 }
-                System.out.println("read " + temp + "orbs from file");
+                // System.out.println("read " + temp + "orbs from file");
             } catch(IOException e){
                 e.printStackTrace();
             }
