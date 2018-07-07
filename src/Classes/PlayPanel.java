@@ -46,12 +46,15 @@ public class PlayPanel extends Pane {
     public static final double PLAYPANEL_HEIGHT = 1080;
     public static final double CANNON_X_POS = ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2.0; // The x-position of the cannon's axis of rotation in a 1-player playpanel.
     public static final double CANNON_Y_POS = 975; // The y-position of the cannon's axis of rotation in a 1-player playpanel.
-    public static final double ROW_HEIGHT = Math.sqrt(Math.pow(2* ORB_RADIUS,2) - Math.pow(ORB_RADIUS,2)); // Vertical distance between Orb rows.
     private static final double[] VIBRATION_OFFSETS = {2.5, 1.5, 1}; // How much the array orbs vibrate before they drop 1 level.
     private static final double[] VIBRATION_FREQUENCIES = {15.2, 10.7, 5.3}; // cycles per second
 
     // Misc constants:
     private static final double ELECTRIFCATION_PROBABILITY = .004;
+
+    // Constants cached for speed:
+    public static final double FOUR_R_SQUARED = 4 * ORB_RADIUS * ORB_RADIUS;
+    public static final double ROW_HEIGHT = Math.sqrt(Math.pow(2* ORB_RADIUS,2) - Math.pow(ORB_RADIUS,2)); // Vertical distance between Orb rows.
 
     private List<Player> playerList = new LinkedList<>();
     private Rectangle liveBoundary;
@@ -306,7 +309,6 @@ public class PlayPanel extends Pane {
     // Note: recall that the y-axis points downward and shootingOrb.getAngle() returns a negative value.
     //todo: convert all y1p/x1p to Math.tan(angle). In fact, it appears so often, just cache double tanAngle = Math.tan(angle).
     public void advanceShootingOrbs(List<Orb> shootingOrbs, Orb[][] orbArray, double timeRemainingInFrame, Set<SoundEffect> soundEffectsToPlay, List<Collision> collisions) {
-
         // Put all possible collisions in here. If a shooter orb's path this frame would put it on a collision course
         // with the ceiling, a wall, or an array orb, then that collision will be added to this list, even if there is
         // another orb in the way.
@@ -318,19 +320,20 @@ public class PlayPanel extends Pane {
             double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
             double y0 = shootingOrb.getYPos(); // y-position of the shooting orb before it is advanced.
             double distanceToTravel = speed * timeRemainingInFrame;
-            double x1 = x0 + distanceToTravel * Math.cos(angle); // Theoretical x-position of the shooting orb after it is advanced.
-            double y1 = y0 + distanceToTravel * Math.sin(angle); // Theoretical y-position of the shooting orb after it is advanced.
-            double x1P = x1 - x0;
-            double y1P = y1 - y0;
+            double x1P = distanceToTravel * Math.cos(angle); // Theoretical x-position of the shooting orb after it is advanced, relative to x0.
+            double y1P = distanceToTravel * Math.sin(angle); // Theoretical y-position of the shooting orb after it is advanced, relative to y0
+            double tanAngle = y1P/x1P;
+            double onePlusTanAngleSquared = 1+Math.pow(tanAngle, 2.0); // cached for speed
 
             // Cycle through the entire Orb array and find all possible collision points along this shooting orb's path:
-            for (int i = 0; i < PlayPanelData.ARRAY_HEIGHT; i++) {
+            boolean collisionsFoundOnRow = false;
+            for (int i = ARRAY_HEIGHT-1; i >= 0; i--) {
                 for (int j = 0; j < ARRAY_WIDTH_PER_CHARACTER * numPlayers; j ++) {
                     if (orbArray[i][j] != NULL) {
                         double xAP = orbArray[i][j].getXPos() - x0;
                         double yAP = orbArray[i][j].getYPos() - y0;
-                        double lhs = 4 * ORB_RADIUS * ORB_RADIUS * (1 + Math.pow(y1P / x1P, 2.0));
-                        double rhs = Math.pow(y1P * xAP / x1P - yAP, 2.0);
+                        double lhs = FOUR_R_SQUARED * onePlusTanAngleSquared;
+                        double rhs = Math.pow(tanAngle * xAP - yAP, 2.0);
                         // Test whether collision is possible. If it is, then compute its 2 possible collision points.
                         if (lhs > rhs) {
                             // Compute the two possible intersection points, (xPP, yPP) and (xPN, yPN)
@@ -340,20 +343,20 @@ public class PlayPanel extends Pane {
                             double yPN;
 
                             // if the Orb is traveling nearly vertically, use a special solution to prevent a near-zero denominator:
-                            if (-0.01 < x1P && x1P < 0.01) {
+                            if(Math.abs(x1P) < 0.01) {
                                 xPP = 0;
                                 xPN = 0;
-                                yPP = yAP + Math.sqrt(4 * ORB_RADIUS * ORB_RADIUS - xAP * xAP);
-                                yPN = yAP - Math.sqrt(4 * ORB_RADIUS * ORB_RADIUS - xAP * xAP);
+                                double sqrt4R2mxAP2 = Math.sqrt(FOUR_R_SQUARED - xAP * xAP);
+                                yPP = yAP + sqrt4R2mxAP2;
+                                yPN = yAP - sqrt4R2mxAP2;
                             }
                             else {
-                                double numerator1 = xAP + y1P * yAP / x1P;
+                                double numerator1 = xAP + tanAngle * yAP;
                                 double numerator2 = Math.sqrt(lhs - rhs);
-                                double divisor = 1 + Math.pow(y1P / x1P, 2.0);
-                                xPP = (numerator1 + numerator2) / divisor;
-                                yPP = xPP * y1P / x1P;
-                                xPN = (numerator1 - numerator2) / divisor;
-                                yPN = xPN * y1P / x1P;
+                                xPP = (numerator1 + numerator2) / onePlusTanAngleSquared;
+                                yPP = xPP * tanAngle;
+                                xPN = (numerator1 - numerator2) / onePlusTanAngleSquared;
+                                yPN = xPN * tanAngle;
                             }
 
                             // Figure out which intersection point is closer, and only add the collision to the list of
@@ -364,15 +367,20 @@ public class PlayPanel extends Pane {
                                     && distanceToCollisionPSquared < distanceToCollisionNSquared) {
                                 double timeToCollision = Math.sqrt(distanceToCollisionPSquared) / speed;
                                 possibleCollisionPoints.add(new Collision(shootingOrb, orbArray[i][j], timeToCollision));
+                                collisionsFoundOnRow = true;
                             }
-                            if (distanceToCollisionNSquared < distanceToTravel * distanceToTravel
-                                    && distanceToCollisionNSquared < distanceToCollisionPSquared) {
+                            else if (distanceToCollisionNSquared < distanceToTravel * distanceToTravel) {
                                 double timeToCollision = Math.sqrt(distanceToCollisionNSquared) / speed;
                                 possibleCollisionPoints.add(new Collision(shootingOrb, orbArray[i][j], timeToCollision));
+                                collisionsFoundOnRow = true;
                             }
                         }
                     }
+                    // note to self: don't break out of the inner loop if collisionFoundOnRow == true. There may be
+                    // multiple Orbs in the shootingOrb's path on this row and it's not necessarily the case that the
+                    // first one we find is the closest one.
                 }
+                if(collisionsFoundOnRow) break;
             }
 
             // Check for and add collisions with the wall:
@@ -391,7 +399,7 @@ public class PlayPanel extends Pane {
             // ToDo: check for and add collisions with other shooting orbs
 
             // Check for and add collisions with the ceiling:
-            if(y1<ORB_RADIUS){
+            if(y1P<yCeilingP){
                 double timeToCollision = timeRemainingInFrame * yCeilingP / y1P;
                 possibleCollisionPoints.add(new Collision(shootingOrb, Orb.CEILING, timeToCollision));
             }
@@ -410,15 +418,10 @@ public class PlayPanel extends Pane {
         // Advance all shooting orbs to that point in time and deal with the collision.
         if (soonestCollision != null) {
             for (Orb shootingOrb : shootingOrbs) {
-                double speed = shootingOrb.getSpeed();
                 double angle = shootingOrb.getAngle();
-                double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
-                double y0 = shootingOrb.getYPos(); // y-position of the shooting orb before it is advanced.
-                double distanceToTravel = speed * soonestCollisionTime;
-                double x1 = x0 + distanceToTravel * Math.cos(angle);
-                double y1 = y0 + distanceToTravel * Math.sin(angle);
-                shootingOrb.setXPos(x1);
-                shootingOrb.setYPos(y1);
+                double distanceToTravel = shootingOrb.getSpeed() * soonestCollisionTime;
+                shootingOrb.setXPos(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle));
+                shootingOrb.setYPos(shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
             }
 
             // If there was a collision with a wall, then just reflect the shooter orb's angle.
@@ -454,18 +457,12 @@ public class PlayPanel extends Pane {
         // If there are no more collisions, just advance all orbs to the end of the frame.
         else {
             for (Orb shootingOrb : shootingOrbs) {
-                double speed = shootingOrb.getSpeed();
                 double angle = shootingOrb.getAngle();
-                double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
-                double y0 = shootingOrb.getYPos(); // y-position of the shooting orb before it is advanced.
-                double distanceToTravel = speed * timeRemainingInFrame;
-                double x1 = x0 + distanceToTravel * Math.cos(angle);
-                double y1 = y0 + distanceToTravel * Math.sin(angle);
-                shootingOrb.setXPos(x1);
-                shootingOrb.setYPos(y1);
+                double distanceToTravel = shootingOrb.getSpeed() * timeRemainingInFrame;
+                shootingOrb.setXPos(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle));
+                shootingOrb.setYPos(shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
             }
         }
-
     }
 
     public List<Orb> snapOrbs(List<Collision> snaps, Orb[][] orbArray, Orb[] deathOrbs, Set<SoundEffect> soundEffectsToPlay){
@@ -529,7 +526,6 @@ public class PlayPanel extends Pane {
                 // on the deathOrbs array. If that's the case, then burst the second orb that attempts to snap
                 if(deathOrbs[jSnap] != NULL){
                     orbsToBurst.add(snap.shooterOrb);
-                    System.out.println("Two orbs attempted to snap to the same deathOrbs index. Bursting second orb");
                 }
                 else{
                     deathOrbs[jSnap] = snap.shooterOrb;
@@ -549,7 +545,6 @@ public class PlayPanel extends Pane {
             // If that's the case, then burst the second orb that attempts to snap.
             else if(orbArray[iSnap][jSnap] != NULL){
                 orbsToBurst.add(snap.shooterOrb);
-                System.out.println("Two orbs attempted to snap to the same orbArray coordinate. Bursting second orb");
             }
             else{
                 orbArray[iSnap][jSnap] = snap.shooterOrb;
