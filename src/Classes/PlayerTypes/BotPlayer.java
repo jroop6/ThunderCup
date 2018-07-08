@@ -32,7 +32,7 @@ public class BotPlayer extends Player {
     private int transitionFrame;
 
     // Multithreading
-    private int numThreads = 7; // note: by experimentation, around 5 or maaaaybe 6 is optimal on my machine 4th gen i7)
+    private int numThreads = 5; // note: by experimentation, around 5 or maaaaybe 6 is optimal on my machine (4th gen i7) when there are 3 hard computer players.
     private ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
 
     // Misc, for debugging
@@ -203,7 +203,6 @@ public class BotPlayer extends Player {
         int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy);
 
         // determine the outcome for a variety of shooting angles:
-        // todo: multithread this, for speed. Just evenly divide the work into ranges of angles and make sure to use a thread-safe list.
         LinkedList<Outcome> choices = new LinkedList<>();
 
         // Create tasks to be run concurrently:
