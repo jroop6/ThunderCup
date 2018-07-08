@@ -32,7 +32,7 @@ public class BotPlayer extends Player {
     private int transitionFrame;
 
     // Multithreading
-    private int numThreads = 5;
+    private int numThreads = 7; // note: by experimentation, around 5 or maaaaybe 6 is optimal on my machine 4th gen i7)
     private ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
 
     // Misc, for debugging
@@ -484,5 +484,9 @@ public class BotPlayer extends Player {
         }
     }
     private enum Phase{ THINKING, PRE_MOVEMENT, BROAD_MOVEMENT, INTERCESSION, FINE_MOVEMENT, FIRING}
+
+    public void cleanUp(){
+        threadPool.shutdown();
+    }
 }
 

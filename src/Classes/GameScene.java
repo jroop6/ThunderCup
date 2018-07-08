@@ -559,6 +559,7 @@ public class GameScene extends Scene {
     }
 
     public void cleanUp(){
+        // Tell the other players that we're leaving:
         int[] packetsProcessingInfo = {0,0,0};
         if(isHost){
             gameData.changeCancelGame(true);
@@ -568,6 +569,7 @@ public class GameScene extends Scene {
             localPlayer.changeResignPlayer();
             prepareAndSendClientPacket(packetsProcessingInfo);
         }
+
         // wait a little bit to make sure the packet gets through:
         try{
             Thread.sleep(2000/connectionManager.getPacketsSentPerSecond());
@@ -576,8 +578,17 @@ public class GameScene extends Scene {
                     "might not be informed that you've left but... oh well, leaving anyways.");
             e.printStackTrace();
         }
+
+        // Stop the other threads (animationTimer, receiver and sender workers in the connectionManager, and BotPlayer threads):
         animationTimer.stop();
         connectionManager.cleanUp();
+        for(PlayPanel playPanel : playPanelMap.values()){
+            for(Player player : playPanel.getPlayerList()){
+                if(player instanceof BotPlayer){
+                    ((BotPlayer) player).cleanUp();
+                }
+            }
+        }
     }
 
     // Overlays the Scene with a transparent black rectangle when the game is paused:
