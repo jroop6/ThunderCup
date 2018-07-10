@@ -141,7 +141,7 @@ public abstract class Player {
         // There is no change to the view, other than the fact that the player is no longer able to fire.
     }
 
-    private void freezePlayer(){
+    public void freezePlayer(){
         character.freeze(); // updates view (GameScene)
         cannon.freeze();// updates view (GameScene)
     }
@@ -172,7 +172,6 @@ public abstract class Player {
     public void pointCannon(double angle){
         if(playerData.getDefeated()) return;
         playerData.changeCannonAngle(angle); // updates model
-        cannon.setAngle(angle); // updates view
     }
 
     private void setFireCannon(){
@@ -215,11 +214,11 @@ public abstract class Player {
         }
         if(newPlayerData.isCannonChanged()){
             playerData.changeCannon(newPlayerData.getCannonEnum()); // updates model
-            cannon.setCannonEnum(newPlayerData.getCannonEnum()); // updates view
+            cannon.setCannonEnum(newPlayerData.getCannonEnum()); // updates view //todo: update the view in a different method
         }
         if(newPlayerData.isCharacterChanged()){
             playerData.changeCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view
+            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged()){
             playerData.changeDefeated(newPlayerData.getDefeated()); //updates model
@@ -229,26 +228,24 @@ public abstract class Player {
         }
         if(newPlayerData.isFrozenChanged()){
             playerData.changeFrozen(newPlayerData.getFrozen()); // updates model
-            freezePlayer(); // updates view
         }
         if(newPlayerData.isTeamChanged()){
             playerData.changeTeam(newPlayerData.getTeam()); // updates model
-            teamChoice.getSelectionModel().select(newPlayerData.getTeam()-1); // updates view
+            teamChoice.getSelectionModel().select(newPlayerData.getTeam()-1); // updates view //todo: update the view in a different method
         }
         if(newPlayerData.isUsernameChanged()){
             playerData.changeUsername(newPlayerData.getUsername()); // updates model
-            usernameButton.setText(newPlayerData.getUsername()); // updates view
+            usernameButton.setText(newPlayerData.getUsername()); // updates view //todo: update the view in a different method
         }
 
         playerData.changeCannonAngle(newPlayerData.getCannonAngle()); //updates model
-        cannon.setAngle(newPlayerData.getCannonAngle()); // updates view
 
         if(latencies!=null){ // Todo: This line is temporary. latencies should never be null in the final game.
             if(latencies.containsKey(playerData.getPlayerID())){
                 playerData.changeLatency(latencies.get(playerData.getPlayerID())); // updates model
             }
-            if(playerData.getLatency()<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",playerData.getLatency()/1000L)); // updates view
-            else latencyLabel.setText(String.format("Latency: %d milliseconds",playerData.getLatency()/1000000L)); // updates view
+            if(playerData.getLatency()<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",playerData.getLatency()/1000L)); // updates view //todo: update the view in a different method
+            else latencyLabel.setText(String.format("Latency: %d milliseconds",playerData.getLatency()/1000000L)); // updates view //todo: update the view in a different method
         }
     }
 
@@ -265,42 +262,49 @@ public abstract class Player {
         }
         if(newPlayerData.isCannonChanged() && !playerData.isCannonChanged()){
             playerData.setCannon(newPlayerData.getCannonEnum()); // updates model
-            cannon.setCannonEnum(newPlayerData.getCannonEnum()); // updates view
+            cannon.setCannonEnum(newPlayerData.getCannonEnum()); // updates view //todo: update the view in a different method
         }
         if(newPlayerData.isCharacterChanged() && !playerData.isCharacterChanged()){
             playerData.setCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view
+            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged() && !playerData.isDefeatedChanged()){
             playerData.setDefeated(newPlayerData.getDefeated()); //updates model
         }
         if(newPlayerData.isFrozenChanged() && !playerData.isFrozenChanged()){
             playerData.setFrozen(newPlayerData.getFrozen()); // updates model
-            freezePlayer(); // updates view
         }
         if(newPlayerData.isTeamChanged() && !playerData.isTeamChanged()){
             playerData.setTeam(newPlayerData.getTeam()); // updates model
-            teamChoice.getSelectionModel().select(newPlayerData.getTeam()-1); // updates view
+            teamChoice.getSelectionModel().select(newPlayerData.getTeam()-1); // updates view //todo: update the view in a different method
         }
         if(newPlayerData.isUsernameChanged() && !playerData.isUsernameChanged()){
             playerData.setUsername(newPlayerData.getUsername()); // updates model
-            usernameButton.setText(newPlayerData.getUsername()); // updates view
+            usernameButton.setText(newPlayerData.getUsername()); // updates view //todo: update the view in a different method
         }
 
         // remote players' cannon angles are always updated:
         if(!isLocalPlayer){
             playerData.setCannonAngle(newPlayerData.getCannonAngle()); //updates model
-            cannon.setAngle(newPlayerData.getCannonAngle()); // updates view
         }
 
         // players' latencies are always updated:
         playerData.setLatency(newPlayerData.getLatency()); // updates model
-        if(newPlayerData.getLatency()<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",newPlayerData.getLatency()/1000L)); // updates view
-        else latencyLabel.setText(String.format("Latency: %d milliseconds",newPlayerData.getLatency()/1000000L)); // updates view
+        if(newPlayerData.getLatency()<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",newPlayerData.getLatency()/1000L)); // updates view //todo: update the view in a different method
+        else latencyLabel.setText(String.format("Latency: %d milliseconds",newPlayerData.getLatency()/1000000L)); // updates view //todo: update the view in a different method
 
         // check for consistency between this player's ammunitionOrbs and the host's data for ammunitionOrbs. If they
         // are different for too long, then override the client's data with the host's data.
         playerData.checkForConsistency(newPlayerData);
+
+    }
+
+    public void updateView(PlayerData playerData){
+        if(playerData.isFrozenChanged()){
+            freezePlayer(); // updates view
+        }
+
+        cannon.setAngle(playerData.getCannonAngle()); // updates view
 
     }
 

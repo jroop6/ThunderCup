@@ -19,6 +19,14 @@ public class VisualFlourish {
         this.sticky = sticky;
     }
 
+    public VisualFlourish(VisualFlourish other){
+        this.animationEnum = other.animationEnum;
+        this.xPos = other.xPos;
+        this.yPos = other.yPos;
+        this.sticky = other.sticky;
+        this.currentFrame = other.currentFrame;
+    }
+
     public boolean animationTick(){
         currentFrame++;
         if(currentFrame > animationEnum.getSpriteSheet().getMaxFrameIndex()){

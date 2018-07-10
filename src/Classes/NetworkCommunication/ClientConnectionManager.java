@@ -56,7 +56,6 @@ public class ClientConnectionManager extends ConnectionManager{
         Alert connectingDialog = createConnectingDialog(host, port);
         connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.show();
-        int[] packetsProcessingInfo = {0,0,0};
         int timeoutAttempts = 40;
         while(timeoutAttempts>0){
             try{
@@ -64,7 +63,7 @@ public class ClientConnectionManager extends ConnectionManager{
             } catch (InterruptedException e){
                 e.printStackTrace();
             }
-            Packet packet = retrievePacket(packetsProcessingInfo);
+            Packet packet = retrievePacket();
             if(packet!=null){
                 if(packet.isConnectionRejected()){
                     connectingDialog.setResult(ButtonType.CLOSE);
@@ -87,7 +86,6 @@ public class ClientConnectionManager extends ConnectionManager{
         Alert connectingDialog = new Alert(Alert.AlertType.NONE);
         connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.initStyle(StageStyle.UNDECORATED);
-        //connectingDialog.setTitle("Connecting");
         connectingDialog.setHeaderText("Connecting");
         connectingDialog.setContentText("Connecting to " + host + " on port " + port + "...");
         connectingDialog.setGraphic(null);

@@ -40,7 +40,7 @@ public class MultiplayerSelectionScene extends Scene {
     private Scale scaler = new Scale();
     private ChatBox chatBox;
     private Alert kickAlert;
-    private final int ANIMATION_FRAME_RATE = 24;
+    private final int FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds).
     boolean initializing = true;
 
@@ -68,7 +68,7 @@ public class MultiplayerSelectionScene extends Scene {
         // set up connection framework:
         if(isHost) connectionManager = new HostConnectionManager(port, localPlayer.getPlayerData().getPlayerID());
         else connectionManager = new ClientConnectionManager(host, port, localPlayer.getPlayerData().getPlayerID());
-        maxConsecutivePacketsMissed = connectionManager.getPacketsSentPerSecond() * 5;
+        maxConsecutivePacketsMissed = FRAME_RATE * 5;
         if (!connectionManager.isConnected()){
             SceneManager.switchToMainMenu();
             return;
@@ -160,18 +160,14 @@ public class MultiplayerSelectionScene extends Scene {
                     initializing = false;
                 }
 
-                int[] packetsProcessingInfo;
-
                 // Incoming packets are processed every frame, if there are any:
-                if(isHost) packetsProcessingInfo = processPacketsAsHost();
-                else packetsProcessingInfo = processPacketsAsClient();
-                numberOfPacketsProcessed += packetsProcessingInfo[0];
-                numberOfPacketsRemaining += packetsProcessingInfo[1];
+                if(isHost) processPacketsAsHost();
+                else processPacketsAsClient();
                 ++MSSCalls;
 
                 // Character and Bubble animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
-                    nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
+                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
                 }
 
                 // Latency probes are sent by the host 3 times per second:
@@ -186,18 +182,18 @@ public class MultiplayerSelectionScene extends Scene {
                 // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this
                 // time and displays messages to the chat box:
                 if(now>nextSendInstance){
-                    nextSendInstance += 1000000000L/connectionManager.getPacketsSentPerSecond();
+                    nextSendInstance += 1000000000L/FRAME_RATE;
 
                     // update the chatBox:
                     if(gameData.isMessageRequested()) chatBox.addMessages(gameData.getMessages());
 
                     if(isHost){
-                        prepareAndSendServerPacket(packetsProcessingInfo);
+                        prepareAndSendServerPacket();
                         deleteRemovedPlayers();
                         resetFlags(); // reset the local change flags so that they are only broadcast once:
                     }
                     else{
-                        prepareAndSendClientPacket(packetsProcessingInfo);
+                        prepareAndSendClientPacket();
                         resetFlags(); // reset the local change flags so that they are only sent to the server once:
                     }
                     checkForDisconnectedPlayers();
@@ -206,7 +202,7 @@ public class MultiplayerSelectionScene extends Scene {
                 // A debugging message is displayed once per second:
                 if(now> nextReport) {
                     nextReport += 1000000000L;
-                    report(packetsProcessingInfo);
+                    report();
                 }
             }
         };
@@ -227,9 +223,7 @@ public class MultiplayerSelectionScene extends Scene {
 
     // for debugging
     // recall: {number of packets processed, number remaining, 0=host 1=client}
-    public void report(int[] packetsProcessingInfo){
-        System.out.println((packetsProcessingInfo[2]==0?"Host:":"Client:") + " Packets processed: "
-             + numberOfPacketsProcessed + " Number of packets remaining: " + numberOfPacketsRemaining + " Timer called " + MSSCalls + " times");
+    public void report(){
         Map<Long,Long> latencies = connectionManager.getLatencies();
         System.out.print("Latencies: ");
         for(PlayerSlot playerSlot : playerSlotContainer.getContents()){
@@ -239,23 +233,16 @@ public class MultiplayerSelectionScene extends Scene {
             }
         }
         System.out.print("\n");
-        numberOfPacketsProcessed = 0;
-        numberOfPacketsRemaining = 0;
-        MSSCalls = 0;
     }
 
     //ToDo: check for player disconnection. Maybe have a counter that increments any time a packet is NOT received from a
     //TODO: player. If the counter goes above a prescribed amount, then resign that player (or ask the host what to do?)
-    public int[] processPacketsAsHost(){
-        int[] packetsProcessingInfo = {0,0,0}; // {number of packets processed, number remaining, 0=host 1=client}.
-        int packetsProcessed = 0;
+    private void processPacketsAsHost(){
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
-        int numPlayers = playerSlots.size();
-        Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
+        Packet packet = connectionManager.retrievePacket();
 
         // Process Packets one at a time:
-        while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER*numPlayers){
-
+        while(packet!=null){
             // First process the PlayerData
             PlayerData playerData = packet.popPlayerData();
             PlayerSlot playerSlot = getPlayerSlotByID(playerData.getPlayerID(),playerSlots);
@@ -286,13 +273,8 @@ public class MultiplayerSelectionScene extends Scene {
             }
 
             // Prepare for the next iteration:
-            ++packetsProcessed;
-            packet = connectionManager.retrievePacket(packetsProcessingInfo);
+            packet = connectionManager.retrievePacket();
         }
-
-        // For debugging:
-        packetsProcessingInfo[0] = packetsProcessed;
-        return packetsProcessingInfo;
     }
 
     private PlayerSlot getPlayerSlotByID(long playerID, List<PlayerSlot> playerSlots){
@@ -302,7 +284,7 @@ public class MultiplayerSelectionScene extends Scene {
         return null; // return null to indicate that the PlayerSlot was not found
     }
 
-    private void prepareAndSendServerPacket(int[] packetsProcessingInfo){
+    private void prepareAndSendServerPacket(){
         // Go grab the latency data:
         Map<Long, Long> latencies = connectionManager.getLatencies();
 
@@ -325,9 +307,6 @@ public class MultiplayerSelectionScene extends Scene {
             outPacket.addPlayerData(playerData);
         }
 
-        if(packetsProcessingInfo[1]>0){
-            // ToDo: Host may be lagging. Slow down the game if necessary.
-        }
         connectionManager.send(outPacket);
     }
 
@@ -394,7 +373,7 @@ public class MultiplayerSelectionScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            missedPacketsCount.replace(player.getPlayerData().getPlayerID(),(int)(maxConsecutivePacketsMissed - connectionManager.getPacketsSentPerSecond()*10));
+            missedPacketsCount.replace(player.getPlayerData().getPlayerID(),(int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
             dialogStage.close();
         });
 
@@ -420,13 +399,10 @@ public class MultiplayerSelectionScene extends Scene {
         }
     }
 
-    private int[] processPacketsAsClient(){
-        int packetsProcessed = 0;
-        int[] packetsProcessingInfo = {0,0,1};
-
+    private void processPacketsAsClient(){
         // Process Packets, one at a time:
-        Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
-        while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER){
+        Packet packet = connectionManager.retrievePacket();
+        while(packet!=null){
             int currentPlayerSlotIndex = 0;
             PlayerSlot currentPlayerSlot;
             List<PlayerSlot> playerSlots;
@@ -514,13 +490,8 @@ public class MultiplayerSelectionScene extends Scene {
             }
 
             // Prepare for next iteration:
-            ++packetsProcessed;
-            packet = connectionManager.retrievePacket(packetsProcessingInfo);
+            packet = connectionManager.retrievePacket();
         }
-
-        // For debugging:
-        packetsProcessingInfo[0] = packetsProcessed;
-        return packetsProcessingInfo;
     }
 
     private void showHostNameDialog(){
@@ -573,16 +544,13 @@ public class MultiplayerSelectionScene extends Scene {
         return newPlayerSlot;
     }
 
-    private void prepareAndSendClientPacket(int[] packetsProcessingInfo){
+    private void prepareAndSendClientPacket(){
         // The network must create a copy of the local PlayerData and GameData now and send those copies. This is to
         // prevent the change flags within the PlayerData and GameData from being reset before the packet is sent.
         PlayerData localPlayerData = new PlayerData(localPlayer.getPlayerData());
         GameData localGameData = new GameData(gameData);
 
         Packet outPacket = new Packet(localPlayerData, localGameData);
-        if(packetsProcessingInfo[1]>0){
-            // ToDo: Client may be lagging. Request slowdown if necessary.
-        }
         connectionManager.send(outPacket);
     }
 
@@ -618,11 +586,10 @@ public class MultiplayerSelectionScene extends Scene {
                     // Todo: check whether there are any unclaimed open spots before starting the game.
                     System.out.println("pressed Start!");
                     gameData.changeGameStarted(true);
-                    int[] packetsProcessingInfo = {0,0,0};
-                    prepareAndSendServerPacket(packetsProcessingInfo);
+                    prepareAndSendServerPacket();
                     // wait a little bit to make sure the packet gets through:
                     try{
-                        Thread.sleep(2000/connectionManager.getPacketsSentPerSecond());
+                        Thread.sleep(2000/FRAME_RATE);
                     } catch (InterruptedException e){
                         System.err.println("InterruptedException encountered while trying to start the game. Other players" +
                                 "might not be informed that the game has started but... oh well, starting anyways.");
@@ -658,18 +625,17 @@ public class MultiplayerSelectionScene extends Scene {
     }
 
     public void cleanUp(){
-        int[] packetsProcessingInfo = {0,0,0};
         if(isHost){
             gameData.changeCancelGame(true);
-            prepareAndSendServerPacket(packetsProcessingInfo);
+            prepareAndSendServerPacket();
         }
         else{
             localPlayer.changeResignPlayer();
-            prepareAndSendClientPacket(packetsProcessingInfo);
+            prepareAndSendClientPacket();
         }
         // wait a little bit to make sure the packet gets through:
         try{
-            Thread.sleep(2000/connectionManager.getPacketsSentPerSecond());
+            Thread.sleep(2000/FRAME_RATE);
         } catch (InterruptedException e){
             System.err.println("InterruptedException encountered while trying to leave the game. Other players" +
                     "might not be informed that you've left but... oh well, leaving anyways.");

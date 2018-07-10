@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
@@ -48,16 +49,10 @@ public class GameScene extends Scene {
     private List<Player> players;
     private int numPlayers;
 
-    // Variables related to displaying victory/defeat graphics:
-    private boolean victoryPauseStarted = false;
-    private boolean victoryDisplayStarted = false;
-    private long victoryTime = 0;
-    private int victoriousTeam;
-
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
     private boolean initializing = true;
-    public static final int ANIMATION_FRAME_RATE = 24;
+    public static final int FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds)
 
     // Variables related to network communications:
@@ -69,15 +64,23 @@ public class GameScene extends Scene {
     private Map<Long,Integer> missedPacketsCount = new HashMap<Long,Integer>(); // maps playerIDs to the number of misssed packets for that player.
 
     // for misc debugging:
-    private int numberOfPacketsProcessed = 0;
-    private int numberOfPacketsRemaining = 0;
-    private int MSSCalls = 0;
     private long nextReport = 0; // The time at which miscellaneous debugging info will next be printed (nanoseconds).
     private long[] playPanelTickTime = {0,0,Long.MAX_VALUE,0}; // number of times the tick() method has been called, the cumulative time (nanoseconds) for their executions, minimum execution time, maximum execution time.
 
     // for pause menu
     private Rectangle pauseOverlay;
     private StackPane pauseMenu;
+
+    // for concurrent execution:
+    private ReceivePacketsTasks receivePacketsTasks = new ReceivePacketsTasks();
+    private UpdateFrameTasks updateFrameTasks = new UpdateFrameTasks();
+    private SendPacketsTasks sendPacketsTasks = new SendPacketsTasks();
+    private ReportingTasks reportingTasks = new ReportingTasks();
+    private ExecutorService workerThread = Executors.newSingleThreadExecutor();
+    private Future<FrameResult> resultHolder;
+
+    private boolean victoryPauseStarted2 = false;
+    private boolean victoryDisplayStarted2 = false;
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
     public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
@@ -87,7 +90,7 @@ public class GameScene extends Scene {
         this.connectionManager = connectionManager;
         this.players = players;
         numPlayers = players.size();
-        maxConsecutivePacketsMissed = connectionManager.getPacketsSentPerSecond() * 5;
+        maxConsecutivePacketsMissed = FRAME_RATE * 5;
 
         // Arrange the players into their teams by adding each one to an appropriate List:
         Map<Integer, List<Player>> teams = new HashMap<>();
@@ -163,11 +166,9 @@ public class GameScene extends Scene {
                 case P:
                     System.out.println("Pause pressed!");
                     gameData.changePause(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
-                    // displayPauseMenu(); // ToDo: This line is temporary. displayPauseMenu should be called in the animationTimer, when gameData is being examined.
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
                     gameData.changePause(false);
-                    //removePauseMenu();
             }
         });
 
@@ -181,68 +182,48 @@ public class GameScene extends Scene {
         animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                // Initialize some bookkeeping variables:
                 if(initializing){
+                    // Initialize some bookkeeping variables:
                     nextAnimationFrameInstance = now;
                     nextLatencyTest = now;
                     nextSendInstance = now;
                     nextReport = now;
+
+                    // Initialize resultHolder by computing the first frame:
+                    resultHolder = workerThread.submit(updateFrameTasks);
+
                     initializing = false;
                 }
 
-                // Incoming packets are processed every frame, if there are any:
-                int[] packetsProcessingInfo;
-                if(isHost) packetsProcessingInfo = processPacketsAsHost(gameData.getPause());
-                else packetsProcessingInfo = processPacketsAsClient(gameData.getPause());
-                numberOfPacketsProcessed += packetsProcessingInfo[0];
-                numberOfPacketsRemaining += packetsProcessingInfo[1];
-                ++MSSCalls;
+                // Incoming packets are processed as often as possible:
+                workerThread.submit(receivePacketsTasks);
 
-                // Character and Orb animations are updated 24 times per second. Bots are also update at this time:
+                // Visuals are updated 24 times per second.
                 if(now>nextAnimationFrameInstance){
-                    // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
-                    // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
-                    // suppose I could just make sure they use the same random number generator, but having the host do it
-                    // is just easier and reduces the overall amount of computation for the clients.
-                    if(!gameData.getPause() && isHost) processBots();
+                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
+                    try{
+                        // Retrieve the outcome of the previous frame and have the worker thread start computing the next frame:
+                        FrameResult previousResult = resultHolder.get();
+                        resultHolder = workerThread.submit(updateFrameTasks);
 
-                    if(!gameData.getPause()){
-                        // update each PlayPanel:
-                        for(PlayPanel playPanel: playPanelMap.values()){
-                            long time = System.nanoTime();
-                            playPanel.tick();
-                            time = System.nanoTime() - time;
-                            playPanelTickTime[0]++;
-                            playPanelTickTime[1]+=time;
-                            if(time < playPanelTickTime[2]) playPanelTickTime[2] = time;
-                            if(time > playPanelTickTime[3]) playPanelTickTime[3] = time;
-                        }
-                        // process inter-PlayPanel events (transferring orbs and determining victory/defeat):
-                        tick();
+                        // update visuals corresponding to the PlayPanelData and PlayerData:
+                        updatePlayPanelViews(previousResult.playPanelDataListCopy, previousResult.playerDataListCopy);
+
+                        // Play sound effects:
+                        for(SoundEffect soundEffect : previousResult.soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
+
+                        // update visuals corresponding to GameData:
+                        updateGameView(previousResult.gameDataCopy);
+                    } catch (ExecutionException | InterruptedException e){
+                        e.printStackTrace();
                     }
-                    nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
                 }
-
 
                 // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this time:
                 if(now>nextSendInstance){
-                    if(localPlayer.getPlayerData().isFiring()){
-                        for(Orb orb: localPlayer.getPlayerData().getFiredOrbs()){
-                            long prevSendInstance = nextSendInstance - 1000000000L/connectionManager.getPacketsSentPerSecond();
-                            orb.computeTimeStamp(prevSendInstance);
-                        }
-                    }
                     nextSendInstance += 1000000000L/connectionManager.getPacketsSentPerSecond();
-                    if(isHost){
-                        prepareAndSendServerPacket(packetsProcessingInfo);
-                    }
-                    else prepareAndSendClientPacket(packetsProcessingInfo);
-                    checkForDisconnectedPlayers();
+                    workerThread.submit(sendPacketsTasks);
                 }
-
-                // pause the game if doing so is indicated:
-                if(gameData.getPause()) displayPauseMenu();
-                else removePauseMenu();
 
                 // Latency probes are sent by the host 3 times per second:
                 if(isHost){
@@ -252,15 +233,209 @@ public class GameScene extends Scene {
                     }
                 }
 
-                // A debugging message is displayed once per second:
+                // A debugging message is displayed approximately once per second:
                 if(now> nextReport) {
                     nextReport += 1000000000L;
-                    report(packetsProcessingInfo);
+                    workerThread.submit(reportingTasks);
                 }
             }
         };
         animationTimer.start();
+    }
 
+    private void updateGameView(GameData gameData){
+        // pause the game if doing so is indicated:
+        if(gameData.getPause()) displayPauseMenu();
+        else removePauseMenu();
+
+        // Add new chat messages to the chat box:
+        if(gameData.isMessageRequested()) chatBox.addMessages(gameData.getMessages());
+
+        // Check whether victory has been declared:
+        // todo: there's got to be a better way of ensuring that these methods are only called once...
+        if(gameData.getVictoryPauseStarted() && !gameData.getVictoryDisplayStarted()) startVictoryPause_View();
+        else if(gameData.getVictoryDisplayStarted()) startVictoryDisplay_View(gameData.getVictoriousTeam());
+    }
+
+    private void updatePlayPanelViews(List<PlayPanelData> playPanelDataList, List<PlayerData> playerDataList){
+        // Repaint every PlayPanel:
+        for(PlayPanelData playPanelData : playPanelDataList){
+            PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
+            playPanel.repaint(playPanelData, playerDataList);
+        }
+
+        // Update individual Player views:
+        for(PlayerData playerData : playerDataList){
+            //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
+            //Todo: note: simply adding a getPlayer() method to PlayerData won't work (the reference has been lost over transmission).
+            Player player = players.get(0);
+            for(Player tempPlayer : players){
+                if(tempPlayer.getPlayerData().getPlayerID() == playerData.getPlayerID()){
+                    player = tempPlayer;
+                    break;
+                }
+            }
+
+            player.updateView(playerData);
+
+            // If the player has been gone for too long (and they have not resigned), ask the host what to do:
+            /*Integer missedPackets = missedPacketsCount.get(playerData.getPlayerID()); // todo: SUPER IMPORTANT! This is not thread-safe. The workerThread updates this HashMap.
+            if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
+                showConnectionLostDialog(player);
+            }*/
+        }
+    }
+
+    private void checkForVictory_Model(){
+        // Todo: what if 2 players declare victory at the exact same time?
+        // check to see whether anybody's won a quick victory by clearing their PlayPanel:
+        for(PlayPanel playPanel : playPanelMap.values()){
+            if(playPanel.getPlayPanelData().isVictoriousChanged()){
+                // Todo: host should check whether it's actually true.
+                startVictoryPause_Model(playPanel.getPlayPanelData().getTeam());
+                System.out.println("Hey, somebody won a quick victory!");
+            }
+        }
+
+        // In competitive multiplayer (or Vs Computer) games, check to see whether there's only 1 live team left
+        if(playPanelMap.values().size()>1){
+            Set<Integer> liveTeams = new HashSet<>();
+            for(Player player : players){
+                if(!player.getPlayerData().getDefeated()) liveTeams.add(player.getPlayerData().getTeam());
+            }
+            if(liveTeams.size()==1){
+                System.out.println("There's only 1 team left. They've won the game!");
+                startVictoryPause_Model(liveTeams.iterator().next());
+            }
+
+            // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
+            else if(liveTeams.size() == 0){
+                System.out.println("WHOA!!! A tie!!!!");
+            }
+        }
+
+        // In puzzle games, check to see whether the only existing team has lost:
+        else{
+            if(players.get(0).getPlayerData().getDefeated()) startVictoryPause_Model(-1);
+        }
+
+        // If someone has won, handle the delay before the victory graphics are actually displayed:
+        if(gameData.getVictoryPauseStarted() && !gameData.getVictoryDisplayStarted()){
+            if(((System.nanoTime() - gameData.getVictoryTime())/1000000000)>0.85) startVictoryDisplay_Model();
+        }
+    }
+
+    private class ReceivePacketsTasks implements Callable<Void>{
+        @Override
+        public Void call(){
+            if(isHost) processPacketsAsHost();
+            else processPacketsAsClient();
+            return null;
+        }
+    }
+
+    private class UpdateFrameTasks implements Callable<FrameResult> {
+        @Override
+        public FrameResult call(){
+            // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
+            // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
+            // suppose I could just make sure they use the same random number generator, but having the host do it
+            // is just easier and reduces the overall amount of computation for the clients.
+            if(!gameData.getPause() && isHost) processBots();
+
+            Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
+            if(!gameData.getPause()){
+                // update each PlayPanel:
+                for(PlayPanel playPanel: playPanelMap.values()){
+                    long time = System.nanoTime();
+                    playPanel.tick(soundEffectsToPlay);
+                    time = System.nanoTime() - time;
+                    playPanelTickTime[0]++;
+                    playPanelTickTime[1]+=time;
+                    if(time < playPanelTickTime[2]) playPanelTickTime[2] = time;
+                    if(time > playPanelTickTime[3]) playPanelTickTime[3] = time;
+                }
+                // process inter-PlayPanel events (transferring orbs and determining victory/defeat):
+                tick();
+            }
+
+            // Check for victory conditions:
+            checkForVictory_Model();
+
+            // Copy the playPanelData
+            List<PlayPanelData> playPanelDataList = new LinkedList<>();
+            for(PlayPanel playPanel : playPanelMap.values()){
+                playPanelDataList.add(new PlayPanelData(playPanel.getPlayPanelData()));
+            }
+
+            // Copy the playerData
+            List<PlayerData> playerDataList = new LinkedList<>();
+            for(Player player : players){
+                playerDataList.add(new PlayerData(player.getPlayerData()));
+            }
+
+            return new FrameResult(soundEffectsToPlay, new GameData(gameData) , playPanelDataList, playerDataList);
+        }
+    }
+
+    private class FrameResult{
+        Set<SoundEffect> soundEffectsToPlay;
+        GameData gameDataCopy;
+        List<PlayPanelData> playPanelDataListCopy;
+        List<PlayerData> playerDataListCopy;
+        FrameResult(Set<SoundEffect> soundEffectsToPlay, GameData gameData, List<PlayPanelData> playPanelDataList, List<PlayerData> playerDataList){
+            this.soundEffectsToPlay = soundEffectsToPlay;
+            gameDataCopy = gameData;
+            playPanelDataListCopy = playPanelDataList;
+            playerDataListCopy = playerDataList;
+        }
+    }
+
+    private class SendPacketsTasks implements Callable<Void>{
+        @Override
+        public Void call(){
+            // Put a timestamp on fired Orbs:
+            /*if(localPlayer.getPlayerData().isFiring()){
+                for(Orb orb: localPlayer.getPlayerData().getFiredOrbs()){
+                    long prevSendInstance = nextSendInstance - 1000000000L/connectionManager.getPacketsSentPerSecond();
+                    orb.computeTimeStamp(prevSendInstance);
+                }
+            }*/
+
+            // Process outgoing Packets
+            if(isHost) prepareAndSendServerPacket();
+            else prepareAndSendClientPacket();
+
+            // Increment the missed packets count (used for detecting dropped players):
+            incrementMissedPacketsCounts();
+
+            return null;
+        }
+    }
+
+    // for debugging
+    private class ReportingTasks implements Callable<Void>{
+        @Override
+        public Void call(){
+            System.out.println("PlayPanel.tick() called " + playPanelTickTime[0] + " times. Average: " + (playPanelTickTime[1]/1000)/playPanelTickTime[0] + " microseconds. minimum: " + playPanelTickTime[2]/1000 + " microseconds. maximum: " + playPanelTickTime[3]/1000 + " microseconds");
+
+            // compile all the individual bot retargeting times.
+            long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time.
+            for(PlayPanel playPanel : playPanelMap.values()){
+                for (Player player : playPanel.getPlayerList()){
+                    if (player instanceof BotPlayer){
+                        long[] times = ((BotPlayer) player).getBotRetargetTime();
+                        botRetargetTime[0] += times[0];
+                        botRetargetTime[1] += times[1];
+                        if(times[2]<botRetargetTime[2]) botRetargetTime[2] = times[2];
+                        if(times[3]>botRetargetTime[3]) botRetargetTime[3] = times[3];
+                    }
+                }
+            }
+
+            System.out.println("BotPlayer.retarget() called " + botRetargetTime[0] + " times. Average: " + (botRetargetTime[1]/1000)/Math.max(botRetargetTime[0],1) + " microseconds. minimum: " + botRetargetTime[2]/1000 + " microseconds. maximum: " + botRetargetTime[3]/1000 + " microseconds");
+            return null;
+        }
     }
 
     private void processBots(){
@@ -273,43 +448,14 @@ public class GameScene extends Scene {
         }
     }
 
-    // for debugging
-    // contents of packetsProcessingInfo: {number of packets processed, number remaining, 0=host 1=client}
-    private void report(int[] packetsProcessingInfo){
-        System.out.println((packetsProcessingInfo[2]==0?"Host:":"Client:") + " Packets processed: "
-                + numberOfPacketsProcessed + " Number of packets remaining: " + numberOfPacketsRemaining + " Timer called " + MSSCalls + " times");
-        numberOfPacketsProcessed = 0;
-        numberOfPacketsRemaining = 0;
-        MSSCalls = 0;
-        System.out.println("PlayPanel.tick() called " + playPanelTickTime[0] + " times. Average: " + (playPanelTickTime[1]/1000)/playPanelTickTime[0] + " microseconds. minimum: " + playPanelTickTime[2]/1000 + " microseconds. maximum: " + playPanelTickTime[3]/1000 + " microseconds");
-
-        // compile all the individual bot retargeting times.
-        long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time.
-        for(PlayPanel playPanel : playPanelMap.values()){
-            for (Player player : playPanel.getPlayerList()){
-                if (player instanceof BotPlayer){
-                    long[] times = ((BotPlayer) player).getBotRetargetTime();
-                    botRetargetTime[0] += times[0];
-                    botRetargetTime[1] += times[1];
-                    if(times[2]<botRetargetTime[2]) botRetargetTime[2] = times[2];
-                    if(times[3]>botRetargetTime[3]) botRetargetTime[3] = times[3];
-                }
-            }
-        }
-        System.out.println("BotPlayer.retarget() called " + botRetargetTime[0] + " times. Average: " + (botRetargetTime[1]/1000)/Math.max(botRetargetTime[0],1) + " microseconds. minimum: " + botRetargetTime[2]/1000 + " microseconds. maximum: " + botRetargetTime[3]/1000 + " microseconds");
-
-    }
-
-    private int[] processPacketsAsHost(boolean isPaused){
-        int[] packetsProcessingInfo = {0,0,0}; // {number of packets processed, number remaining, 0=host 1=client}.
-        int packetsProcessed = 0;
-        Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
+    private void processPacketsAsHost(){
+        Packet packet = connectionManager.retrievePacket();
 
         // Process Packets one at a time:
-        while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER*numPlayers){
+        while(packet!=null){
             // Pop the PlayerData from the packet:
             PlayerData playerData = packet.popPlayerData();
-            if(!isPaused){
+            if(!gameData.getPause()){
                 // Find the PlayPanel associated with the player:
                 PlayPanel playPanel = playPanelMap.get(playerData.getTeam());
                 // Update the PlayPanelData and the PlayerData:
@@ -323,16 +469,11 @@ public class GameScene extends Scene {
             updateGameData(clientGameData, isHost);
 
             // Prepare for the next iteration:
-            ++packetsProcessed;
-            packet = connectionManager.retrievePacket(packetsProcessingInfo);
+            packet = connectionManager.retrievePacket();
         }
-
-        // For debugging:
-        packetsProcessingInfo[0] = packetsProcessed;
-        return packetsProcessingInfo;
     }
 
-    private void prepareAndSendServerPacket(int[] packetsProcessingInfo){
+    private void prepareAndSendServerPacket(){
         // We must create a copy of the local PlayerData, GameData, and PlayPanelData and add those copies to the packet. This
         // is to prevent the change flags within the local PlayerData and GameData from being reset before the packet is
         // sent (note the last 4 lines of this method).
@@ -355,20 +496,7 @@ public class GameScene extends Scene {
             playPanel.getPlayPanelData().resetFlags(); // reset the local change flags so that they are only broadcast once
         }
 
-        if(packetsProcessingInfo[1]>0){
-            // ToDo: Host may be lagging. Slow down the game if necessary.
-        }
-
         connectionManager.send(outPacket);
-
-        // update the chatBox before resetting the flags and the message:
-        if(gameData.isMessageRequested()) chatBox.addMessages(gameData.getMessages());
-
-        // pause the game if doing so is indicated:
-        if(gameData.isPauseRequested()){
-            if(gameData.getPause()) displayPauseMenu();
-            else removePauseMenu();
-        }
 
         // reset the local change flags so that they are only broadcast once:
         localPlayer.getPlayerData().resetFlags();
@@ -377,32 +505,21 @@ public class GameScene extends Scene {
         gameData.resetMessages();
     }
 
-    private void checkForDisconnectedPlayers(){
+    private void incrementMissedPacketsCounts(){
         for (Player player: players) {
             PlayerData playerData = player.getPlayerData();
             if(!(player instanceof RemotePlayer)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
             if(!isHost && playerData.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
-            Integer missedPackets = missedPacketsCount.get(playerData.getPlayerID());
 
             // increment the missed packets count. The count will be reset whenever the next packet is received:
             missedPacketsCount.replace(playerData.getPlayerID(),missedPacketsCount.get(playerData.getPlayerID())+1);
-
-            // If the player has been gone for too long (and they have not resigned), ask the host what to do:
-            if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
-                showConnectionLostDialog(player);
-            }
         }
     }
 
-    private int[] processPacketsAsClient(boolean isPaused){
-        int packetsProcessed = 0;
-        int[] packetsProcessingInfo = {0,0,1};
-
+    private void processPacketsAsClient(){
         // Process Packets one at a time:
-        Packet packet = connectionManager.retrievePacket(packetsProcessingInfo);
-        while(packet!=null && packetsProcessed<connectionManager.MAX_PACKETS_PER_PLAYER){
-
-
+        Packet packet = connectionManager.retrievePacket();
+        while(packet!=null){
             // Within each Packet, process PlayerData one at a time in order:
             PlayerData playerData = packet.popPlayerData();
             while(playerData!=null){
@@ -436,13 +553,8 @@ public class GameScene extends Scene {
             updateGameData(hostGameData, isHost);
 
             // Prepare for next iteration:
-            ++packetsProcessed;
-            packet = connectionManager.retrievePacket(packetsProcessingInfo);
+            packet = connectionManager.retrievePacket();
         }
-
-        // For debugging:
-        packetsProcessingInfo[0] = packetsProcessed;
-        return packetsProcessingInfo;
     }
 
     private void updateGameData(GameData gameDataIn, boolean isHost){
@@ -463,7 +575,7 @@ public class GameScene extends Scene {
         }
     }
 
-    private void prepareAndSendClientPacket(int[] packetsProcessingInfo){
+    private void prepareAndSendClientPacket(){
         // The network must create a copy of the local PlayerData and GameData and send those copies instead of the
         // originals. This is to prevent the change flags within the PlayerData and GameData from being reset before the
         // packet is sent.
@@ -472,9 +584,6 @@ public class GameScene extends Scene {
         PlayPanelData localPlayPanelData = new PlayPanelData(playPanelMap.get(localPlayerData.getTeam()).getPlayPanelData());
 
         Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanelData);
-        if(packetsProcessingInfo[1]>0){
-            // ToDo: Client may be lagging. Request slowdown if necessary.
-        }
         connectionManager.send(outPacket);
 
         // reset local change flags so that they are sent only once:
@@ -531,7 +640,7 @@ public class GameScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            missedPacketsCount.replace(player.getPlayerData().getPlayerID(),(int)(maxConsecutivePacketsMissed - connectionManager.getPacketsSentPerSecond()*10));
+            missedPacketsCount.replace(player.getPlayerData().getPlayerID(),(int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
             dialogStage.close();
         });
 
@@ -560,35 +669,36 @@ public class GameScene extends Scene {
 
     public void cleanUp(){
         // Tell the other players that we're leaving:
-        int[] packetsProcessingInfo = {0,0,0};
         if(isHost){
             gameData.changeCancelGame(true);
-            prepareAndSendServerPacket(packetsProcessingInfo);
+            prepareAndSendServerPacket();
         }
         else{
             localPlayer.changeResignPlayer();
-            prepareAndSendClientPacket(packetsProcessingInfo);
+            prepareAndSendClientPacket();
         }
 
         // wait a little bit to make sure the packet gets through:
+        // todo: replace this with a blocking send() method of some sort?
         try{
-            Thread.sleep(2000/connectionManager.getPacketsSentPerSecond());
+            Thread.sleep(2000/FRAME_RATE);
         } catch (InterruptedException e){
             System.err.println("InterruptedException encountered while trying to leave the game. Other players" +
                     "might not be informed that you've left but... oh well, leaving anyways.");
             e.printStackTrace();
         }
 
-        // Stop the other threads (animationTimer, receiver and sender workers in the connectionManager, and BotPlayer threads):
+        // Stop the other threads that are running:
         animationTimer.stop();
-        connectionManager.cleanUp();
+        connectionManager.cleanUp(); // stops the receiver and sender workers in the connectionManager
         for(PlayPanel playPanel : playPanelMap.values()){
             for(Player player : playPanel.getPlayerList()){
                 if(player instanceof BotPlayer){
-                    ((BotPlayer) player).cleanUp();
+                    ((BotPlayer) player).cleanUp(); // shuts down the BotPlayer's thread pool
                 }
             }
         }
+        workerThread.shutdown();
     }
 
     // Overlays the Scene with a transparent black rectangle when the game is paused:
@@ -620,10 +730,6 @@ public class GameScene extends Scene {
         Button unpauseBtn = createButton(ButtonImages.UNPAUSE);
         buttonsHolder.getChildren().addAll(spacer, resignBtn, unpauseBtn);
         pauseMenu.getChildren().add(buttonsHolder);
-
-        /*// Make everything scale correctly when the window is resized:
-        buttonsHolder.getTransforms().add(scaler);
-        background.getTransforms().add(scaler);*/
 
         return pauseMenu;
     }
@@ -689,89 +795,20 @@ public class GameScene extends Scene {
             }
             transferOutOrbs.clear();
         }
-
-        // Todo: what if 2 players declare victory at the exact same time?
-        // check to see whether anybody's won a quick victory by clearing their PlayPanel:
-        for(PlayPanel playPanel : playPanelMap.values()){
-            if(playPanel.getPlayPanelData().isVictoriousChanged()){
-                // Todo: host should check whether it's actually true.
-                startVictoryPause(playPanel.playPanelData.getTeam());
-                System.out.println("Hey, somebody won a quick victory!");
-            }
-        }
-
-        // In competitive multiplayer (or Vs Computer) games, check to see whether there's only 1 live team left
-        if(playPanelMap.values().size()>1){
-            int numLiveTeams = 0;
-            for(PlayPanel playPanel : playPanelMap.values()){
-                boolean alive = false;
-                for(Player player : playPanel.getPlayerList()){
-                    if(!player.getPlayerData().getDefeated()){
-                        alive = true;
-                        break;
-                    }
-                }
-                if(alive) numLiveTeams++;
-                if(numLiveTeams>1) break;
-            }
-            if(numLiveTeams==1){
-                System.out.println("There's only 1 team left. They've won the game!");
-                // Todo: the following for loop is nearly-duplicated code. There's got to be a better way of doing this.
-                for(PlayPanel playPanel : playPanelMap.values()){
-                    for(Player player : playPanel.getPlayerList()){
-                        if(!player.getPlayerData().getDefeated()){
-                            startVictoryPause(playPanel.playPanelData.getTeam());
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Todo: in the offhand chance that everyone died at the exact same time, declare a tie or pick a winner at random from those who just died this turn (check the isDefeatedChanged flag).
-            if(numLiveTeams == 0){
-                System.out.println("WHOA!!! A tie!!!!");
-            }
-        }
-
-        // In puzzle games, check to see whether the only existing team has lost:
-        else{
-            for(Player player : playPanelMap.get(localPlayer.getPlayerData().getTeam()).getPlayerList()){
-                if(player.getPlayerData().getDefeated()){
-                    startVictoryPause(-1);
-                }
-            }
-        }
-
-        // If someone has won, handle the delay before the victory graphics are actually displayed:
-        if(victoryPauseStarted && !victoryDisplayStarted){
-            if(((System.nanoTime() - victoryTime)/1000000000)>0.85) startVictoryDisplay(victoriousTeam);
-        }
     }
 
     // If victoriousTeam == -1, that means nobody won (player failed a puzzle challenge, for example)
     // todo: what about ties? Am I gonna bother with those?
-    private void startVictoryPause(int victoriousTeam){
-        if(victoryPauseStarted) return; // To ensure that the effects of this method are only applied once.
-        victoryTime = System.nanoTime();
-        this.victoriousTeam = victoriousTeam;
-        SoundManager.silenceMusic();
-        SoundManager.silenceAllSoundEffects();
-        SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
+    private void startVictoryPause_Model(int victoriousTeam){
+        if(gameData.getVictoryPauseStarted()) return; // To ensure that the effects of this method are only applied once.
+        gameData.setVictoryTime(System.nanoTime());
+        gameData.setVictoriousTeam(victoriousTeam);
 
         // Disable all cannons and freeze all defeated players:
-        for(PlayPanel playPanel: playPanelMap.values()){
-            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
-                // freeze all players // todo: I don't like how freezing the player looks, but I don't want the bots to continue firing either. Create a disableCannon() method or something.
-                for(Player victoriousPlayer : playPanel.getPlayerList()){
-                    victoriousPlayer.changeDisableCannon();
-                }
-            }
-            else {
-                // set defeated = true for all other players:
-                for(Player defeatedPlayer : playPanel.getPlayerList()){
-                    defeatedPlayer.changeResignPlayer();
-                }
-            }
+        for(Player player : players){
+            //if(player.getPlayerData().getTeam() == victoriousTeam){
+            player.changeDisableCannon();
+            //}
         }
 
         // clear any outstanding shooting orbs:
@@ -779,11 +816,26 @@ public class GameScene extends Scene {
             playPanel.getPlayPanelData().getShootingOrbs().clear();
         }
 
-        victoryPauseStarted = true;
+        gameData.setVictoryPauseStarted(true);
         System.out.println("team " + victoriousTeam + " has won.");
     }
 
-    private void startVictoryDisplay(int victoriousTeam){
+    // If victoriousTeam == -1, that means nobody won (player failed a puzzle challenge, for example)
+    // todo: what about ties? Am I gonna bother with those?
+    private void startVictoryPause_View(){
+        if(victoryPauseStarted2) return;
+        SoundManager.silenceMusic();
+        SoundManager.silenceAllSoundEffects();
+        SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
+        victoryPauseStarted2 = true;
+    }
+
+    private void startVictoryDisplay_Model(){
+        gameData.setVictoryDisplayStarted(true);
+    }
+
+    private void startVictoryDisplay_View(int victoriousTeam){
+        if(victoryDisplayStarted2) return;
         for(PlayPanel playPanel: playPanelMap.values()){
             if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
                 if(playPanelMap.values().size()==1) playPanel.displayVictoryResults(PlayPanel.VictoryType.PUZZLE_CLEARED);
@@ -796,7 +848,6 @@ public class GameScene extends Scene {
         }
         if(localPlayer.getPlayerData().getTeam() == victoriousTeam) SoundManager.playSong(Music.GO_TAKE_FLIGHT,false);
         else SoundManager.playSong(Music.GAME_OVER,false);
-        victoryDisplayStarted = true;
 
         VBox vBox = new VBox();
         vBox.setMaxWidth(1.0); // to prevent the VBox from covering the scroll buttons
@@ -804,8 +855,9 @@ public class GameScene extends Scene {
         vBox.getChildren().add(returnToMain);
         vBox.setAlignment(Pos.TOP_CENTER);
         rootNode.getChildren().add(vBox);
-    }
 
+        victoryDisplayStarted2 = true;
+    }
 }
 
 enum LocationType {

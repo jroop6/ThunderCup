@@ -25,6 +25,12 @@ public class GameData implements Serializable{
     private boolean gameStartedRequested = false;
     private boolean ammunitionUrlRequested = false;
 
+    // Variables related to displaying victory/defeat graphics:
+    private boolean victoryPauseStarted = false;
+    private boolean victoryDisplayStarted = false;
+    private long victoryTime = 0;
+    private int victoriousTeam;
+
     // Default constructor:
     public GameData(){
         super();
@@ -38,6 +44,10 @@ public class GameData implements Serializable{
         cancelGame = other.getCancelGame();
         gameStarted = other.getGameStarted();
         ammunitionUrl = other.getAmmunitionUrl();
+        victoryPauseStarted = other.getVictoryPauseStarted();
+        victoryDisplayStarted = other.getVictoryDisplayStarted();
+        victoryTime = other.getVictoryTime();
+        victoriousTeam = other.getVictoriousTeam();
 
         frameRateRequested = other.isFrameRateRequested();
         messageRequested = other.isMessageRequested();
@@ -95,6 +105,18 @@ public class GameData implements Serializable{
     public void setAmmunitionUrl(String ammunitionUrl){
         this.ammunitionUrl = ammunitionUrl;
     }
+    public void setVictoryPauseStarted(boolean newVal){
+        victoryPauseStarted = newVal;
+    }
+    public void setVictoryDisplayStarted(boolean newVal){
+        victoryDisplayStarted = newVal;
+    }
+    public void setVictoryTime(long newVal){
+        victoryTime = newVal;
+    }
+    public void setVictoriousTeam(int team){
+        victoriousTeam = team;
+    }
 
     public void resetFlags(){
         frameRateRequested = false;
@@ -147,6 +169,18 @@ public class GameData implements Serializable{
     }
     public String getAmmunitionUrl(){
         return ammunitionUrl;
+    }
+    public boolean getVictoryPauseStarted(){
+        return victoryPauseStarted;
+    }
+    public boolean getVictoryDisplayStarted(){
+        return victoryDisplayStarted;
+    }
+    public long getVictoryTime(){
+        return victoryTime;
+    }
+    public int getVictoriousTeam(){
+        return victoriousTeam;
     }
 
 }

@@ -2,7 +2,6 @@ package Classes;
 
 import Classes.Animation.MiscAnimations;
 import Classes.Animation.PngSequencePlayer;
-import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonImages;
 import Classes.Images.StaticBgImages;
@@ -28,7 +27,6 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Scale;
-import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 import java.awt.*;
@@ -37,7 +35,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
-import static Classes.GameScene.ANIMATION_FRAME_RATE;
+import static Classes.GameScene.FRAME_RATE;
 
 /**
  * Created by HydrusBeta on 7/23/2017.
@@ -176,7 +174,7 @@ public class MainMenuScene extends Scene {
                 // Animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
                     title.incrementFrame();
-                    nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
+                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
                 }
             }
         };

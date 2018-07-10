@@ -202,7 +202,8 @@ public class BotPlayer extends Player {
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
         int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy);
 
-        // determine the outcome for a variety of shooting angles:
+        // ** Let's determine the outcome for a variety of shooting angles ** //
+
         LinkedList<Outcome> choices = new LinkedList<>();
 
         // Create tasks to be run concurrently:
@@ -442,12 +443,12 @@ public class BotPlayer extends Player {
         private Random rand = new Random();
 
         Difficulty(double thinkingTime, double preMovementTime, double broadMovementTime, double intercessionTime, double fineMovementTime, double firingTime, double broadMovementOffset, double fineMovementOffset, double stupidity){
-            thinkingFrames = (int)Math.round(thinkingTime*GameScene.ANIMATION_FRAME_RATE);
-            preMovementFrames = (int)Math.round(preMovementTime*GameScene.ANIMATION_FRAME_RATE);
-            broadMovementFrames = (int)Math.round(broadMovementTime*GameScene.ANIMATION_FRAME_RATE);
-            intercessionFrames = (int)Math.round(intercessionTime*GameScene.ANIMATION_FRAME_RATE);
-            fineMovementFrames = (int)Math.round(fineMovementTime*GameScene.ANIMATION_FRAME_RATE);
-            firingFrames = (int)Math.round(firingTime*GameScene.ANIMATION_FRAME_RATE);
+            thinkingFrames = (int)Math.round(thinkingTime*GameScene.FRAME_RATE);
+            preMovementFrames = (int)Math.round(preMovementTime*GameScene.FRAME_RATE);
+            broadMovementFrames = (int)Math.round(broadMovementTime*GameScene.FRAME_RATE);
+            intercessionFrames = (int)Math.round(intercessionTime*GameScene.FRAME_RATE);
+            fineMovementFrames = (int)Math.round(fineMovementTime*GameScene.FRAME_RATE);
+            firingFrames = (int)Math.round(firingTime*GameScene.FRAME_RATE);
             this.broadMovementOffset = broadMovementOffset;
             this.fineMovementOffset = fineMovementOffset;
             this.stupidity = stupidity;

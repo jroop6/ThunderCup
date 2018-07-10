@@ -1,6 +1,6 @@
 *******Priority items, copied from below*******
+re-enable the chat box in GameScene
 PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
-improve efficiency for slower computers
 fix multiplayer de-synch problems
 more puzzles!
 character animations
@@ -13,11 +13,10 @@ fix multiplayer de-synch problems
     transferInOrbs eventually go out of synch every time.
     If the player shoots an extra time at the end of one puzzle, the host will think they fired on the next puzzle.
     sometimes it seems that the host doesn't pick up that a client has fired.
-    Some computers have a tough time hosting despite not using all their CPU power.
-        The event dispatch thread might have too much work to do. consider multithreading.
 chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 
 -------important features-------
+re-enable the chat box in GameScene
 improve efficiency for slower computers
 ability to select random puzzles or a specific puzzle in competitive multiplayer mode.
 puzzle data should specify how many shots cause a new row to appear.
@@ -34,8 +33,6 @@ TransferInOrbs should be able to kill a player.
 -------moderate refactoring-------
 Instead of each bot having its own thread pool, generate a single pool in GameScene and pass it down to the BotPlayers.
 There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.
-use a hashset for the transferInOrbs instead of a list, for easier consistency checking.
-Consider using Orbs instead of PointInts for depth-first search and other related methods.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
 	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
 combine animation enums into 1 file instead of 3 (exception for orbImages)
@@ -50,15 +47,14 @@ add a progress bar at the top, indicating how many shots the player has left unt
 Add a new feature/game mode - controlling multiple cannons.
 Make multiplayer games easier for non-techie people to set up.
 Display an error message if java fails to launch with sufficient memory for the game.
-background clouds on the main menu disappear a little too early.
 center the "Return to Main Menu" button in the PuzzleSelectionScene or make the mute button smaller.
 
 -------cleanup and loose ends-------
 make all audio files .mp3
 replace i++ with ++i in for-loops (does this even make a difference in Java?)
-add links to CC licenses in credits for audio assets
-    while I'm at it, make sure the audio credits are complete and correct.
+Make sure the audio credits are complete and correct.
 redo all spritesheets to make sure that transparent pixels are actually cropped out.
+    An older version of SpriteSheetCreatorUtility had a bug in it.
 	It will also change _metadata.csv to spritesheet_metadata.csv, which is better.
 make sure all array traversals traverse i first then j, for memory performance reasons.
 make sure I'm not using PointInt or Point.Double more often than I need to (you only need to when a function needs to return both an x-value and a y-value, such as with IJtoXY())

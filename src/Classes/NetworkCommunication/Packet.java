@@ -42,6 +42,10 @@ public class Packet implements Serializable{
         return gameData;
     }
 
+    public Queue<PlayPanelData> getPlayPanelDataList(){
+        return playPanelDataList;
+    }
+
     public PlayerData popPlayerData(){
         return playerDataList.poll();
     }

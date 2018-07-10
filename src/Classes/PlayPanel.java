@@ -2,7 +2,6 @@ package Classes;
 
 import Classes.Animation.MiscAnimations;
 import Classes.Audio.SoundEffect;
-import Classes.Audio.SoundManager;
 import Classes.Animation.OrbImages;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
@@ -25,7 +24,7 @@ import javafx.scene.text.TextAlignment;
 import java.util.*;
 import java.util.List;
 
-import static Classes.GameScene.ANIMATION_FRAME_RATE;
+import static Classes.GameScene.FRAME_RATE;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.NetworkCommunication.PlayPanelData.SHOTS_BETWEEN_DROPS;
@@ -46,8 +45,8 @@ public class PlayPanel extends Pane {
     public static final double PLAYPANEL_HEIGHT = 1080;
     public static final double CANNON_X_POS = ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2.0; // The x-position of the cannon's axis of rotation in a 1-player playpanel.
     public static final double CANNON_Y_POS = 975; // The y-position of the cannon's axis of rotation in a 1-player playpanel.
-    private static final double[] VIBRATION_OFFSETS = {2.5, 1.5, 1}; // How much the array orbs vibrate before they drop 1 level.
     private static final double[] VIBRATION_FREQUENCIES = {15.2, 10.7, 5.3}; // cycles per second
+    private static final double[] VIBRATION_MAGNITUDES = {2.5, 1.5, 1}; // How much the array orbs vibrate before they drop 1 level.
 
     // Misc constants:
     private static final double ELECTRIFCATION_PROBABILITY = .004;
@@ -64,7 +63,6 @@ public class PlayPanel extends Pane {
     private int numPlayers;
     private Canvas orbCanvas;
     private GraphicsContext orbDrawer;
-    private List<VisualFlourish> visualFlourishes = new LinkedList<>();
 
     // For generating the puzzle and ammunition:
     private String puzzleUrl;
@@ -164,16 +162,16 @@ public class PlayPanel extends Pane {
 
 
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
-    void tick(){
+    void tick(Set<SoundEffect> soundEffectsToPlay){
         // Existing data that will be affected via side-effects:
         Orb[][] orbArray = playPanelData.getOrbArray();
         List<Orb> burstingOrbs = playPanelData.getBurstingOrbs();
         List<Orb> shootingOrbs = playPanelData.getShootingOrbs();
         List<Orb> droppingOrbs = playPanelData.getDroppingOrbs();
         Orb[] deathOrbs = playPanelData.getDeathOrbs();
+        List<VisualFlourish> visualFlourishes = playPanelData.getVisualFlourishes();
 
         // New Sets and lists that will be filled via side-effects:
-        Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
         List<Orb> orbsToDrop = new LinkedList<>(); // Orbs that are no longer connected to the ceiling by the end of this frame
         List<Orb> orbsToTransfer = new LinkedList<>(); // Orbs to transfer to other PlayPanels
         List<Collision> collisions = new LinkedList<>(); // All collisions that happen during this frame
@@ -181,10 +179,10 @@ public class PlayPanel extends Pane {
         List<Orb> arrayOrbsToBurst = new LinkedList<>(); // Orbs in the array that will be burst this frame
 
         // Most of the computation work is done in here. All the lists are updated via side-effects:
-        simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double)ANIMATION_FRAME_RATE);
+        simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double) FRAME_RATE);
 
         // Advance the animation frame of the existing visual flourishes:
-        List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes();
+        List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
         visualFlourishes.removeAll(flourishesToRemove);
 
         // If orbs were dropped or a sufficient number were burst, add visual flourishes for the orbs to be transferred:
@@ -224,7 +222,7 @@ public class PlayPanel extends Pane {
 
         // Advance the existing transfer-in Orbs, adding visual flourishes if they're done:
         List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
-        snapTransferOrbs(transferOrbsToSnap, orbArray, connectedOrbs, soundEffectsToPlay);
+        snapTransferOrbs(transferOrbsToSnap, orbArray, connectedOrbs, soundEffectsToPlay, visualFlourishes);
 
         // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
         if(connectedOrbs.isEmpty()){
@@ -259,9 +257,6 @@ public class PlayPanel extends Pane {
             soundEffectsToPlay.add(SoundEffect.NEW_ROW);
         }
 
-        // Play sound effects:
-        for(SoundEffect soundEffect : soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
-
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!getPlayPanelData().isDeathOrbsEmpty()){
             for(Player defeatedPlayer : getPlayerList()){
@@ -270,7 +265,6 @@ public class PlayPanel extends Pane {
         }
 
         removeStrayOrbs();
-        repaint(); // Updates view
     }
 
     public void simulateOrbs(Orb[][] orbArray, List<Orb> burstingOrbs, List<Orb> shootingOrbs, List<Orb> droppingOrbs, Orb[] deathOrbs, Set<SoundEffect> soundEffectsToPlay, List<Orb> orbsToDrop, List<Orb> orbsToTransfer, List<Collision> collisions, Set<Orb> connectedOrbs, List<Orb> arrayOrbsToBurst, double deltaTime){
@@ -641,9 +635,7 @@ public class PlayPanel extends Pane {
     }
 
     // Todo: there are several methods exactly like this one. Can it be reduced to one using generics? Actually, it might require casting outside this method call, so think about it carefully.
-    /*private List<T> advanceAnimationController<T>(List<T>){
-    }*/
-    private List<VisualFlourish> advanceVisualFlourishes(){
+    private List<VisualFlourish> advanceVisualFlourishes(List<VisualFlourish> visualFlourishes){
         List<VisualFlourish> visualFlourishesToRemove = new LinkedList<>();
         for(VisualFlourish visualFlourish : visualFlourishes){
             if(visualFlourish.animationTick()) visualFlourishesToRemove.add(visualFlourish);
@@ -653,7 +645,7 @@ public class PlayPanel extends Pane {
 
 
 
-    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay){
+    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay, List<VisualFlourish> visualFlourishes){
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
             List<Orb> neighbors = playPanelData.getNeighbors(orb, orbArray);
@@ -671,8 +663,8 @@ public class PlayPanel extends Pane {
     private List<Orb> advanceDroppingOrbs(){
         List<Orb> orbsToTransfer = new LinkedList<>();
         for(Orb orb : playPanelData.getDroppingOrbs()){
-            orb.setSpeed(orb.getSpeed() + GameScene.GRAVITY/ANIMATION_FRAME_RATE);
-            orb.setYPos(orb.getYPos() + orb.getSpeed()/ANIMATION_FRAME_RATE);
+            orb.setSpeed(orb.getSpeed() + GameScene.GRAVITY/ FRAME_RATE);
+            orb.setYPos(orb.getYPos() + orb.getSpeed()/ FRAME_RATE);
             if(orb.getYPos() > PLAYPANEL_HEIGHT){
                 orbsToTransfer.add(orb);
             }
@@ -691,7 +683,7 @@ public class PlayPanel extends Pane {
     }
 
     // repaints all orbs and Character animations on the PlayPanel.
-    private void repaint(){
+    public void repaint(PlayPanelData playPanelData, List<PlayerData> playerDataList){
         // Clear the canvas
         orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
         double vibrationOffset = 0.0;
@@ -707,7 +699,7 @@ public class PlayPanel extends Pane {
 
         // If we are close to adding 1 more level to the orbArray, apply a vibration effect to the array orbs:
         if(playPanelData.getShotsUntilNewRow()<=VIBRATION_FREQUENCIES.length && playPanelData.getShotsUntilNewRow()>0){
-            vibrationOffset = Math.sin(2*PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000)*VIBRATION_OFFSETS[playPanelData.getShotsUntilNewRow()-1];
+            vibrationOffset = VIBRATION_MAGNITUDES[playPanelData.getShotsUntilNewRow()-1]*Math.sin(2*PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000);
         }
 
         // paint Array orbs:
@@ -722,7 +714,7 @@ public class PlayPanel extends Pane {
         for(Orb orb: playPanelData.getDeathOrbs()) orb.drawSelf(orbDrawer,vibrationOffset);
 
         // paint VisualFlourishes:
-        for(VisualFlourish visualFlourish : visualFlourishes) visualFlourish.drawSelf(orbDrawer);
+        for(VisualFlourish visualFlourish : playPanelData.getVisualFlourishes()) visualFlourish.drawSelf(orbDrawer);
 
         // paint transferring orbs:
         for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
@@ -734,10 +726,12 @@ public class PlayPanel extends Pane {
         for(Orb orb: playPanelData.getBurstingOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
 
         // Paint ammunition orbs:
-        for(Player player : playerList){
-            List<Orb> ammunitionOrbs = player.getPlayerData().getAmmunition();
-            ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
-            ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
+        for(PlayerData playerData : playerDataList){
+            if(playerData.getTeam() == playPanelData.getTeam()){
+                List<Orb> ammunitionOrbs = playerData.getAmmunition();
+                ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
+                ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
+            }
         }
 
         // Paint shooting orbs:
@@ -841,7 +835,7 @@ public class PlayPanel extends Pane {
 
         // Add an appropriate Win/Lose/Cleared animation
         visualFlourish.relocate(PLAYPANEL_WIDTH_PER_PLAYER*numPlayers/2, PLAYPANEL_HEIGHT/2-100);
-        visualFlourishes.add(visualFlourish);
+        playPanelData.getVisualFlourishes().add(visualFlourish);
 
         // Display statistics for this PlayPanel
         statistics = new Text("total orbs fired: " + playPanelData.getCumulativeShotsFired() + "\n" +

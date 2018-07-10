@@ -21,7 +21,7 @@ import javafx.scene.transform.Scale;
 
 import java.util.Optional;
 
-import static Classes.GameScene.ANIMATION_FRAME_RATE;
+import static Classes.GameScene.FRAME_RATE;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.Orb.NULL;
@@ -185,7 +185,7 @@ public class PuzzleCreatorScene extends Scene {
                             else orbArray[i][j].drawSelf(orbDrawer, 0);
                         }
                     }
-                    nextAnimationFrameInstance += 1000000000L/ANIMATION_FRAME_RATE;
+                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
                 }
             }
         };
