@@ -17,6 +17,7 @@ import javafx.scene.text.Text;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import static javafx.scene.layout.HBox.setHgrow;
 import static javafx.scene.layout.VBox.setVgrow;
@@ -24,7 +25,7 @@ import static javafx.scene.layout.VBox.setVgrow;
 
 /**
  * The chatbox does not immediately display messages that are typed. Instead, It updates the gameData to send a message
- * to the host. When the AnimationTimer for the associated Scene examines the GameData, it should call addMessage() to
+ * to the host. When the AnimationTimer for the associated Scene examines the GameData, it should call displayMessage() to
  * finally display the message.
  */
 public class ChatBox extends StackPane {
@@ -37,6 +38,8 @@ public class ChatBox extends StackPane {
     private boolean textFieldShowing = true;
     private TextField textField;
     private HBox messageEntryContainer;
+    private Queue<Message> newMessagesOut = new LinkedList<>(); // New messages that were just typed by the local player. These will eventually be sent on to other players.
+    private Queue<Message> newMessagesIn = new LinkedList<>(); // New messages received from other players (or our own message echoed back by the host). These will eventually be displayed.
 
     public ChatBox(GameData gameData, PlayerData localPlayerData, double minHeight, boolean showBackground){
         this.localPlayerData = localPlayerData;
@@ -67,7 +70,7 @@ public class ChatBox extends StackPane {
                     r.getChildrenUnmodifiable().stream().filter(n -> n instanceof Region).map(n-> (Region) n).forEach(n -> n.setBackground(Background.EMPTY));
                 }
             });
-            addMessage("Press Enter to open Chat interface");
+            newMessagesIn.add(new Message("Press Enter to open Chat interface",localPlayerData.getPlayerID()));
         }
         messageScrollPane.setContent(messageContainer);
         verticalOrienter.getChildren().add(messageScrollPane);
@@ -117,17 +120,15 @@ public class ChatBox extends StackPane {
             if(textField.getText().isEmpty()){
                 if(showBackground) return;
                 else{
-                    toggleTextFieldVisibility();
+                    hideTextField();
                     return;
                 }
             }
-            List<Message> newMessage = new LinkedList<>();
-            newMessage.add(new Message ("<" + localPlayerData.getUsername() + "> " + textField.getText(), localPlayerData.getPlayerID()));
-            gameData.changeAddMessages(newMessage);
-            addMessage(newMessage.get(0).getString());
+            Message newMessage = new Message ("<" + localPlayerData.getUsername() + "> " + textField.getText(), localPlayerData.getPlayerID());
+            addNewMessageOut(newMessage);
             textField.setPromptText("");
             textField.clear();
-            if(!showBackground) toggleTextFieldVisibility();
+            if(!showBackground) hideTextField();
         });
 
         // Set the actionListener for the pressing the ENTER key:
@@ -136,38 +137,55 @@ public class ChatBox extends StackPane {
         });
     }
 
-    public void toggleTextFieldVisibility(){
-        if(textFieldShowing){
-            System.out.println("User hit ENTER or SEND and chat box was showing. Turning it off...");
-            messageEntryContainer.setOpacity(0.0);
-            textFieldShowing = false;
-            getParent().requestFocus();
-        }
-        else{
-            System.out.println("User hit ENTER or SEND and chat box was not showing. Turning it on...");
-            messageEntryContainer.setOpacity(1.0);
-            textFieldShowing = true;
-            textField.requestFocus();
-        }
+    public boolean isTextFieldShowing(){
+        return textFieldShowing;
     }
 
-    public void addMessage(String newMessage){
-        System.out.println("addmessage called");
-        Text newText = new Text(newMessage);
-        newText.setFont(font);
-        if(!showBackground){
-            newText.setFill(Color.WHITE);
-            newText.setStroke(Color.BLACK);
-            newText.setStrokeWidth(1.0);
-            newText.setStyle("-fx-font-weight: bold");
-        }
-        messageContainer.getChildren().add(newText);
+    public void hideTextField(){
+        System.out.println("User hit ENTER or SEND and chat box was showing. Turning it off...");
+        messageEntryContainer.setOpacity(0.0);
+        textFieldShowing = false;
+        getParent().requestFocus();
     }
 
-    // ignores the localplayer's own messages that have already been printed and have been echoed back by the host.
-    public void addMessages(List<Message> newMessages){
-        for (Message newMessage: newMessages) {
-            if(newMessage.getPlayerID() != localPlayerData.getPlayerID()) addMessage(newMessage.getString());
+    public void showTextField(){
+        System.out.println("User hit ENTER or SEND and chat box was not showing. Turning it on...");
+        messageEntryContainer.setOpacity(1.0);
+        textFieldShowing = true;
+        textField.requestFocus();
+    }
+
+    /* The methods for manipulating the newMessagesOut queues are synchronized because both the workerThread in GameScene
+     * and the JavaFx Application Thread need to work with the Queues and could otherwise interfere with each other. */
+    // This method is called by the JavaFX Application Thread
+    public synchronized void addNewMessageOut(Message newMessage){
+        newMessagesOut.add(newMessage);
+    }
+    // This method is called by the GameScene's worker thread.
+    public synchronized Message getNextNewMessageOut(){
+        return newMessagesOut.poll();
+    }
+    // Note: this method is called by the GameScene's worker thread
+    public synchronized void addNewMessageIn(Message newMessage){
+        newMessagesIn.add(newMessage);
+    }
+    // Note: this method is called by the GameScene's worker thread
+    public synchronized void addNewMessagesIn(List<Message> newMessages){
+        newMessagesIn.addAll(newMessages);
+    }
+    // Displays all messages in the newMessagesIn queue and also clears that queue. This method is called by the JavaFX Application Thread.
+    public synchronized void displayNewMessagesIn(){
+        Message newMessageIn;
+        while((newMessageIn = newMessagesIn.poll())!=null){
+            Text newText = new Text(newMessageIn.getString());
+            newText.setFont(font);
+            if(!showBackground){
+                newText.setFill(Color.WHITE);
+                newText.setStroke(Color.BLACK);
+                newText.setStrokeWidth(1.0);
+                newText.setStyle("-fx-font-weight: bold");
+            }
+            messageContainer.getChildren().add(newText);
         }
     }
 

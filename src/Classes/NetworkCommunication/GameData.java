@@ -2,24 +2,35 @@ package Classes.NetworkCommunication;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Created by HydrusBeta on 8/6/2017.
+ * There are 3 collections of messages - messages here in GameData, and newMessagesIn and newMessagesOut in the ChatBox
+ * class. When a player types a message into the TextBox and hits ENTER, the message is added to newMessagesOut by the
+ * JavaFX Application Thread. Later, in the updateGameData method of GameScene, a worker thread moves this message into
+ * the messages list so that it can be broadcast to other players in a packet. The receiving player's worker thread
+ * copies this message over to newMessagesIn. Finally, the JavaFX thread reads newMessagesIn and displays the messages
+ * in the ChatBox. Separating messages and messagesOut prevents duplicate messages from appearing in the ChatBox. Otherwise,
+ * a client wouldn't be able to distinguish messages that were just typed by the user from messages that were echoed
+ * back by the host computer. The synchronized newMessagesIn queue in ChatBox is necessary to prevent a race condition.
+ * If we were to put newly-typed messages directly into messages, then it would be possible for the following sequence
+ * of events to happen in this order:
+ *    In prepareAndSendXXXXPacket(), the worker thread creates a copy of gameData and puts it into a Packet.
+ *    the JavaFX application thread adds a new message to gameData (bad timing!)
+ *    the worker thread sends the Packet off and calls resetMessages(), destroying the message that was just added.
  */
 public class GameData implements Serializable{
-    private int frameRate;
     private boolean pause;
     private boolean cancelGame;
-    private List<Message> messages = new ArrayList<>();
+    private List<Message> messages; // new messages to send to other players
     private String ammunitionUrl = "";
-
-    // Special Data that is set only by the host:
+    private Map<Long,Integer> missedPacketsCount; // maps playerIDs to the number of misssed packets for that player.
     private boolean gameStarted;
 
     // Flags indicating changes to GameData:
-    private boolean frameRateRequested = false;
-    private boolean messageRequested = false;
+    private boolean messagesChanged = false;
     private boolean pauseRequested = false;
     private boolean cancelGameRequested = false;
     private boolean gameStartedRequested = false;
@@ -33,13 +44,13 @@ public class GameData implements Serializable{
 
     // Default constructor:
     public GameData(){
-        super();
+        messages = new ArrayList<>();
+        missedPacketsCount = new HashMap<>();
     }
 
     // Copy constructor:
     public GameData(GameData other){
-        frameRate = other.getFrameRate();
-        messages.addAll(other.messages);
+        messages = new ArrayList<>(other.messages);
         pause = other.getPause();
         cancelGame = other.getCancelGame();
         gameStarted = other.getGameStarted();
@@ -48,9 +59,9 @@ public class GameData implements Serializable{
         victoryDisplayStarted = other.getVictoryDisplayStarted();
         victoryTime = other.getVictoryTime();
         victoriousTeam = other.getVictoriousTeam();
+        missedPacketsCount = new HashMap<>(other.getMissedPacketsCount());
 
-        frameRateRequested = other.isFrameRateRequested();
-        messageRequested = other.isMessageRequested();
+        messagesChanged = other.isMessagesChanged();
         pauseRequested = other.isPauseRequested();
         cancelGameRequested = other.isCancelGameRequested();
         gameStartedRequested = other.isGameStartedRequested();
@@ -60,13 +71,13 @@ public class GameData implements Serializable{
     /* Changers: These are called when a client wants to notify the host that he/she is actively changing something
      * (e.g. sending a message, pausing the game, etc). The host will then notify all clients of the change. These
      * are also called when the host wants to notify clients that the game is starting or is cancelled.*/
-    public void changeFrameRate(int frameRate){
-        this.frameRate = frameRate;
-        frameRateRequested = true;
-    }
     public void changeAddMessages(List<Message> messages){
         this.messages.addAll(messages);
-        messageRequested = true;
+        messagesChanged = true;
+    }
+    public void changeAddMessage(Message message){
+        this.messages.add(message);
+        messagesChanged = true;
     }
     public void changePause(boolean pause){
         this.pause = pause;
@@ -87,9 +98,6 @@ public class GameData implements Serializable{
 
     /* Setters: These are called when a client simply wants to update locally-stored game information without
      * notifying the host. */
-    public void setFrameRate(int frameRate){
-        this.frameRate = frameRate;
-    }
     public void setAddMessages(List<Message> messages){
         this.messages.addAll(messages);
     }
@@ -119,8 +127,7 @@ public class GameData implements Serializable{
     }
 
     public void resetFlags(){
-        frameRateRequested = false;
-        messageRequested = false;
+        messagesChanged = false;
         pauseRequested = false;
         cancelGameRequested = false;
         gameStartedRequested = false;
@@ -132,11 +139,8 @@ public class GameData implements Serializable{
 
     /* Change Getters: These are called to see whether the sending party has changed the data. They are always
      * called before retrieving the actual game data. */
-    public boolean isFrameRateRequested(){
-        return frameRateRequested;
-    }
-    public boolean isMessageRequested(){
-        return messageRequested;
+    public boolean isMessagesChanged(){
+        return messagesChanged;
     }
     public boolean isPauseRequested(){
         return pauseRequested;
@@ -152,9 +156,6 @@ public class GameData implements Serializable{
     }
 
     /* Direct Getters: These are called to get the actual game data*/
-    public int getFrameRate(){
-        return frameRate;
-    }
     public List<Message> getMessages(){
         return messages;
     }
@@ -182,5 +183,22 @@ public class GameData implements Serializable{
     public int getVictoriousTeam(){
         return victoriousTeam;
     }
+    public Map<Long,Integer> getMissedPacketsCount(){
+        return missedPacketsCount;
+    }
+
+
+    /* MissedPacketsCount manipulators */
+    public int getMissedPacketsCount(long playerID){
+        return missedPacketsCount.get(playerID);
+    }
+    public void incrementMissedPacketsCount(long playerID){
+        missedPacketsCount.replace(playerID,missedPacketsCount.get(playerID)+1);
+    }
+    public void setMissedPacketsCount(long playerID, int newVal){
+        missedPacketsCount.replace(playerID, newVal);
+    }
+
+
 
 }

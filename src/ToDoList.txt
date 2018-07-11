@@ -31,6 +31,7 @@ Select secondary and tertiary locations for transferInOrbs?
 TransferInOrbs should be able to kill a player.
 
 -------moderate refactoring-------
+use a NUM_SECONDS_ERROR_TOLERANCE instead of a NUM_FRAMES_ERROR_TOLERANCE since the JavaFX framerate is variable and unpredictable.
 Instead of each bot having its own thread pool, generate a single pool in GameScene and pass it down to the BotPlayers.
 There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.

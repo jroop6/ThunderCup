@@ -8,6 +8,11 @@ public class Message implements Serializable {
         this.string = string;
         this.playerID = playerID;
     }
+    public Message (Message other){
+        this.string = other.string;
+        this.playerID = other.playerID;
+    }
+
     public String getString(){
         return string;
     }

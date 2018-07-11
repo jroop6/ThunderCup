@@ -3,9 +3,11 @@ package Classes;
 import Classes.Animation.MiscAnimations;
 import javafx.scene.canvas.GraphicsContext;
 
+import java.io.Serializable;
+
 // For miscellaneous animations displayed on the PlayPanel
 // Todo: make all animation controllers (except perhaps Orb) instances of this class or extend this class.
-public class VisualFlourish {
+public class VisualFlourish implements Serializable {
     private int currentFrame = 0;
     private double xPos;
     private double yPos;

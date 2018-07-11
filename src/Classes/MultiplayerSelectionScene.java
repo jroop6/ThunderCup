@@ -52,9 +52,6 @@ public class MultiplayerSelectionScene extends Scene {
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent (nanoseconds).
 
     // for misc debugging:
-    private int numberOfPacketsProcessed = 0;
-    private int numberOfPacketsRemaining = 0;
-    private int MSSCalls = 0;
     private long nextReport = 0; // The time at which miscellaneous debugging info will next be printed (nanoseconds).
 
     private AnimationTimer animationTimer;
@@ -163,11 +160,22 @@ public class MultiplayerSelectionScene extends Scene {
                 // Incoming packets are processed every frame, if there are any:
                 if(isHost) processPacketsAsHost();
                 else processPacketsAsClient();
-                ++MSSCalls;
 
-                // Character and Bubble animations are updated 24 times per second:
+                // Tasks that occur 24 times per second.
                 if(now>nextAnimationFrameInstance){
                     nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
+
+                    // copy newly-typed messages into gameData:
+                    Message nextNewMessage;
+                    while((nextNewMessage = chatBox.getNextNewMessageOut())!=null){
+                        gameData.changeAddMessage(nextNewMessage);
+                        if(isHost){ // The host prints his/her own messages immediately (clients only print incoming messages from the host).
+                            chatBox.addNewMessageIn(new Message(nextNewMessage));
+                        }
+                    }
+
+                    // Display new-received messages in the chat box:
+                    chatBox.displayNewMessagesIn();
                 }
 
                 // Latency probes are sent by the host 3 times per second:
@@ -185,7 +193,7 @@ public class MultiplayerSelectionScene extends Scene {
                     nextSendInstance += 1000000000L/FRAME_RATE;
 
                     // update the chatBox:
-                    if(gameData.isMessageRequested()) chatBox.addMessages(gameData.getMessages());
+                    chatBox.displayNewMessagesIn();
 
                     if(isHost){
                         prepareAndSendServerPacket();
@@ -265,11 +273,10 @@ public class MultiplayerSelectionScene extends Scene {
 
             // Then process the GameData:
             GameData clientGameData = packet.getGameData();
-            if(clientGameData.isFrameRateRequested()){
-                gameData.changeFrameRate(clientGameData.getFrameRate());
-            }
-            if(clientGameData.isMessageRequested()){
-                gameData.changeAddMessages(clientGameData.getMessages());
+            if(clientGameData.isMessagesChanged()){
+                List<Message> messages = clientGameData.getMessages();
+                gameData.changeAddMessages(new LinkedList<>(messages)); // host re-broadcasts the messages out to all clients
+                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
 
             // Prepare for the next iteration:
@@ -473,12 +480,7 @@ public class MultiplayerSelectionScene extends Scene {
 
             // Now process the GameData:
             GameData hostGameData = packet.getGameData();
-            if(hostGameData.isFrameRateRequested()){
-                gameData.setFrameRate(hostGameData.getFrameRate());
-            }
-            if(hostGameData.isMessageRequested()){
-                chatBox.addMessages(hostGameData.getMessages());
-            }
+            chatBox.displayNewMessagesIn();
             if(hostGameData.isCancelGameRequested()){
                 cleanUp();
                 SceneManager.switchToMainMenu();
@@ -487,6 +489,10 @@ public class MultiplayerSelectionScene extends Scene {
             if(hostGameData.isGameStartedRequested()){
                 System.out.println("host has started the game!");
                 startGame();
+            }
+            if(hostGameData.isMessagesChanged()){
+                List<Message> messages = hostGameData.getMessages();
+                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
 
             // Prepare for next iteration:

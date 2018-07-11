@@ -61,7 +61,6 @@ public class GameScene extends Scene {
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent out (nanoseconds).
     private long nextSendInstance = 0; // The time at which the next packet will be sent (nanoseconds).
     private final long maxConsecutivePacketsMissed; // If this many packets are missed consecutively from a particular player, alert the user.
-    private Map<Long,Integer> missedPacketsCount = new HashMap<Long,Integer>(); // maps playerIDs to the number of misssed packets for that player.
 
     // for misc debugging:
     private long nextReport = 0; // The time at which miscellaneous debugging info will next be printed (nanoseconds).
@@ -107,7 +106,7 @@ public class GameScene extends Scene {
 
             // while we're here, check to see if this is the LocalPlayer.
             if(player instanceof LocalPlayer) localPlayer = (LocalPlayer) player;
-            missedPacketsCount.put(player.getPlayerData().getPlayerID(),0);
+            gameData.getMissedPacketsCount().put(player.getPlayerData().getPlayerID(),0);
         }
 
         // Now create one PlayPanel for each team and assign its players:
@@ -128,8 +127,9 @@ public class GameScene extends Scene {
 
         // Add a chat overlay. Put it at the bottom of the screen, with no background:
         chatBox = new ChatBox(gameData, localPlayer.getPlayerData(), 125, false);
-        chatBox.addMessage("Use mouse wheel to scroll messages");
-        chatBox.addMessage("Press p to pause");
+        chatBox.addNewMessageIn(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerData().getPlayerID()));
+        chatBox.addNewMessageIn(new Message("Press p to pause", localPlayer.getPlayerData().getPlayerID()));
+
         AnchorPane chatBoxPositioner = new AnchorPane();
         chatBoxPositioner.getChildren().add(chatBox);
         setBottomAnchor(chatBox,0.0);
@@ -161,7 +161,9 @@ public class GameScene extends Scene {
             switch(event.getCode()){
                 case ENTER:
                     System.out.println("enter pressed!");
-                    chatBox.toggleTextFieldVisibility();
+                    if(!chatBox.isTextFieldShowing()){
+                        chatBox.showTextField();
+                    }
                     break;
                 case P:
                     System.out.println("Pause pressed!");
@@ -248,8 +250,15 @@ public class GameScene extends Scene {
         if(gameData.getPause()) displayPauseMenu();
         else removePauseMenu();
 
-        // Add new chat messages to the chat box:
-        if(gameData.isMessageRequested()) chatBox.addMessages(gameData.getMessages());
+        // Display new chat messages in the chat box:
+        chatBox.displayNewMessagesIn();
+
+        // If the host has canceled the game, return to the main menu:
+        if(gameData.isCancelGameRequested()){
+            cleanUp();
+            SceneManager.switchToMainMenu();
+            showGameCanceledDialog();
+        }
 
         // Check whether victory has been declared:
         // todo: there's got to be a better way of ensuring that these methods are only called once...
@@ -279,10 +288,10 @@ public class GameScene extends Scene {
             player.updateView(playerData);
 
             // If the player has been gone for too long (and they have not resigned), ask the host what to do:
-            /*Integer missedPackets = missedPacketsCount.get(playerData.getPlayerID()); // todo: SUPER IMPORTANT! This is not thread-safe. The workerThread updates this HashMap.
+            Integer missedPackets = gameData.getMissedPacketsCount(playerData.getPlayerID()); // todo: SUPER IMPORTANT! This is not thread-safe. The workerThread updates this HashMap.
             if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
                 showConnectionLostDialog(player);
-            }*/
+            }
         }
     }
 
@@ -462,7 +471,7 @@ public class GameScene extends Scene {
                 playPanel.updatePlayer(playerData, isHost);
             }
             // Reset the missed packets counter
-            missedPacketsCount.replace(playerData.getPlayerID(),0);
+            gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
 
             // Then process the GameData:
             GameData clientGameData = packet.getGameData();
@@ -512,7 +521,7 @@ public class GameScene extends Scene {
             if(!isHost && playerData.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
 
             // increment the missed packets count. The count will be reset whenever the next packet is received:
-            missedPacketsCount.replace(playerData.getPlayerID(),missedPacketsCount.get(playerData.getPlayerID())+1);
+            gameData.incrementMissedPacketsCount(playerData.getPlayerID());
         }
     }
 
@@ -529,7 +538,7 @@ public class GameScene extends Scene {
                     playPanel.updatePlayer(playerData, isHost);
                 }
                 // Reset the missed packets counter:
-                if(playerData.getPlayerID()==0) missedPacketsCount.replace(playerData.getPlayerID(), 0);
+                if(playerData.getPlayerID()==0) gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
 
                 // Prepare for next iteration:
                 playerData = packet.popPlayerData();
@@ -559,19 +568,21 @@ public class GameScene extends Scene {
 
     private void updateGameData(GameData gameDataIn, boolean isHost){
         if(isHost){
-            if(gameDataIn.isFrameRateRequested()) gameData.changeFrameRate(gameDataIn.getFrameRate());
-            if(gameDataIn.isMessageRequested()) gameData.changeAddMessages(gameDataIn.getMessages());
+            if(gameDataIn.isMessagesChanged()){
+                List<Message> messages = gameDataIn.getMessages();
+                System.out.println("host received messages. adding them to both messagesIn and messagesOut");
+                gameData.changeAddMessages(new LinkedList<>(messages)); // host re-broadcasts the messages out to all clients
+                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
+            }
             if(gameDataIn.isPauseRequested()) gameData.changePause(gameDataIn.getPause());
         }
         else{
-            if(gameDataIn.isFrameRateRequested()) gameData.setFrameRate(gameDataIn.getFrameRate());
-            if(gameDataIn.isMessageRequested()) chatBox.addMessages(gameDataIn.getMessages());
-            if(gameDataIn.isPauseRequested()) gameData.setPause(gameDataIn.getPause());
-            if(gameDataIn.isCancelGameRequested()){
-                cleanUp();
-                SceneManager.switchToMainMenu();
-                showGameCanceledDialog();
+            if(gameDataIn.isMessagesChanged()){
+                List<Message> messages = gameDataIn.getMessages();
+                System.out.println("client received messages. Adding them to messagesIn");
+                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
+            if(gameDataIn.isPauseRequested()) gameData.setPause(gameDataIn.getPause());
         }
     }
 
@@ -640,7 +651,7 @@ public class GameScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            missedPacketsCount.replace(player.getPlayerData().getPlayerID(),(int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
+            gameData.setMissedPacketsCount(player.getPlayerData().getPlayerID(), (int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
             dialogStage.close();
         });
 
@@ -794,6 +805,16 @@ public class GameScene extends Scene {
                 }
             }
             transferOutOrbs.clear();
+        }
+
+        // Copy messages from the chatBox to the gameData so it can be forwarded to other players:
+        Message nextNewMessage;
+        while((nextNewMessage = chatBox.getNextNewMessageOut())!=null){
+            System.out.println("adding messages that the player typed into messagesOut");
+            gameData.changeAddMessage(nextNewMessage);
+            if(isHost){ // The host prints his/her own messages immediately (clients only print incoming messages from the host).
+                chatBox.addNewMessageIn(new Message(nextNewMessage));
+            }
         }
     }
 
