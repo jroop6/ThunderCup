@@ -7,10 +7,12 @@ import Classes.SpriteSheet;
  */
 public enum CharacterImages {
 
-    PINK_FILLY("res/animations/characters/pinkFilly/pinkFilly_spritesheet.png", true, null),
-    UNKNOWN_CHARACTER("res/animations/characters/unknown/unknownCharacter_spritesheet.png", false, null),
-    BROWN_COLT("res/animations/characters/colt/colt_spritesheet.png", true, null),
-    FILLY_BOT_EASY("res/animations/characters/botPony/botPonyEasy_spritesheet.png", false, BotPlayer.Difficulty.EASY),
+    BLITZ("res/animations/characters/blitz/blitz_spritesheet.png", true, null),
+    UNKNOWN_CHARACTER("res/animations/characters/unknownCharacter/unknownCharacter_spritesheet.png", false, null),
+    GEARSHIFT("res/animations/characters/gearshift/gearshift_spritesheet.png", true, null),
+    CLOUDESTINE("res/animations/characters/cloudestine/cloudestine_spritesheet.png", true, null),
+    CHARCOAL("res/animations/characters/charcoal/charcoal_spritesheet.png", true, null),
+    FILLY_BOT_EASY("res/animations/characters/botPony/botPonyEasy_spritesheet.png", true, BotPlayer.Difficulty.EASY),
     FILLY_BOT_MEDIUM("res/animations/characters/botPony/botPonyMedium_spritesheet.png", false, BotPlayer.Difficulty.MEDIUM),
     FILLY_BOT_HARD("res/animations/characters/botPony/botPonyHard_spritesheet.png", false, BotPlayer.Difficulty.HARD);
 

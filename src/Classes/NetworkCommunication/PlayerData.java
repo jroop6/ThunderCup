@@ -63,7 +63,7 @@ public class PlayerData implements Serializable {
             team = 0;
         }
         else{ // Otherwise, assign the player the default character and cannon:
-            characterEnum = CharacterImages.PINK_FILLY;
+            characterEnum = CharacterImages.BLITZ;
             cannonEnum = CannonImages.BASIC_CANNON;
             team = 1;
         }
