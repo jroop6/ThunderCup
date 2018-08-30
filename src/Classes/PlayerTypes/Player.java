@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
 
+import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
+
 
 /**
  * Think of this as the controller in an MVC pattern. Player has a PlayerData (model) as well as a Cannon, Character,
@@ -48,6 +50,19 @@ public abstract class Player {
     // of the game and are never changed. Host and client maintain their own copies separately.
     private int seed;
     private Random ammunitionGenerator;
+
+    // Character animation control:
+    public enum CharacterAnimationState{VICTORY(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEAT(20, 20), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
+        private int upperTriggerHeight;
+        private int lowerTriggerHeight;
+        CharacterAnimationState(int upperTriggerHeight, int lowerTriggerHeight){
+            this.upperTriggerHeight = upperTriggerHeight;
+            this.lowerTriggerHeight = lowerTriggerHeight;
+        }
+        public boolean inRange(int index){
+            return index>=upperTriggerHeight && index <= lowerTriggerHeight;
+        }
+    }
 
     // initialize the username Button, latency Label, ComboBox, and eventHandlers for changing cannon/character:
     public Player(){
@@ -363,7 +378,7 @@ public abstract class Player {
             int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
             OrbImages orbImage = OrbImages.values()[randomOrdinal];
             ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
-            // Note: view gets updated 24 times per second in the repaint() method of the PlaypPanel.
+            // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
         }
     }
 }

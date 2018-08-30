@@ -200,7 +200,7 @@ public class BotPlayer extends Player {
         }
 
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
-        int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy);
+        int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy, deathOrbsCopy);
 
         // ** Let's determine the outcome for a variety of shooting angles ** //
 

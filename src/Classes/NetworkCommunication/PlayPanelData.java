@@ -790,22 +790,21 @@ public class PlayPanelData implements Serializable {
         }
     }
 
-    public int getLowestOccupiedRow(Orb[][] orbArray) {
-        int lowestRow = 0;
-        boolean nonEmpty = false;
+    public int getLowestOccupiedRow(Orb[][] orbArray, Orb[] deathOrbs) {
+        for(Orb orb : deathOrbs){
+            if (orb != NULL) return ARRAY_HEIGHT;
+        }
+
         for (int i = ARRAY_HEIGHT-1; i>=0; i--) {
             Orb[] row = orbArray[i];
-            for (int j = ARRAY_WIDTH_PER_CHARACTER*numPlayers-1; j>=0; j--) {
+            for (int j = ARRAY_WIDTH_PER_CHARACTER * numPlayers - 1; j >= 0; j--) {
                 if (row[j] != NULL) {
-                    nonEmpty = true;
-                    break;
+                    return i;
                 }
             }
-            if (nonEmpty) {
-                lowestRow = i;
-                break;
-            }
         }
-        return lowestRow;
+
+        // otherwise, there are no orbs on the board, so return -1
+        return -1;
     }
 }

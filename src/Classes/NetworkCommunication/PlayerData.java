@@ -4,6 +4,7 @@ import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
 import Classes.Animation.OrbImages;
 import Classes.Orb;
+import Classes.PlayerTypes.Player;
 
 import java.io.Serializable;
 import java.util.LinkedList;
@@ -23,7 +24,7 @@ public class PlayerData implements Serializable {
 
     private double cannonAngle;
     private final long playerID;
-    private int playerPos; // The position of this player in his/her playpanel (0 or greater)
+    private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private String username;
     private CharacterImages characterEnum;
     private CannonImages cannonEnum;
@@ -32,8 +33,10 @@ public class PlayerData implements Serializable {
     private long latency;
     private List<Orb> ammunitionOrbs = new LinkedList<>();
     private Queue<Orb> firedOrbs = new LinkedList<>();
-    private boolean frozen = false;
-    private boolean cannonDisabled = false;
+    private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
+    private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
+    private Player.CharacterAnimationState characterAnimationState = Player.CharacterAnimationState.CONTENT;
+    private int animationFrame = 0;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -367,5 +370,23 @@ public class PlayerData implements Serializable {
 
             inconsistencyCounter = 0;
         }
+    }
+
+    // lowestRow is the index of the lowest Orb on this Player's PlayPanel.
+    //    Lowest possible value: -1 if there aren't any Orbs
+    //    Highest possible value: ARRAY_HEIGHT , if there's an orb on the deathOrbs list.
+    public void tick(int lowestRow){
+        // determine which animation state we should be in:
+        if(characterAnimationState.inRange(lowestRow)); // stay in the same state
+        else{
+            for(Player.CharacterAnimationState state : Player.CharacterAnimationState.values()){
+                if(state.inRange(lowestRow)){
+                    characterAnimationState = state;
+                    System.out.println("new state: " + state);
+                    // todo: set the animation frame to a random frame in this state.
+                }
+            }
+        }
+        //Note to self: DO NOT update the character view here. Remember that we're not in the JavaFX application thread.
     }
 }
