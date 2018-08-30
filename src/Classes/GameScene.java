@@ -267,31 +267,22 @@ public class GameScene extends Scene {
     }
 
     private void updatePlayPanelViews(List<PlayPanelData> playPanelDataList, List<PlayerData> playerDataList){
-        // Repaint every PlayPanel:
         for(PlayPanelData playPanelData : playPanelDataList){
+            // Repaint every PlayPanel:
             PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
             playPanel.repaint(playPanelData, playerDataList);
-        }
 
-        // Update individual Player views:
-        for(PlayerData playerData : playerDataList){
-            //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
-            //Todo: note: simply adding a getPlayer() method to PlayerData won't work (the reference has been lost over transmission).
-            Player player = players.get(0);
-            for(Player tempPlayer : players){
-                if(tempPlayer.getPlayerData().getPlayerID() == playerData.getPlayerID()){
-                    player = tempPlayer;
-                    break;
+            // update each player's visual display:
+            for(Player player : playPanel.getPlayerList()){
+                player.updateView();
+
+                // If the player has been gone for too long (and they have not resigned), ask the host what to do:
+                Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerData().getPlayerID());
+                if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
+                    showConnectionLostDialog(player);
                 }
             }
 
-            player.updateView(playerData);
-
-            // If the player has been gone for too long (and they have not resigned), ask the host what to do:
-            Integer missedPackets = gameData.getMissedPacketsCount(playerData.getPlayerID()); // todo: SUPER IMPORTANT! This is not thread-safe. The workerThread updates this HashMap.
-            if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
-                showConnectionLostDialog(player);
-            }
         }
     }
 

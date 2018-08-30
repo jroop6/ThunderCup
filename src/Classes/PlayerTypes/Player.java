@@ -49,8 +49,8 @@ public abstract class Player {
     private int seed;
     private Random ammunitionGenerator;
 
-    // instance initializer to create the username Button, latency Label, ComboBox, and eventHandlers for changing cannon/character:
-    {
+    // initialize the username Button, latency Label, ComboBox, and eventHandlers for changing cannon/character:
+    public Player(){
         usernameButton = new Button();
         usernameButton.setFont(new Font(48.0));
 
@@ -299,7 +299,7 @@ public abstract class Player {
 
     }
 
-    public void updateView(PlayerData playerData){
+    public void updateView(){
         if(playerData.isFrozenChanged()){
             freezePlayer(); // updates view
         }

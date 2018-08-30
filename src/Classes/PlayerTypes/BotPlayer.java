@@ -26,7 +26,7 @@ public class BotPlayer extends Player {
     private double fineMovementOffset;
     private Random offsetGenerator = new Random();
 
-    // Animation control
+    // Cannon Animation control
     private Phase currentPhase = Phase.THINKING;
     private int currentFrame = 0;
     private int transitionFrame;

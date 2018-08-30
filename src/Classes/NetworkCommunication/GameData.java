@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * There are 3 collections of messages - messages here in GameData, and newMessagesIn and newMessagesOut in the ChatBox
@@ -45,7 +46,7 @@ public class GameData implements Serializable{
     // Default constructor:
     public GameData(){
         messages = new ArrayList<>();
-        missedPacketsCount = new HashMap<>();
+        missedPacketsCount = new ConcurrentHashMap<>();
     }
 
     // Copy constructor:
@@ -59,7 +60,7 @@ public class GameData implements Serializable{
         victoryDisplayStarted = other.getVictoryDisplayStarted();
         victoryTime = other.getVictoryTime();
         victoriousTeam = other.getVictoriousTeam();
-        missedPacketsCount = new HashMap<>(other.getMissedPacketsCount());
+        missedPacketsCount = new ConcurrentHashMap<>(other.getMissedPacketsCount());
 
         messagesChanged = other.isMessagesChanged();
         pauseRequested = other.isPauseRequested();
