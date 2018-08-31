@@ -8,19 +8,15 @@ import javafx.scene.effect.ColorAdjust;
  * For displaying a cannon
  */
 public class Cannon {
-    private CannonImages cannonEnum;
     private Sprite staticBackground;
     private Sprite movingPart;
     private Sprite staticForeground;
-    private int currentFrame = 0;
 
     public Cannon(PlayerData playerData){
-        this.cannonEnum = playerData.getCannonEnum();
-        staticBackground = new Sprite(cannonEnum.getBackgroundImageSpriteSheet());
-        movingPart = new Sprite(cannonEnum.getMovingPartSpriteSheet());
-        staticForeground = new Sprite(cannonEnum.getForegroundImageSpriteSheet());
-        setCannonEnum(cannonEnum);
-        setAngle(playerData.getCannonAngle());
+        staticBackground = new Sprite(playerData.getCannonEnum().getBackgroundImageSpriteSheet());
+        movingPart = new Sprite(playerData.getCannonEnum().getMovingPartSpriteSheet());
+        staticForeground = new Sprite(playerData.getCannonEnum().getForegroundImageSpriteSheet());
+        setAngle(playerData.getCannonAngle(), playerData.getCannonAnimationFrame());
     }
 
     public Sprite getMovingPart(){
@@ -34,23 +30,22 @@ public class Cannon {
     }
 
     public void setCannonEnum(CannonImages cannonEnum){
-        this.cannonEnum = cannonEnum;
         staticBackground.setSpriteSheet(cannonEnum.getBackgroundImageSpriteSheet());
         movingPart.setSpriteSheet(cannonEnum.getMovingPartSpriteSheet());
         staticForeground.setSpriteSheet(cannonEnum.getForegroundImageSpriteSheet());
     }
 
-    public void relocate(double x, double y){
+    public void relocate(double x, double y, int currentFrame){
         staticBackground.relocate(x,y,currentFrame);
         movingPart.relocate(x,y,currentFrame);
         staticForeground.relocate(x,y,currentFrame);
     }
 
-    public void setAngle(double angle){
+    public void setAngle(double angle, int currentFrame){
         movingPart.rotate(angle, currentFrame);
     }
 
-    public void setScale(double scaleFactor){
+    public void setScale(double scaleFactor, int currentFrame){
         staticBackground.scale(scaleFactor,currentFrame);
         movingPart.scale(scaleFactor, currentFrame);
         staticForeground.scale(scaleFactor,currentFrame);

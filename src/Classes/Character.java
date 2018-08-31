@@ -10,10 +10,12 @@ import javafx.scene.transform.Scale;
  * For displaying a character
  */
 public class Character {
+    // model:
     private CharacterImages characterEnum;
-    private Sprite sprite;
-    private AnimationType animationType;
     private int currentFrame = 0;
+
+    // view:
+    private Sprite sprite;
     private Scale scaler = new Scale();
 
     // Initialize with a static display of the character:
@@ -21,7 +23,6 @@ public class Character {
         characterEnum = playerData.getCharacterEnum();
         sprite = new Sprite(characterEnum.getSpriteSheet());
         sprite.getTransforms().add(scaler);
-        animationType = AnimationType.STATIC_DISPLAY;
     }
 
     public void relocate(double x, double y){
@@ -59,11 +60,4 @@ public class Character {
     }
 }
 
-enum AnimationType{
-    STATIC_DISPLAY,
-    IDLE,
-    CHEERING,
-    JUMPING,
-    BUCKING;
-}
 

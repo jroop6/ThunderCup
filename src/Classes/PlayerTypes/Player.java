@@ -33,11 +33,13 @@ public abstract class Player {
     protected PlayerData playerData;
 
     // view:
-    protected Cannon cannon;
-    protected Character character;
     protected Button usernameButton;
     protected ComboBox<String> teamChoice = new ComboBox<>();
     protected Label latencyLabel = new Label("Latency: 0 milliseconds");
+    protected Cannon cannon;
+
+    // additional component controllers, each with models and views:
+    protected Character character;
 
     // The PlayPanel associated with this player (needed for firing new shootingOrbs):
     PlayPanel playPanel;
@@ -195,13 +197,13 @@ public abstract class Player {
     }
 
     public void relocateCannon(double x, double y){
-        cannon.relocate(x,y);
+        cannon.relocate(x,y,playerData.getCannonAnimationFrame());
     }
     public void relocateCharacter(double x, double y){
         character.relocate(x,y);
     }
     public void setScale(double scaleFactor){
-        cannon.setScale(scaleFactor);
+        cannon.setScale(scaleFactor, playerData.getCannonAnimationFrame());
         character.setScale(scaleFactor);
     }
 
@@ -306,7 +308,9 @@ public abstract class Player {
             freezePlayer(); // updates view
         }
 
-        cannon.setAngle(playerData.getCannonAngle()); // updates view
+        cannon.setAngle(playerData.getCannonAngle(), playerData.getCannonAnimationFrame()); // updates view
+
+
 
     }
 

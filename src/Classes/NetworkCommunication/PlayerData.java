@@ -23,6 +23,7 @@ public class PlayerData implements Serializable {
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which ammunitionOrbs data that is inconsistent with the host is tolerated. After this many frames, the ammunitionOrbs list is overwritten with the host's data.
 
     private double cannonAngle;
+    private int cannonAnimationFrame;
     private final long playerID;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private String username;
@@ -58,6 +59,7 @@ public class PlayerData implements Serializable {
     public PlayerData(String username, long playerID){
         //BubbleData = new BubbleData();
         cannonAngle = -80.0; // recall that JavaFx rotates things clockwise instead of counterclockwise
+        cannonAnimationFrame = 0;
         this.username = username;
         this.playerID = playerID;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
@@ -76,6 +78,7 @@ public class PlayerData implements Serializable {
     // Copy constructor
     public PlayerData(PlayerData other){
         cannonAngle = other.getCannonAngle();
+        cannonAnimationFrame = other.getCannonAnimationFrame();
         username = other.getUsername();
         playerID = other.getPlayerID();
         playerPos = other.getPlayerPos();
@@ -299,6 +302,9 @@ public class PlayerData implements Serializable {
     /* Direct Getters: These are called to get the actual player data*/
     public double getCannonAngle(){
         return cannonAngle;
+    }
+    public int getCannonAnimationFrame(){
+        return cannonAnimationFrame;
     }
     public String getUsername(){
         return username;
