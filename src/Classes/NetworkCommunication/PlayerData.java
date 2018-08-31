@@ -38,7 +38,6 @@ public class PlayerData implements Serializable {
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private CharacterImages.CharacterAnimationState characterAnimationState = CharacterImages.CharacterAnimationState.CONTENT;
-    private int animationFrame = 0;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -390,16 +389,16 @@ public class PlayerData implements Serializable {
     public void tick(int lowestRow, Random miscRandomGenerator){
         // determine which animation state we should be in, and increment animationFrame:
         if(characterAnimationState.inRange(lowestRow)){
-            animationFrame++;
+            characterAnimationFrame++;
             int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
-            if(bounds[1] == animationFrame) animationFrame = bounds[0];
+            if(bounds[1] == characterAnimationFrame) characterAnimationFrame = bounds[0];
         }
         else{
             for(CharacterImages.CharacterAnimationState state : CharacterImages.CharacterAnimationState.values()){
                 if(state.inRange(lowestRow)){
                     characterAnimationState = state;
                     int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
-                    animationFrame = miscRandomGenerator.nextInt(bounds[1]-bounds[0]) + bounds[0];
+                    characterAnimationFrame = miscRandomGenerator.nextInt(bounds[1]-bounds[0]) + bounds[0];
                     //System.out.println("new state: " + state + " animation bounds: " + bounds[0] + ", " + bounds[1]);
                     //System.out.println("new animationFrame: " + animationFrame);
                     break;

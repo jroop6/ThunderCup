@@ -18,8 +18,9 @@ import static Classes.PlayPanel.ROW_HEIGHT;
  * A class for handling spritesheets. Includes methods for reading spritesheets and their metadata from disk and drawing
  * a specific frame on a given GraphicsContext. Each frame has its own "anchor point". When the program wishes to
  * display a frame from the spritesheet, it passes the desired location of the anchor point to the drawSprite method.
- * This allows for the frames to change in size (for example, if a character is swinging his/her arms while walking, the
- * frames may change in width) while still carefully controlling the position of the character to avoid jitter.
+ * This allows for the frame bounds to change in size (for example, if a character is swinging his/her arms while
+ * walking, the frames may change in width) while still carefully controlling the position of the character to avoid
+ * jitter.
  */
 public class SpriteSheet extends Image {
 

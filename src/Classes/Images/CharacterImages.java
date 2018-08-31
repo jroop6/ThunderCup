@@ -13,7 +13,7 @@ public enum CharacterImages {
     // (see below). Therefore, the length of the array must match Player.CharacterAnimationState.values().length. The
     // numbers must be increasing, due to assumptions made in getAnimationBounds().
 
-    BLITZ("res/animations/characters/blitz/blitz_spritesheet.png", true, null, new int[] {1, 3, 5, 7, 9}),
+    BLITZ("res/animations/characters/blitz/blitz_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
     UNKNOWN_CHARACTER("res/animations/characters/unknownCharacter/unknownCharacter_spritesheet.png", false, null, new int[] {1, 2, 3, 4, 5}),
     GEARSHIFT("res/animations/characters/gearshift/gearshift_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
     CLOUDESTINE("res/animations/characters/cloudestine/cloudestine_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),

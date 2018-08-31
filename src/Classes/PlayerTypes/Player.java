@@ -309,6 +309,7 @@ public abstract class Player {
         }
 
         cannon.setAngle(playerData.getCannonAngle(), playerData.getCannonAnimationFrame()); // updates view
+        character.getSprite().setFrame(playerData.getCharacterAnimationFrame()); // updates view
 
 
 
