@@ -28,6 +28,7 @@ public class PlayerData implements Serializable {
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private String username;
     private CharacterImages characterEnum;
+    private int characterAnimationFrame;
     private CannonImages cannonEnum;
     private int team;
     private boolean defeated;
@@ -72,6 +73,7 @@ public class PlayerData implements Serializable {
             cannonEnum = CannonImages.BASIC_CANNON;
             team = 1;
         }
+        characterAnimationFrame = 0;
         defeated = false;
     }
 
@@ -83,6 +85,7 @@ public class PlayerData implements Serializable {
         playerID = other.getPlayerID();
         playerPos = other.getPlayerPos();
         characterEnum = other.getCharacterEnum();
+        characterAnimationFrame = other.getCharacterAnimationFrame();
         cannonEnum = other.getCannonEnum();
         team = other.getTeam();
         defeated = other.getDefeated();
@@ -317,6 +320,9 @@ public class PlayerData implements Serializable {
     }
     public CharacterImages getCharacterEnum(){
         return characterEnum;
+    }
+    public int getCharacterAnimationFrame(){
+        return characterAnimationFrame;
     }
     public CannonImages getCannonEnum(){
         return cannonEnum;

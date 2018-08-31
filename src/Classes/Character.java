@@ -10,26 +10,20 @@ import javafx.scene.transform.Scale;
  * For displaying a character
  */
 public class Character {
-    // model:
-    private CharacterImages characterEnum;
-    private int currentFrame = 0;
-
-    // view:
     private Sprite sprite;
     private Scale scaler = new Scale();
 
     // Initialize with a static display of the character:
     public Character(PlayerData playerData){
-        characterEnum = playerData.getCharacterEnum();
-        sprite = new Sprite(characterEnum.getSpriteSheet());
+        sprite = new Sprite(playerData.getCharacterEnum().getSpriteSheet());
         sprite.getTransforms().add(scaler);
     }
 
-    public void relocate(double x, double y){
-        sprite.relocate(x,y,currentFrame);
+    public void relocate(double x, double y, int currentFrame){
+        sprite.relocate(x,y, currentFrame);
     }
 
-    public void setScale(double scaleFactor){
+    public void setScale(double scaleFactor, CharacterImages characterEnum, int currentFrame){
         Point2D anchorPoint = characterEnum.getSpriteSheet().getFrameBound(currentFrame).getAnchorPoint();
         scaler.setPivotX(anchorPoint.getX());
         scaler.setPivotY(anchorPoint.getY());
@@ -37,17 +31,12 @@ public class Character {
         scaler.setY(scaleFactor);
     }
 
-    public void setCharacterEnum(CharacterImages characterEnum){
-        this.characterEnum = characterEnum;
+    public void setCharacterEnum(CharacterImages characterEnum, int currentFrame){
         double scale = scaler.getX();
-        setScale(1.0); // undo any scaling
+        setScale(1.0, characterEnum, currentFrame); // undo any scaling
         sprite.setSpriteSheet(characterEnum.getSpriteSheet());
         sprite.setFrame(0); // todo: choose correct frame.
-        setScale(scale); // restore scaling, using new anchor point
-    }
-
-    public CharacterImages getCharacterEnum(){
-        return characterEnum;
+        setScale(scale, characterEnum, currentFrame); // restore scaling, using new anchor point
     }
 
     public Sprite getSprite(){

@@ -120,7 +120,7 @@ public abstract class Player {
             changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
         }
         playerData.changeCharacter(nextType); // updates model
-        character.setCharacterEnum(nextType); // updates view
+        character.setCharacterEnum(nextType, playerData.getCharacterAnimationFrame()); // updates view
     }
     private void incrementCannonEnum(){
         CannonImages nextType = playerData.getCannonEnum().next();
@@ -135,7 +135,7 @@ public abstract class Player {
         playerData.changeDefeated(true); // updates model
         playerData.changeFrozen(true); // updates model
         playerData.changeCannonDisabled(true); // updates model
-        freezePlayer(); // updates view (GameScene)
+        // freezePlayer(); // updates view (GameScene) // This ought to be done in updateView(), to prevent a race condition.
         // in the MultiplayerSceneSelection, the view is updated in either the deleteRemovedPlayer() or
         // processPacketAsClient() methods, for host and clients respectively.
     }
@@ -200,11 +200,11 @@ public abstract class Player {
         cannon.relocate(x,y,playerData.getCannonAnimationFrame());
     }
     public void relocateCharacter(double x, double y){
-        character.relocate(x,y);
+        character.relocate(x,y,playerData.getCharacterAnimationFrame());
     }
     public void setScale(double scaleFactor){
         cannon.setScale(scaleFactor, playerData.getCannonAnimationFrame());
-        character.setScale(scaleFactor);
+        character.setScale(scaleFactor, playerData.getCharacterEnum(),playerData.getCharacterAnimationFrame());
     }
 
     // Called every frame by the host to update a player's data according to a packet received over the network
@@ -222,7 +222,7 @@ public abstract class Player {
         }
         if(newPlayerData.isCharacterChanged()){
             playerData.changeCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view //todo: update the view in a different method
+            character.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged()){
             playerData.changeDefeated(newPlayerData.getDefeated()); //updates model
@@ -270,7 +270,7 @@ public abstract class Player {
         }
         if(newPlayerData.isCharacterChanged() && !playerData.isCharacterChanged()){
             playerData.setCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum()); //updates view //todo: update the view in a different method
+            character.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged() && !playerData.isDefeatedChanged()){
             playerData.setDefeated(newPlayerData.getDefeated()); //updates model
