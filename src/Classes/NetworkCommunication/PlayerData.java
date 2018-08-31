@@ -4,12 +4,12 @@ import Classes.Images.CannonImages;
 import Classes.Images.CharacterImages;
 import Classes.Animation.OrbImages;
 import Classes.Orb;
-import Classes.PlayerTypes.Player;
 
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Random;
 
 import static Classes.Orb.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_X_POS;
@@ -35,7 +35,7 @@ public class PlayerData implements Serializable {
     private Queue<Orb> firedOrbs = new LinkedList<>();
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
-    private Player.CharacterAnimationState characterAnimationState = Player.CharacterAnimationState.CONTENT;
+    private CharacterImages.CharacterAnimationState characterAnimationState = CharacterImages.CharacterAnimationState.CONTENT;
     private int animationFrame = 0;
 
     // Flags indicating changes to playerData:
@@ -372,21 +372,29 @@ public class PlayerData implements Serializable {
         }
     }
 
-    // lowestRow is the index of the lowest Orb on this Player's PlayPanel.
+    // lowestRow is the index of the lowest Orb on this Player's PlayPanel this frame.
     //    Lowest possible value: -1 if there aren't any Orbs
     //    Highest possible value: ARRAY_HEIGHT , if there's an orb on the deathOrbs list.
-    public void tick(int lowestRow){
-        // determine which animation state we should be in:
-        if(characterAnimationState.inRange(lowestRow)); // stay in the same state
+    public void tick(int lowestRow, Random miscRandomGenerator){
+        // determine which animation state we should be in, and increment animationFrame:
+        if(characterAnimationState.inRange(lowestRow)){
+            animationFrame++;
+            int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
+            if(bounds[1] == animationFrame) animationFrame = bounds[0];
+        }
         else{
-            for(Player.CharacterAnimationState state : Player.CharacterAnimationState.values()){
+            for(CharacterImages.CharacterAnimationState state : CharacterImages.CharacterAnimationState.values()){
                 if(state.inRange(lowestRow)){
                     characterAnimationState = state;
-                    System.out.println("new state: " + state);
-                    // todo: set the animation frame to a random frame in this state.
+                    int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
+                    animationFrame = miscRandomGenerator.nextInt(bounds[1]-bounds[0]) + bounds[0];
+                    //System.out.println("new state: " + state + " animation bounds: " + bounds[0] + ", " + bounds[1]);
+                    //System.out.println("new animationFrame: " + animationFrame);
+                    break;
                 }
             }
         }
+        //System.out.println("current animation frame: " + animationFrame);
         //Note to self: DO NOT update the character view here. Remember that we're not in the JavaFX application thread.
     }
 }

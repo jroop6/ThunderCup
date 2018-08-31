@@ -51,19 +51,6 @@ public abstract class Player {
     private int seed;
     private Random ammunitionGenerator;
 
-    // Character animation control:
-    public enum CharacterAnimationState{VICTORY(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEAT(20, 20), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
-        private int upperTriggerHeight;
-        private int lowerTriggerHeight;
-        CharacterAnimationState(int upperTriggerHeight, int lowerTriggerHeight){
-            this.upperTriggerHeight = upperTriggerHeight;
-            this.lowerTriggerHeight = lowerTriggerHeight;
-        }
-        public boolean inRange(int index){
-            return index>=upperTriggerHeight && index <= lowerTriggerHeight;
-        }
-    }
-
     // initialize the username Button, latency Label, ComboBox, and eventHandlers for changing cannon/character:
     public Player(){
         usernameButton = new Button();

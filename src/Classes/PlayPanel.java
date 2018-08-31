@@ -267,7 +267,7 @@ public class PlayPanel extends Pane {
         // update each player's animation state:
         int lowestRow = playPanelData.getLowestOccupiedRow(orbArray, deathOrbs);
         for(Player player : playerList){
-            player.getPlayerData().tick(lowestRow);
+            player.getPlayerData().tick(lowestRow, miscRandomGenerator);
         }
 
         removeStrayOrbs();
