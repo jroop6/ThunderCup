@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Animation.Sprite;
 import Classes.Images.CannonImages;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.scene.effect.ColorAdjust;

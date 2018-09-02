@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Images.ButtonImages;
-import Classes.Images.CharacterImages;
+import Classes.Animation.CharacterAnimations;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
@@ -586,7 +586,7 @@ public class MultiplayerSelectionScene extends Scene {
                     ((HostConnectionManager)connectionManager).addOpenSlot();
                     break;
                 case ADD_BOT:
-                    playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterImages.FILLY_BOT_MEDIUM),isHost));
+                    playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterAnimations.FILLY_BOT_MEDIUM),isHost));
                     break;
                 case START:
                     // Todo: check whether there are any unclaimed open spots before starting the game.

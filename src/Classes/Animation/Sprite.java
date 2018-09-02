@@ -1,11 +1,9 @@
-package Classes;
+package Classes.Animation;
 
-import javafx.geometry.Bounds;
 import javafx.scene.image.ImageView;
 
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
-import javafx.scene.transform.Translate;
 
 /**
  * A class that provides an ImageView wrapper for a SpriteSheet and convenience methods for updating which frame of the
@@ -13,9 +11,9 @@ import javafx.scene.transform.Translate;
  */
 public class Sprite extends ImageView{
     // note to future self: DON'T store currentFrame in this class. Use classes like Orb, Character, and Cannon to do that.
-    // why? recall that Orb does not have a Sprite - only a SpriteSheet. To keep things consistent, put frame management
+    // Why? recall that Orb does not have a Sprite - only a SpriteSheet. To keep things consistent, put frame management
     // into those classes. Also, objects might have multiple animations that will be easier to manage from those higher-
-    // level classes.
+    // level classes. For example, Orbs have separate electrification and explosion animations.
     private SpriteSheet spriteSheet;
     private Rotate rotater = new Rotate();
     private Scale scaler = new Scale();

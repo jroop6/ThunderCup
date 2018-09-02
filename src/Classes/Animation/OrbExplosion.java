@@ -1,7 +1,6 @@
 package Classes.Animation;
 
 import Classes.GameSettings;
-import Classes.SpriteSheet;
 
 public enum OrbExplosion {
     EXPLOSION_1("res/images/orbs/highRes/OrbExplosion_spritesheet.png", "res/images/orbs/lowRes/null_spritesheet.png");

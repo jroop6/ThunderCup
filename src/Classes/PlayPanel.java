@@ -1,8 +1,9 @@
 package Classes;
 
 import Classes.Animation.MiscAnimations;
+import Classes.Animation.VisualFlourish;
 import Classes.Audio.SoundEffect;
-import Classes.Animation.OrbImages;
+import Classes.Animation.OrbAnimations;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
@@ -753,9 +754,9 @@ public class PlayPanel extends Pane {
     }
 
     // todo: this is horribly inefficient. Can I make it faster? It is somewhat amortized, though...
-    public OrbImages getNextShooterOrbEnum(double randomNumber){
+    public OrbAnimations getNextShooterOrbEnum(double randomNumber){
         // Count the number of each type of orb in the orbArray.
-        LinkedHashMap<OrbImages,Double> counts = new LinkedHashMap<>();
+        LinkedHashMap<OrbAnimations,Double> counts = new LinkedHashMap<>();
         Orb[][] orbArray = playPanelData.getOrbArray();
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
@@ -775,13 +776,13 @@ public class PlayPanel extends Pane {
             total += amount;
         }
         double cumulativeSum = 0.0;
-        for(OrbImages orbImage : counts.keySet()){
+        for(OrbAnimations orbImage : counts.keySet()){
             cumulativeSum += counts.get(orbImage);
             counts.replace(orbImage, cumulativeSum/total);
         }
 
-        OrbImages chosenEnum = OrbImages.BLACK_ORB; // initializing to make the compiler happy.
-        for(OrbImages orbImage : counts.keySet()){
+        OrbAnimations chosenEnum = OrbAnimations.BLACK_ORB; // initializing to make the compiler happy.
+        for(OrbAnimations orbImage : counts.keySet()){
             if(randomNumber<counts.get(orbImage)){
                 chosenEnum = orbImage;
                 break;

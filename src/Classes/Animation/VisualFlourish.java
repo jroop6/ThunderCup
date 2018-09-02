@@ -1,6 +1,5 @@
-package Classes;
+package Classes.Animation;
 
-import Classes.Animation.MiscAnimations;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.io.Serializable;

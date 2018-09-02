@@ -11,7 +11,7 @@ public class RemotePlayer extends Player {
     public RemotePlayer(PlayerData playerData){
         this.playerData = playerData;
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData);
+        this.character = new Character(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }

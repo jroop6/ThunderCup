@@ -1,15 +1,14 @@
-package Classes.Images;
+package Classes.Animation;
 import Classes.PlayerTypes.BotPlayer;
-import Classes.SpriteSheet;
 
 /**
  * Created by Jonathan Roop on 8/1/2017.
  */
-public enum CharacterImages {
+public enum CharacterAnimations {
 
     // About the animationIndexBound array:
     // Each index is an "exclusive" bound of one of the character's animations. The index of the last frame of the
-    // corresponding animation is 1 less. The animations correspond to the CharacterImages.CharacterAnimationState enums
+    // corresponding animation is 1 less. The animations correspond to the CharacterAnimations.CharacterAnimationState enums
     // (see below). Therefore, the length of the array must match Player.CharacterAnimationState.values().length. The
     // numbers must be increasing, due to assumptions made in getAnimationBounds().
 
@@ -27,7 +26,7 @@ public enum CharacterImages {
     private BotPlayer.Difficulty botDifficulty;
     private int[] animationIndexBound;
 
-    CharacterImages(String url, boolean playable, BotPlayer.Difficulty botDifficulty, int[] animationIndexBound){
+    CharacterAnimations(String url, boolean playable, BotPlayer.Difficulty botDifficulty, int[] animationIndexBound){
         spriteSheet = new SpriteSheet(url);
         this.playable = playable;
         this.botDifficulty = botDifficulty;
@@ -52,7 +51,7 @@ public enum CharacterImages {
     }
 
     // Retrieves the next Character in the enumeration.
-    public CharacterImages next(){
+    public CharacterAnimations next(){
         return values()[(this.ordinal()+1) % values().length];
     }
 

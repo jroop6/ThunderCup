@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Animation.OrbImages;
+import Classes.Animation.OrbAnimations;
 import Classes.Images.StaticBgImages;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Point2D;
@@ -32,7 +32,7 @@ import static Classes.PlayPanel.ROW_HEIGHT;
 
 public class PuzzleCreatorScene extends Scene {
 
-    private final Orb EMPTY = new Orb(OrbImages.BLACK_ORB,-2,-2,Orb.BubbleAnimationType.STATIC);
+    private final Orb EMPTY = new Orb(OrbAnimations.BLACK_ORB,-2,-2,Orb.BubbleAnimationType.STATIC);
     private long nextAnimationFrameInstance = 0;
     private boolean initializing = false;
     private Scale scaler = new Scale(1,1);
@@ -92,13 +92,13 @@ public class PuzzleCreatorScene extends Scene {
 
             // Change the OrbImage enum:
             if(orbArray[iPos][jPos]==EMPTY){
-                OrbImages newEnum;
-                if(event.isPrimaryButtonDown()) newEnum = OrbImages.values()[0]; // left-click
-                else newEnum = OrbImages.values()[OrbImages.values().length-1]; // right-click
+                OrbAnimations newEnum;
+                if(event.isPrimaryButtonDown()) newEnum = OrbAnimations.values()[0]; // left-click
+                else newEnum = OrbAnimations.values()[OrbAnimations.values().length-1]; // right-click
                 orbArray[iPos][jPos] = new Orb(newEnum,iPos,jPos,Orb.BubbleAnimationType.STATIC);
             }
             else if(orbArray[iPos][jPos] != NULL){
-                OrbImages newEnum;
+                OrbAnimations newEnum;
                 if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbEnum().next(); // left-click
                 else newEnum = orbArray[iPos][jPos].getOrbEnum().previous(); // right-click
                 if(newEnum == null) orbArray[iPos][jPos] = EMPTY;

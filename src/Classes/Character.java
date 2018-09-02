@@ -1,6 +1,7 @@
 package Classes;
 
-import Classes.Images.CharacterImages;
+import Classes.Animation.CharacterAnimations;
+import Classes.Animation.Sprite;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.geometry.Point2D;
 import javafx.scene.effect.ColorAdjust;
@@ -14,8 +15,8 @@ public class Character {
     private Scale scaler = new Scale();
 
     // Initialize with a static display of the character:
-    public Character(PlayerData playerData){
-        sprite = new Sprite(playerData.getCharacterEnum().getSpriteSheet());
+    public Character(CharacterAnimations characterEnum){
+        sprite = new Sprite(characterEnum.getSpriteSheet());
         sprite.getTransforms().add(scaler);
     }
 
@@ -23,7 +24,7 @@ public class Character {
         sprite.relocate(x,y, currentFrame);
     }
 
-    public void setScale(double scaleFactor, CharacterImages characterEnum, int currentFrame){
+    public void setScale(double scaleFactor, CharacterAnimations characterEnum, int currentFrame){
         Point2D anchorPoint = characterEnum.getSpriteSheet().getFrameBound(currentFrame).getAnchorPoint();
         scaler.setPivotX(anchorPoint.getX());
         scaler.setPivotY(anchorPoint.getY());
@@ -31,7 +32,7 @@ public class Character {
         scaler.setY(scaleFactor);
     }
 
-    public void setCharacterEnum(CharacterImages characterEnum, int currentFrame){
+    public void setCharacterEnum(CharacterAnimations characterEnum, int currentFrame){
         double scale = scaler.getX();
         setScale(1.0, characterEnum, currentFrame); // undo any scaling
         sprite.setSpriteSheet(characterEnum.getSpriteSheet());

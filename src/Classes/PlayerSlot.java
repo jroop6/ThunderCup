@@ -41,7 +41,7 @@ public class PlayerSlot extends StackPane{
         ImageView background = StaticBgImages.PLAYER_SLOT_BACKGROUND.getImageView();
         getChildren().add(background);
 
-        // Add CharacterImages and cannon images. They are placed on a Pane for more control over positioning:
+        // Add CharacterAnimations and cannon images. They are placed on a Pane for more control over positioning:
         Pane characterAndCannonPositioner = new Pane();
         characterAndCannonPositioner.getChildren().addAll(player.getCharacterSprite() , player.getCannonMovingPart());
         /*player.relocateCharacter(CHARACTER_X-player.getPlayerData().getCharacterEnum().getHoovesX(),

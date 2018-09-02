@@ -1,9 +1,9 @@
 package Classes.NetworkCommunication;
 
-import Classes.Animation.OrbImages;
+import Classes.Animation.OrbAnimations;
 import Classes.Orb;
 import Classes.PointInt;
-import Classes.VisualFlourish;
+import Classes.Animation.VisualFlourish;
 
 import java.io.*;
 import java.util.*;
@@ -680,14 +680,14 @@ public class PlayPanelData implements Serializable {
         if(puzzleUrl.substring(0,6).equals("RANDOM")){
             int rows = Integer.parseInt(puzzleUrl.substring(7));
             if(rows>19) rows = 19;
-            int orbEnumBound = OrbImages.values().length;
-            OrbImages[] orbImages = OrbImages.values();
+            int orbEnumBound = OrbAnimations.values().length;
+            OrbAnimations[] orbImages = OrbAnimations.values();
 
             for(int i=0; i<rows; ++i){
                 for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                     if(j%2==i%2){
                         int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
-                        OrbImages orbImage = orbImages[randomOrdinal];
+                        OrbAnimations orbImage = orbImages[randomOrdinal];
                         orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
                     }
                     else orbArray[i][j] = NULL;
@@ -715,7 +715,7 @@ public class PlayPanelData implements Serializable {
                     //System.out.println("line is " + line);
                     for (j=0; j<line.length() && j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
                         char orbSymbol = line.charAt(j);
-                        OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol(orbSymbol);
+                        OrbAnimations orbEnum = OrbAnimations.lookupOrbImageBySymbol(orbSymbol);
                         if(orbEnum==null) orbArray[i][j] = NULL;
                         else orbArray[i][j] = new Orb(orbEnum,i,j,Orb.BubbleAnimationType.STATIC);
                     }
@@ -778,12 +778,12 @@ public class PlayPanelData implements Serializable {
 
         // finally, add the new row
         i = 0;
-        int orbEnumBound = OrbImages.values().length;
-        OrbImages[] orbImages = OrbImages.values();
+        int orbEnumBound = OrbAnimations.values().length;
+        OrbAnimations[] orbImages = OrbAnimations.values();
         for(int j=0; j<orbArray[i].length; j++){
             if(j%2==newRowOffset){
                 int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
-                OrbImages orbImage = orbImages[randomOrdinal];
+                OrbAnimations orbImage = orbImages[randomOrdinal];
                 orbArray[i][j] = new Orb(orbImage,i,j,Orb.BubbleAnimationType.STATIC);
             }
             else orbArray[i][j] = NULL;

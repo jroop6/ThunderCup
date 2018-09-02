@@ -1,11 +1,11 @@
 package Classes.PlayerTypes;
 
 import Classes.*;
-import Classes.Animation.OrbImages;
+import Classes.Animation.OrbAnimations;
 import Classes.Audio.SoundEffect;
 import Classes.Character;
 import Classes.Images.CannonImages;
-import Classes.Images.CharacterImages;
+import Classes.Animation.CharacterAnimations;
 import Classes.NetworkCommunication.PlayerData;
 
 import java.util.*;
@@ -38,7 +38,7 @@ public class BotPlayer extends Player {
     // Misc, for debugging
     private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
 
-    public BotPlayer(CharacterImages characterEnum){
+    public BotPlayer(CharacterAnimations characterEnum){
         // create a (probably) unique player ID:
         long playerID;
         do{
@@ -54,7 +54,7 @@ public class BotPlayer extends Player {
 
         // initialize views:
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData);
+        this.character = new Character(playerData.getCharacterEnum());
         character.setCharacterEnum(characterEnum, playerData.getCannonAnimationFrame()); // character initializes with a default player, so change it to a bot, here.
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
@@ -278,7 +278,7 @@ public class BotPlayer extends Player {
                 /*-- Simulate the outcome if we were to fire at this angle --*/
 
                 // Create a hypothetical shooter orb for the simulated shot:
-                OrbImages currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
+                OrbAnimations currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbEnum();
                 Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0,Orb.BubbleAnimationType.STATIC);
                 hypotheticalOrb.setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos());
                 hypotheticalOrb.setYPos(CANNON_Y_POS);

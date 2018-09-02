@@ -1,7 +1,5 @@
 package Classes.Animation;
 
-import Classes.SpriteSheet;
-
 public enum OrbElectrification {
 
     ELECTRIFICATION_1("res/images/orbs/highRes/OrbElectrification_spritesheet.png");

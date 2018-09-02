@@ -3,7 +3,7 @@ package Classes;
 import Classes.Audio.SoundEffect;
 import Classes.Animation.OrbElectrification;
 import Classes.Animation.OrbExplosion;
-import Classes.Animation.OrbImages;
+import Classes.Animation.OrbAnimations;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -19,7 +19,7 @@ import static Classes.GameScene.FRAME_RATE;
  * Created by HydrusBeta on 8/16/2017.
  */
 public class Orb extends PointInt implements Serializable{
-    private OrbImages orbEnum;
+    private OrbAnimations orbEnum;
     private OrbElectrification orbElectrification; // enum used for displaying electrification animation.
     private OrbExplosion orbExplosion; // enum used for displaying burst animation.
     private SoundEffect orbThunder; // enum used for displaying thunder animation.
@@ -30,12 +30,12 @@ public class Orb extends PointInt implements Serializable{
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
-    public static final Orb WALL = new Orb(OrbImages.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
-    public static final Orb CEILING = new Orb(OrbImages.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
+    public static final Orb WALL = new Orb(OrbAnimations.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
+    public static final Orb CEILING = new Orb(OrbAnimations.BLACK_ORB,0,0, BubbleAnimationType.STATIC);
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbImage because we only have 1 instance of this orb instead of literally hundreds.
-    public static final Orb NULL = new Orb(OrbImages.BLACK_ORB, -1, -1, BubbleAnimationType.STATIC);
+    public static final Orb NULL = new Orb(OrbAnimations.BLACK_ORB, -1, -1, BubbleAnimationType.STATIC);
 
     // Cached constant for better performance:
     private static final double ROOT3 = Math.sqrt(3.0);
@@ -55,7 +55,7 @@ public class Orb extends PointInt implements Serializable{
     private long timeStamp; // how many nanoseconds have passed since the previous packet was sent from the client.
 
 
-    public Orb(OrbImages orbEnum, int iPos, int jPos, BubbleAnimationType animationEnum){
+    public Orb(OrbAnimations orbEnum, int iPos, int jPos, BubbleAnimationType animationEnum){
         super(iPos, jPos);
         this.orbEnum = orbEnum;
         setIJ(iPos, jPos);
@@ -139,7 +139,7 @@ public class Orb extends PointInt implements Serializable{
     public void computeTimeStamp(long timeLastPacketSent){
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
-    public void setOrbEnum(OrbImages orbEnum){
+    public void setOrbEnum(OrbAnimations orbEnum){
         this.orbEnum = orbEnum;
     }
 
@@ -164,7 +164,7 @@ public class Orb extends PointInt implements Serializable{
     public BubbleAnimationType getAnimationEnum(){
         return animationEnum;
     }
-    public OrbImages getOrbEnum(){
+    public OrbAnimations getOrbEnum(){
         return orbEnum;
     }
     public OrbElectrification getOrbElectrification(){

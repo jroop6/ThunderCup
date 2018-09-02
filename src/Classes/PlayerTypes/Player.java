@@ -1,10 +1,11 @@
 package Classes.PlayerTypes;
 
 import Classes.*;
+import Classes.Animation.Sprite;
 import Classes.Character;
 import Classes.Images.CannonImages;
-import Classes.Images.CharacterImages;
-import Classes.Animation.OrbImages;
+import Classes.Animation.CharacterAnimations;
+import Classes.Animation.OrbAnimations;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
@@ -20,8 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
-
-import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
 
 
 /**
@@ -107,7 +106,7 @@ public abstract class Player {
     }
 
     private void incrementCharacterEnum(){
-        CharacterImages nextType = playerData.getCharacterEnum().next();
+        CharacterAnimations nextType = playerData.getCharacterEnum().next();
         if (this instanceof LocalPlayer){
             while(!nextType.isPlayable()){
                 nextType = nextType.next();
@@ -180,7 +179,7 @@ public abstract class Player {
 
     private void setFireCannon(){
         if(playerData.getDefeated()) return;
-        OrbImages newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        OrbAnimations newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
         playerData.setFire(newShooterOrbEnum); // updates Player model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
         // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
@@ -188,7 +187,7 @@ public abstract class Player {
 
     public void changeFireCannon(){
         if(playerData.getCannonDisabled()) return;
-        OrbImages newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        OrbAnimations newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
         Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), newShooterOrbEnum); // updates Player model
         Queue<Orb> firedOrbList = new LinkedList<>();
         firedOrbList.add(firedOrb);
@@ -350,7 +349,7 @@ public abstract class Player {
                 int nextOrbSymbol;
                 int temp = 0;
                 while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n' && nextOrbSymbol!='\r'){
-                    OrbImages orbEnum = OrbImages.lookupOrbImageBySymbol((char)nextOrbSymbol);
+                    OrbAnimations orbEnum = OrbAnimations.lookupOrbImageBySymbol((char)nextOrbSymbol);
                     if(orbEnum==null){
                         System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");
                         continue;
@@ -367,8 +366,8 @@ public abstract class Player {
         // Add random Orbs to the ammunitionOrbs Queue after that:
         while(ammunitionOrbs.size()<2){
             System.out.println();
-            int randomOrdinal = ammunitionGenerator.nextInt(OrbImages.values().length);
-            OrbImages orbImage = OrbImages.values()[randomOrdinal];
+            int randomOrdinal = ammunitionGenerator.nextInt(OrbAnimations.values().length);
+            OrbAnimations orbImage = OrbAnimations.values()[randomOrdinal];
             ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
             // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
         }

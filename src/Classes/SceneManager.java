@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
-import Classes.Images.CharacterImages;
+import Classes.Animation.CharacterAnimations;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
 import Classes.PlayerTypes.BotPlayer;
@@ -166,7 +166,7 @@ public class SceneManager extends Application {
         // add a player and a bot, each with the same puzzle:
         List<Player> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
-        BotPlayer botPlayer = new BotPlayer(CharacterImages.FILLY_BOT_HARD);
+        BotPlayer botPlayer = new BotPlayer(CharacterAnimations.FILLY_BOT_HARD);
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 

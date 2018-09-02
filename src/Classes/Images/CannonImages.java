@@ -1,6 +1,6 @@
 package Classes.Images;
 
-import Classes.SpriteSheet;
+import Classes.Animation.SpriteSheet;
 
 public enum CannonImages {
     BASIC_CANNON("res/animations/cannons/BasicCannon_spritesheet.png","res/animations/cannons/BasicCannonBackground_spritesheet.png","res/animations/cannons/BasicCannonForeground_spritesheet.png", 123.0, 1050.0, 135.0, 32.0, true),

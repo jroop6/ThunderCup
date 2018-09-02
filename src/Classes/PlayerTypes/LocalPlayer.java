@@ -28,7 +28,7 @@ public class LocalPlayer extends Player {
 
         // Initialize the "views" (playerData will specify a default character and cannon):
         cannon = new Cannon(playerData);
-        character = new Character(playerData);
+        character = new Character(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }

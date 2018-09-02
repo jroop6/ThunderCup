@@ -1,15 +1,20 @@
 package Classes.Animation;
-import Classes.Sprite;
 
 public class PngSequencePlayer extends Sprite {
 
     int currentFrame = 0;
-    LoopBehavior loopBehavior = LoopBehavior.PLAY_ONCE;
+    LoopBehavior loopBehavior;
     int maxFrame;
 
-    public PngSequencePlayer(MiscAnimations animationEnum){
+    public PngSequencePlayer(MiscAnimations animationEnum, LoopBehavior loopBehavior){
         super(animationEnum.getSpriteSheet());
+        this.loopBehavior = loopBehavior;
         maxFrame = animationEnum.getSpriteSheet().getMaxFrameIndex();
+    }
+
+
+    public PngSequencePlayer(MiscAnimations animationEnum){
+        this(animationEnum, LoopBehavior.PLAY_ONCE);
     }
 
     public void incrementFrame(){

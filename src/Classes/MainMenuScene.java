@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Animation.CharacterAnimations;
 import Classes.Animation.MiscAnimations;
 import Classes.Animation.PngSequencePlayer;
 import Classes.Audio.SoundManager;
@@ -93,7 +94,7 @@ public class MainMenuScene extends Scene {
         // Add the foreground cloud and character:
         ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
-        Character character = new Character(new PlayerData("temp",0));
+        Character character = new Character(CharacterAnimations.BLITZ);
         character.getSprite().relocate(550,850,0);
         scaledRoot.getChildren().addAll(nearCloud,character.getSprite());
 

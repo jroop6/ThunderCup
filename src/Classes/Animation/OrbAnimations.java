@@ -1,11 +1,9 @@
 package Classes.Animation;
 
-import Classes.SpriteSheet;
-
 /**
  * Note: Orbs are assumed to be 46 pixels in diameter. This cannot easily be changed.
  */
-public enum OrbImages {
+public enum OrbAnimations {
     RED_ORB("res/images/orbs/highRes/redOrb_spritesheet.png", 720.0, 'R'),
     GREEN_ORB("res/images/orbs/highRes/greenOrb_spritesheet.png", 720.0, 'G'),
     BLUE_ORB("res/images/orbs/highRes/blueOrb_spritesheet.png", 720.0, 'B'),
@@ -17,7 +15,7 @@ public enum OrbImages {
     private double orbSpeed; // pixels per second
     private char symbol; // Symbol used to specify this type of Orb in a puzzle file or ammunition file.
 
-    OrbImages(String spriteSheetURL, double orbSpeed, char symbol){
+    OrbAnimations(String spriteSheetURL, double orbSpeed, char symbol){
         spriteSheet = new SpriteSheet(spriteSheetURL);
         this.orbSpeed = orbSpeed;
         this.symbol = symbol;
@@ -33,21 +31,21 @@ public enum OrbImages {
         return symbol;
     }
 
-    public static OrbImages lookupOrbImageBySymbol(char symbol){
-        for(OrbImages orbImage: values()){
+    public static OrbAnimations lookupOrbImageBySymbol(char symbol){
+        for(OrbAnimations orbImage: values()){
             if(orbImage.getSymbol()==symbol) return orbImage;
         }
         return null;
     }
 
     // Retrieves the next orb in the enumeration, or null if the end of the enumeration has been reached.
-    public OrbImages next(){
+    public OrbAnimations next(){
         if(this.ordinal()+1==values().length) return null;
         else return values()[(this.ordinal()+1)];
     }
 
     // Retrieves the previous orb in the enumeration, or null if the beginning of the enumeration has been reached.
-    public OrbImages previous(){
+    public OrbAnimations previous(){
         if(this.ordinal()==0) return null;
         else return values()[(this.ordinal()-1)];
     }

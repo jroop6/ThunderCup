@@ -1,8 +1,8 @@
 package Classes.NetworkCommunication;
 
 import Classes.Images.CannonImages;
-import Classes.Images.CharacterImages;
-import Classes.Animation.OrbImages;
+import Classes.Animation.CharacterAnimations;
+import Classes.Animation.OrbAnimations;
 import Classes.Orb;
 
 import java.io.Serializable;
@@ -27,7 +27,7 @@ public class PlayerData implements Serializable {
     private final long playerID;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private String username;
-    private CharacterImages characterEnum;
+    private CharacterAnimations characterEnum;
     private int characterAnimationFrame;
     private CannonImages cannonEnum;
     private int team;
@@ -37,7 +37,7 @@ public class PlayerData implements Serializable {
     private Queue<Orb> firedOrbs = new LinkedList<>();
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
-    private CharacterImages.CharacterAnimationState characterAnimationState = CharacterImages.CharacterAnimationState.CONTENT;
+    private CharacterAnimations.CharacterAnimationState characterAnimationState = CharacterAnimations.CharacterAnimationState.CONTENT;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -63,12 +63,12 @@ public class PlayerData implements Serializable {
         this.username = username;
         this.playerID = playerID;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
-            characterEnum = CharacterImages.UNKNOWN_CHARACTER;
+            characterEnum = CharacterAnimations.UNKNOWN_CHARACTER;
             cannonEnum = CannonImages.UNKNOWN_CANNON;
             team = 0;
         }
         else{ // Otherwise, assign the player the default character and cannon:
-            characterEnum = CharacterImages.BLITZ;
+            characterEnum = CharacterAnimations.BLITZ;
             cannonEnum = CannonImages.BASIC_CANNON;
             team = 1;
         }
@@ -140,7 +140,7 @@ public class PlayerData implements Serializable {
         this.username = username;
         usernameChanged = true;
     }
-    public void changeCharacter(CharacterImages characterEnum){
+    public void changeCharacter(CharacterAnimations characterEnum){
         this.characterEnum = characterEnum;
         characterChanged = true;
     }
@@ -168,7 +168,7 @@ public class PlayerData implements Serializable {
         ammunitionOrbs.add(newOrb);
         ammunitionOrbsChanged = true;
     }
-    public Orb changeFire(double angle, OrbImages newEnum){
+    public Orb changeFire(double angle, OrbAnimations newEnum){
         // Remove the first ammunition orb and fire it
         Orb firedOrb = ammunitionOrbs.remove(0);
         firedOrb.setRawTimestamp(System.nanoTime());
@@ -209,7 +209,7 @@ public class PlayerData implements Serializable {
         this.ammunitionOrbsChanged = ammunitionOrbsChanged;
     }
 
-    public void setFire(OrbImages newEnum){
+    public void setFire(OrbAnimations newEnum){
         ammunitionOrbs.remove(0);
 
         // Add a new ammunition orb to the end of the list
@@ -223,7 +223,7 @@ public class PlayerData implements Serializable {
     public void setUsername(String username){
         this.username = username;
     }
-    public void setCharacter(CharacterImages characterEnum){
+    public void setCharacter(CharacterAnimations characterEnum){
         this.characterEnum = characterEnum;
     }
     public void setCannon(CannonImages cannonEnum){
@@ -317,7 +317,7 @@ public class PlayerData implements Serializable {
     public int getPlayerPos() {
         return playerPos;
     }
-    public CharacterImages getCharacterEnum(){
+    public CharacterAnimations getCharacterEnum(){
         return characterEnum;
     }
     public int getCharacterAnimationFrame(){
@@ -394,7 +394,7 @@ public class PlayerData implements Serializable {
             if(bounds[1] == characterAnimationFrame) characterAnimationFrame = bounds[0];
         }
         else{
-            for(CharacterImages.CharacterAnimationState state : CharacterImages.CharacterAnimationState.values()){
+            for(CharacterAnimations.CharacterAnimationState state : CharacterAnimations.CharacterAnimationState.values()){
                 if(state.inRange(lowestRow)){
                     characterAnimationState = state;
                     int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);

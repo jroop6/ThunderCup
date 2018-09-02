@@ -13,7 +13,7 @@ public class UnclaimedPlayer extends Player {
     public UnclaimedPlayer(){
         this.playerData = new PlayerData("Open Slot",-1);
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData);
+        this.character = new Character(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
     }
 
