@@ -41,7 +41,7 @@ public class VisualFlourish implements Serializable {
     }
 
     public void drawSelf(GraphicsContext orbDrawer){
-        int err= animationEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos, currentFrame);
+        int err= animationEnum.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos, currentFrame);
         if(err!=0) System.err.println("visualFlourish");
     }
 

@@ -239,23 +239,23 @@ public class Orb extends PointInt implements Serializable{
             case STATIC:
             case DROPPING:
             case IMPLODING:
-                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbEnum.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 if(err!=0) System.err.println("imploding");
                 break;
             case BURSTING:
-                err = orbExplosion.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbExplosion.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 if(err!=0) System.err.println("bursting");
                 break;
             case ELECTRIFYING:
-                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbEnum.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 if(err!=0) System.err.println("electrifying - orbEnum");
-                err = orbElectrification.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
+                err = orbElectrification.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
                 if(err!=0) System.err.println("electrifying - orbElectrification");
                 break;
             case TRANSFERRING:
                 // draw the orb at 50% transparency:
                 orbDrawer.setGlobalAlpha(0.5);
-                err = orbEnum.getSpriteSheet().drawSprite(orbDrawer, xPos, yPos + vibrationOffset, 0);
+                err = orbEnum.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, 0);
                 if(err!=0) System.err.println("transferring");
                 orbDrawer.setGlobalAlpha(1.0);
                 // draw an outline that shows how much time is left before the transfer is complete:
