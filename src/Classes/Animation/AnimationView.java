@@ -1,6 +1,7 @@
 package Classes.Animation;
 
-public abstract class AnimationView {
-    public abstract int drawFrame(AnimationData animationData);
-    public abstract void setScale(double scale);
+/** Note: I don't think this interface will be used, after all.  See notes in AnimationManager */
+public interface AnimationView {
+    int drawFrame(AnimationData animationData);
+    void setScale(double scale);
 }

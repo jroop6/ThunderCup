@@ -6,7 +6,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.effect.Effect;
 
-public class GraphicsContextSprite extends AnimationView {
+/** Note: I don't think this class will be used, after all.  See notes in AnimationManager*/
+public class GraphicsContextSprite implements AnimationView {
     GraphicsContext graphicsContext;
     public GraphicsContextSprite(GraphicsContext graphicsContext){
         this.graphicsContext = graphicsContext;
@@ -14,7 +15,7 @@ public class GraphicsContextSprite extends AnimationView {
 
     // todo: take scale into account
     public int drawFrame(AnimationData animationData){
-        if(animationData.getVisibility() == AnimationData.Visibility.INVISIBLE) return 0;
+        if(animationData.getVisibility() == VisibilityOption.INVISIBLE) return 0;
 
         // Save the existing effect:
         Effect previousEffect = graphicsContext.getEffect(new ColorAdjust());
@@ -35,7 +36,7 @@ public class GraphicsContextSprite extends AnimationView {
         }
 
         // Draw the sprite:
-        animationData.currentAnimation.getSpriteSheet().drawFrame(graphicsContext, animationData.getAnchorX(), animationData.getAnchorY(), animationData.getFrame());
+        animationData.getAnimation().getSpriteSheet().drawFrame(graphicsContext, animationData.getAnchorX(), animationData.getAnchorY(), animationData.getFrame());
 
         // Restore the previous effect:
         graphicsContext.setEffect(previousEffect);

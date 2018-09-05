@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Animation.AnimationManager;
 import Classes.Animation.CharacterAnimations;
 import Classes.Animation.Sprite;
 import Classes.NetworkCommunication.PlayerData;

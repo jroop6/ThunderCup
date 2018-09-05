@@ -1,9 +1,9 @@
 package Classes.NetworkCommunication;
 
+import Classes.Animation.AnimationData;
 import Classes.Animation.OrbAnimations;
 import Classes.Orb;
 import Classes.PointInt;
-import Classes.Animation.VisualFlourish;
 
 import java.io.*;
 import java.util.*;
@@ -33,7 +33,7 @@ public class PlayPanelData implements Serializable {
     private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
     private Set<Orb> transferInOrbs = new HashSet<>(); // orbs to be transferred from other players
     private List<Orb> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
-    private List<VisualFlourish> visualFlourishes = new LinkedList<>();
+    private List<AnimationData> visualFlourishes = new LinkedList<>();
 
     //Todo: make deathOrbs an array with width=PLAYPANLE_WIDTH_PER_PLAYER*numPlayers, for easier lookup by (i,j) coordinates
     private boolean victorious = false;
@@ -161,10 +161,10 @@ public class PlayPanelData implements Serializable {
         return copiedList;
     }
 
-    private List<VisualFlourish> deepCopyVisualFlourishesList(List<VisualFlourish> other){
-        List<VisualFlourish> copiedList = new LinkedList<>();
-        for(VisualFlourish visualFlourish : other){
-            copiedList.add(new VisualFlourish(visualFlourish));
+    private List<AnimationData> deepCopyVisualFlourishesList(List<AnimationData> other){
+        List<AnimationData> copiedList = new LinkedList<>();
+        for(AnimationData visualFlourish : other){
+            copiedList.add(new AnimationData(visualFlourish));
         }
         return copiedList;
     }
@@ -423,7 +423,7 @@ public class PlayPanelData implements Serializable {
     public int getCumulativeShotsFired(){
         return cumulativeShotsFired;
     }
-    public List<VisualFlourish> getVisualFlourishes(){
+    public List<AnimationData> getVisualFlourishes(){
         return visualFlourishes;
     }
 

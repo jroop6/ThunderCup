@@ -1,9 +1,7 @@
 package Classes;
 
+import Classes.Animation.*;
 import Classes.Audio.SoundEffect;
-import Classes.Animation.OrbElectrification;
-import Classes.Animation.OrbExplosion;
-import Classes.Animation.OrbAnimations;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -20,8 +18,8 @@ import static Classes.GameScene.FRAME_RATE;
  */
 public class Orb extends PointInt implements Serializable{
     private OrbAnimations orbEnum;
-    private OrbElectrification orbElectrification; // enum used for displaying electrification animation.
-    private OrbExplosion orbExplosion; // enum used for displaying burst animation.
+    private AnimationData orbElectrification; // enum used for displaying electrification animation.
+    private AnimationData orbExplosion; // enum used for displaying burst animation.
     private SoundEffect orbThunder; // enum used for displaying thunder animation.
     private BubbleAnimationType animationEnum;
     public static final double ORB_RADIUS = 23.0;
@@ -103,7 +101,7 @@ public class Orb extends PointInt implements Serializable{
         switch(animationEnum){
             case BURSTING:
                 // Get a bursting animation Todo: randomize this once I have more than 1 type of animation
-                orbExplosion = OrbExplosion.EXPLOSION_1;
+                orbExplosion = new AnimationData(Animation.EXPLOSION_1);
                 currentFrame = 0;
             case IMPLODING:
                 currentFrame = 0;
@@ -114,7 +112,7 @@ public class Orb extends PointInt implements Serializable{
                 break;
             case ELECTRIFYING:
                 // Get an electrification animation Todo: randomize this once I have more than 1 type of animation
-                orbElectrification = OrbElectrification.ELECTRIFICATION_1;
+                orbElectrification = new AnimationData(Animation.ELECTRIFICATION_1);
                 electrificationAnimationFrame = 0;
                 break;
             case TRANSFERRING:
@@ -167,10 +165,10 @@ public class Orb extends PointInt implements Serializable{
     public OrbAnimations getOrbEnum(){
         return orbEnum;
     }
-    public OrbElectrification getOrbElectrification(){
+    public AnimationData getOrbElectrification(){
         return orbElectrification;
     }
-    public OrbExplosion getOrbExplosion(){
+    public AnimationData getOrbExplosion(){
         return orbExplosion;
     }
     public SoundEffect getOrbThunder(){
@@ -201,13 +199,13 @@ public class Orb extends PointInt implements Serializable{
                 break;
             case BURSTING:
                 currentFrame++;
-                if(currentFrame > orbExplosion.getSpriteSheet().getMaxFrameIndex()){
+                if(currentFrame > orbExplosion.getAnimation().getSpriteSheet().getMaxFrameIndex()){
                     return true;
                 }
                 break;
             case ELECTRIFYING:
                 electrificationAnimationFrame++;
-                if(electrificationAnimationFrame>orbElectrification.getSpriteSheet().getMaxFrameIndex()){
+                if(electrificationAnimationFrame>orbElectrification.getAnimation().getSpriteSheet().getMaxFrameIndex()){
                     setAnimationEnum(BubbleAnimationType.STATIC);
                     return true;
                 }
@@ -243,13 +241,13 @@ public class Orb extends PointInt implements Serializable{
                 if(err!=0) System.err.println("imploding");
                 break;
             case BURSTING:
-                err = orbExplosion.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
+                err = orbExplosion.getAnimation().getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 if(err!=0) System.err.println("bursting");
                 break;
             case ELECTRIFYING:
                 err = orbEnum.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, currentFrame);
                 if(err!=0) System.err.println("electrifying - orbEnum");
-                err = orbElectrification.getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
+                err = orbElectrification.getAnimation().getSpriteSheet().drawFrame(orbDrawer, xPos, yPos + vibrationOffset, electrificationAnimationFrame);
                 if(err!=0) System.err.println("electrifying - orbElectrification");
                 break;
             case TRANSFERRING:

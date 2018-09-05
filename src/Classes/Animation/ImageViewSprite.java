@@ -2,8 +2,8 @@ package Classes.Animation;
 
 import javafx.scene.image.ImageView;
 
-//todo: finish implementing this.
-public class ImageViewSprite extends AnimationView {
+/** Note: I don't think this class will be used, after all. See notes in AnimationManager */
+public class ImageViewSprite implements AnimationView {
     ImageView imageView;
     public ImageViewSprite(ImageView imageView){
         this.imageView = imageView;

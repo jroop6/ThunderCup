@@ -1,12 +1,9 @@
 package Classes;
 
-import Classes.Animation.CharacterAnimations;
-import Classes.Animation.MiscAnimations;
-import Classes.Animation.PngSequencePlayer;
+import Classes.Animation.*;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonImages;
 import Classes.Images.StaticBgImages;
-import Classes.NetworkCommunication.PlayerData;
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
@@ -99,9 +96,9 @@ public class MainMenuScene extends Scene {
         scaledRoot.getChildren().addAll(nearCloud,character.getSprite());
 
         // Add the animated title:
-        PngSequencePlayer title = new PngSequencePlayer(MiscAnimations.TITLE);
-        title.relocate(1920/2,550/2,0);
-        scaledRoot.getChildren().add(title);
+        AnimationData title = new AnimationData(Classes.Animation.Animation.TITLE,1920/2, 550/2, PlayOption.PLAY_ONCE_THEN_PAUSE);
+        ImageView titleView = new ImageView();
+        scaledRoot.getChildren().add(titleView);
 
         // Create buttons and add them to the scene:
         Button puzzleModeButton = createGameChoiceButton(ButtonImages.PUZZLE);
@@ -174,7 +171,8 @@ public class MainMenuScene extends Scene {
 
                 // Animations are updated 24 times per second:
                 if(now>nextAnimationFrameInstance){
-                    title.incrementFrame();
+                    title.tick();
+                    title.drawSelf(titleView);
                     nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
                 }
             }

@@ -1,9 +1,7 @@
 package Classes;
 
-import Classes.Animation.MiscAnimations;
-import Classes.Animation.VisualFlourish;
+import Classes.Animation.*;
 import Classes.Audio.SoundEffect;
-import Classes.Animation.OrbAnimations;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
@@ -170,7 +168,7 @@ public class PlayPanel extends Pane {
         List<Orb> shootingOrbs = playPanelData.getShootingOrbs();
         List<Orb> droppingOrbs = playPanelData.getDroppingOrbs();
         Orb[] deathOrbs = playPanelData.getDeathOrbs();
-        List<VisualFlourish> visualFlourishes = playPanelData.getVisualFlourishes();
+        List<AnimationData> visualFlourishes = playPanelData.getVisualFlourishes();
 
         // New Sets and lists that will be filled via side-effects:
         List<Orb> orbsToDrop = new LinkedList<>(); // Orbs that are no longer connected to the ceiling by the end of this frame
@@ -183,17 +181,17 @@ public class PlayPanel extends Pane {
         simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double) FRAME_RATE);
 
         // Advance the animation frame of the existing visual flourishes:
-        List<VisualFlourish> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
+        List<AnimationData> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
         visualFlourishes.removeAll(flourishesToRemove);
 
         // If orbs were dropped or a sufficient number were burst, add visual flourishes for the orbs to be transferred:
         if(!orbsToDrop.isEmpty() || !orbsToTransfer.isEmpty()){
             soundEffectsToPlay.add(SoundEffect.DROP);
             for(Orb orb : orbsToDrop){
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(),false));
+                visualFlourishes.add(new AnimationData(Animation.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
             for(Orb orb : orbsToTransfer){
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), false));
+                visualFlourishes.add(new AnimationData(Animation.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
         }
 
@@ -642,24 +640,24 @@ public class PlayPanel extends Pane {
     }
 
     // Todo: there are several methods exactly like this one. Can it be reduced to one using generics? Actually, it might require casting outside this method call, so think about it carefully.
-    private List<VisualFlourish> advanceVisualFlourishes(List<VisualFlourish> visualFlourishes){
-        List<VisualFlourish> visualFlourishesToRemove = new LinkedList<>();
-        for(VisualFlourish visualFlourish : visualFlourishes){
-            if(visualFlourish.animationTick()) visualFlourishesToRemove.add(visualFlourish);
+    private List<AnimationData> advanceVisualFlourishes(List<AnimationData> visualFlourishes){
+        List<AnimationData> visualFlourishesToRemove = new LinkedList<>();
+        for(AnimationData visualFlourish : visualFlourishes){
+            if(visualFlourish.tick()) visualFlourishesToRemove.add(visualFlourish);
         }
         return visualFlourishesToRemove;
     }
 
 
 
-    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay, List<VisualFlourish> visualFlourishes){
+    private void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay, List<AnimationData> visualFlourishes){
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
             List<Orb> neighbors = playPanelData.getNeighbors(orb, orbArray);
             if((orb.getI()==0 || !Collections.disjoint(neighbors,connectedOrbs)) && orbArray[orb.getI()][orb.getJ()] == NULL){
                 orbArray[orb.getI()][orb.getJ()] = orb;
                 soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
-                visualFlourishes.add(new VisualFlourish(MiscAnimations.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), false));
+                visualFlourishes.add(new AnimationData(Animation.MAGIC_TELEPORTATION,orb.getXPos(),orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
         }
 
@@ -721,7 +719,7 @@ public class PlayPanel extends Pane {
         for(Orb orb: playPanelData.getDeathOrbs()) orb.drawSelf(orbDrawer,vibrationOffset);
 
         // paint VisualFlourishes:
-        for(VisualFlourish visualFlourish : playPanelData.getVisualFlourishes()) visualFlourish.drawSelf(orbDrawer);
+        for(AnimationData visualFlourish : playPanelData.getVisualFlourishes()) visualFlourish.drawSelf(orbDrawer);
 
         // paint transferring orbs:
         for(Orb orb: playPanelData.getTransferInOrbs()) orb.drawSelf(orbDrawer, vibrationOffset);
@@ -813,30 +811,30 @@ public class PlayPanel extends Pane {
 
     public void displayVictoryResults(VictoryType victoryType){
         Text statistics;
-        VisualFlourish visualFlourish;
+        AnimationData visualFlourish;
         String specializedStatistic;
 
         // Note: we must add getDroppingOrbs().size() to getCumulativeOrbsTransferred() because orbs that are dropping at the very end of the game haven't been added to the transferOutOrbs list, yet.
         switch(victoryType) {
             case VS_WIN:
-                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN, 0, 0, true);
+                visualFlourish = new AnimationData(Animation.WIN_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n";
                 break;
             case VS_LOSE:
-                visualFlourish = new VisualFlourish(MiscAnimations.LOSE_SCREEN, 0, 0, true);
+                visualFlourish = new AnimationData(Animation.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs transferred to other players: " + (playPanelData.getCumulativeOrbsTransferred() + playPanelData.getDroppingOrbs().size()) + "\n";
                 break;
             case PUZZLE_CLEARED:
-                visualFlourish = new VisualFlourish(MiscAnimations.CLEAR_SCREEN, 0, 0, true);
+                visualFlourish = new AnimationData(Animation.CLEAR_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n";
                 break;
             case PUZZLE_FAILED:
-                visualFlourish = new VisualFlourish(MiscAnimations.LOSE_SCREEN, 0, 0, true);
+                visualFlourish = new AnimationData(Animation.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs dropped: " + playPanelData.getCumulativeOrbsDropped() + "\n";
                 break;
             default:
                 System.err.println("Unrecognized VictoryType. setting default visual Flourish.");
-                visualFlourish = new VisualFlourish(MiscAnimations.WIN_SCREEN,0,0,true);
+                visualFlourish = new AnimationData(Animation.WIN_SCREEN,0,0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "\n";
         }
 
