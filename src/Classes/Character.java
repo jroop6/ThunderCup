@@ -1,9 +1,7 @@
 package Classes;
 
-import Classes.Animation.AnimationManager;
 import Classes.Animation.CharacterAnimations;
 import Classes.Animation.Sprite;
-import Classes.NetworkCommunication.PlayerData;
 import javafx.geometry.Point2D;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.transform.Scale;

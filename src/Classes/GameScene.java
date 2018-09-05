@@ -787,7 +787,7 @@ public class GameScene extends Scene {
     private void tick(){
         // transfer the transferOutOrbs.
         for(PlayPanel fromPlayPanel : playPanelMap.values()){
-            List<Orb> transferOutOrbs = fromPlayPanel.getPlayPanelData().getTransferOutOrbs();
+            List<OrbData> transferOutOrbs = fromPlayPanel.getPlayPanelData().getTransferOutOrbs();
             if(!transferOutOrbs.isEmpty()){
                 for(PlayPanel toPlayPanel : playPanelMap.values()){
                     if(fromPlayPanel!=toPlayPanel){

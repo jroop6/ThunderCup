@@ -46,12 +46,12 @@ public enum Animation {
 
 
     /* ORBS */
-    RED_ORB("res/images/orbs/highRes/redOrb_spritesheet.png"),
-    GREEN_ORB("res/images/orbs/highRes/greenOrb_spritesheet.png"),
-    BLUE_ORB("res/images/orbs/highRes/blueOrb_spritesheet.png"),
-    YELLOW_ORB("res/images/orbs/highRes/yellowOrb_spritesheet.png"),
-    BLACK_ORB("res/images/orbs/highRes/blackOrb_spritesheet.png"),
-    WHITE_ORB("res/images/orbs/highRes/whiteOrb_spritesheet.png"),
+    RED_ORB_IMPLODING("res/images/orbs/highRes/redOrb_spritesheet.png"),
+    GREEN_ORB_IMPLODING("res/images/orbs/highRes/greenOrb_spritesheet.png"),
+    BLUE_ORB_IMPLODING("res/images/orbs/highRes/blueOrb_spritesheet.png"),
+    YELLOW_ORB_IMPLODING("res/images/orbs/highRes/yellowOrb_spritesheet.png"),
+    BLACK_ORB_IMPLODING("res/images/orbs/highRes/blackOrb_spritesheet.png"),
+    WHITE_ORB_IMPLODING("res/images/orbs/highRes/whiteOrb_spritesheet.png"),
 
     /* MISC */
     UNKNOWN_CHARACTER("res/animations/characters/unknownCharacter/unknownCharacter_spritesheet.png"),

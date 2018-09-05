@@ -3,7 +3,7 @@ package Classes.PlayerTypes;
 import Classes.Cannon;
 import Classes.Character;
 import Classes.NetworkCommunication.PlayerData;
-import Classes.Orb;
+import Classes.OrbData;
 
 public class RemotePlayer extends Player {
 
@@ -16,7 +16,7 @@ public class RemotePlayer extends Player {
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }
 
-    public double computeInitialDistance(Orb orb){
-        return (playerData.getLatency()/1000000000)*orb.getOrbEnum().getOrbSpeed();
+    public double computeInitialDistance(OrbData orbData){
+        return (playerData.getLatency()/1000000000)* orbData.getOrbColor().getOrbSpeed();
     }
 }

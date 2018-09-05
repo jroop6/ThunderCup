@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Animation.OrbAnimations;
+import Classes.Animation.OrbColor;
 import Classes.Images.StaticBgImages;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Point2D;
@@ -24,20 +24,20 @@ import java.util.Optional;
 import static Classes.GameScene.FRAME_RATE;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
-import static Classes.Orb.NULL;
-import static Classes.Orb.ORB_RADIUS;
+import static Classes.OrbData.NULL;
+import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 import static Classes.PlayPanel.ROW_HEIGHT;
 
 public class PuzzleCreatorScene extends Scene {
 
-    private final Orb EMPTY = new Orb(OrbAnimations.BLACK_ORB,-2,-2,Orb.BubbleAnimationType.STATIC);
+    private final OrbData EMPTY = new OrbData(OrbColor.BLACK,-2,-2, OrbData.OrbAnimationState.STATIC);
     private long nextAnimationFrameInstance = 0;
     private boolean initializing = false;
     private Scale scaler = new Scale(1,1);
     private AnimationTimer animationTimer;
-    private Orb[][] orbArray;
+    private OrbData[][] orbArray;
     private Canvas orbCanvas;
 
     PuzzleCreatorScene(int numPlayers){
@@ -65,7 +65,7 @@ public class PuzzleCreatorScene extends Scene {
         hBox.getChildren().add(orbCanvas);
 
         // Initialize the Array:
-        orbArray = new Orb[ARRAY_HEIGHT+3*numPlayers][ARRAY_WIDTH_PER_CHARACTER*numPlayers];
+        orbArray = new OrbData[ARRAY_HEIGHT+3*numPlayers][ARRAY_WIDTH_PER_CHARACTER*numPlayers];
         for(int i=0; i<orbArray.length; ++i){
             for(int j=0; j<orbArray[i].length; j++){
                 if(j%2==i%2) orbArray[i][j] = EMPTY;
@@ -92,15 +92,15 @@ public class PuzzleCreatorScene extends Scene {
 
             // Change the OrbImage enum:
             if(orbArray[iPos][jPos]==EMPTY){
-                OrbAnimations newEnum;
-                if(event.isPrimaryButtonDown()) newEnum = OrbAnimations.values()[0]; // left-click
-                else newEnum = OrbAnimations.values()[OrbAnimations.values().length-1]; // right-click
-                orbArray[iPos][jPos] = new Orb(newEnum,iPos,jPos,Orb.BubbleAnimationType.STATIC);
+                OrbColor newEnum;
+                if(event.isPrimaryButtonDown()) newEnum = OrbColor.values()[0]; // left-click
+                else newEnum = OrbColor.values()[OrbColor.values().length-1]; // right-click
+                orbArray[iPos][jPos] = new OrbData(newEnum,iPos,jPos, OrbData.OrbAnimationState.STATIC);
             }
             else if(orbArray[iPos][jPos] != NULL){
-                OrbAnimations newEnum;
-                if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbEnum().next(); // left-click
-                else newEnum = orbArray[iPos][jPos].getOrbEnum().previous(); // right-click
+                OrbColor newEnum;
+                if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbColor().next(); // left-click
+                else newEnum = orbArray[iPos][jPos].getOrbColor().previous(); // right-click
                 if(newEnum == null) orbArray[iPos][jPos] = EMPTY;
                 else orbArray[iPos][jPos].setOrbEnum(newEnum);
             }
@@ -117,7 +117,7 @@ public class PuzzleCreatorScene extends Scene {
             for(int i=0; i<=maxRow; i++){
                 for(int j=0; j<orbArray[i].length; j++){
                     if(orbArray[i][j]==NULL || orbArray[i][j]==EMPTY) puzzle += ' ';
-                    else puzzle += orbArray[i][j].getOrbEnum().getSymbol();
+                    else puzzle += orbArray[i][j].getOrbColor().getSymbol();
                 }
                 puzzle += '\n';
             }
@@ -127,7 +127,7 @@ public class PuzzleCreatorScene extends Scene {
             for(int playerIndex=0; playerIndex<numPlayers; playerIndex++){
                 for(int i=ARRAY_HEIGHT+1+3*playerIndex; i<=ARRAY_HEIGHT+2+3*playerIndex; i++){
                     for(int j=i%2; j<orbArray[i].length; j+=2){
-                        if(orbArray[i][j]!=EMPTY) puzzle += orbArray[i][j].getOrbEnum().getSymbol();
+                        if(orbArray[i][j]!=EMPTY) puzzle += orbArray[i][j].getOrbColor().getSymbol();
                     }
                 }
                 puzzle += '\n';

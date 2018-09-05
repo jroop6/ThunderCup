@@ -32,7 +32,7 @@ public class UnclaimedPlayer extends Player {
     }
 
     // Note: this method is irrelevant and should never be called
-    public double computeInitialDistance(Orb orb){
+    public double computeInitialDistance(OrbData orbData){
         System.err.println("computeInitialDistance() was called on an UnclaimedPlayer instance... This was probably" +
                 "not supposed to happen");
         return 0.0;

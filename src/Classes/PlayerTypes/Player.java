@@ -5,7 +5,7 @@ import Classes.Animation.Sprite;
 import Classes.Character;
 import Classes.Images.CannonImages;
 import Classes.Animation.CharacterAnimations;
-import Classes.Animation.OrbAnimations;
+import Classes.Animation.OrbColor;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
@@ -74,7 +74,7 @@ public abstract class Player {
     }
 
     /* Abstract Methods: */
-    public abstract double computeInitialDistance(Orb orb);
+    public abstract double computeInitialDistance(OrbData orbData);
 
     /* Concrete methods: */
     public void registerToPlayPanel(PlayPanel playPanel){
@@ -179,7 +179,7 @@ public abstract class Player {
 
     private void setFireCannon(){
         if(playerData.getDefeated()) return;
-        OrbAnimations newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
         playerData.setFire(newShooterOrbEnum); // updates Player model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
         // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
@@ -187,9 +187,9 @@ public abstract class Player {
 
     public void changeFireCannon(){
         if(playerData.getCannonDisabled()) return;
-        OrbAnimations newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-        Orb firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), newShooterOrbEnum); // updates Player model
-        Queue<Orb> firedOrbList = new LinkedList<>();
+        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        OrbData firedOrb = playerData.changeFire(cannon.getAngle()*(Math.PI/180), newShooterOrbEnum); // updates Player model
+        Queue<OrbData> firedOrbList = new LinkedList<>();
         firedOrbList.add(firedOrb);
         playPanel.getPlayPanelData().changeAddShootingOrbs(firedOrbList); // updates PlayPanel model
         // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
@@ -329,7 +329,7 @@ public abstract class Player {
     public void readAmmunitionOrbs(String filename, int seed, int positionIndex){
         this.seed = seed;
         if(ammunitionGenerator==null) ammunitionGenerator = new Random(seed);
-        List<Orb> ammunitionOrbs = playerData.getAmmunition();
+        List<OrbData> ammunitionOrbs = playerData.getAmmunition();
         ammunitionOrbs.clear();
         if(!filename.substring(0,6).equals("RANDOM")){
             InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
@@ -349,12 +349,12 @@ public abstract class Player {
                 int nextOrbSymbol;
                 int temp = 0;
                 while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n' && nextOrbSymbol!='\r'){
-                    OrbAnimations orbEnum = OrbAnimations.lookupOrbImageBySymbol((char)nextOrbSymbol);
+                    OrbColor orbEnum = OrbColor.lookupOrbImageBySymbol((char)nextOrbSymbol);
                     if(orbEnum==null){
                         System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");
                         continue;
                     }
-                    ammunitionOrbs.add(new Orb(orbEnum,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
+                    ammunitionOrbs.add(new OrbData(orbEnum,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
                     temp++;
                     // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
                 }
@@ -366,9 +366,9 @@ public abstract class Player {
         // Add random Orbs to the ammunitionOrbs Queue after that:
         while(ammunitionOrbs.size()<2){
             System.out.println();
-            int randomOrdinal = ammunitionGenerator.nextInt(OrbAnimations.values().length);
-            OrbAnimations orbImage = OrbAnimations.values()[randomOrdinal];
-            ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.BubbleAnimationType.STATIC)); // Updates model
+            int randomOrdinal = ammunitionGenerator.nextInt(OrbColor.values().length);
+            OrbColor orbImage = OrbColor.values()[randomOrdinal];
+            ammunitionOrbs.add(new OrbData(orbImage,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
             // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
         }
     }

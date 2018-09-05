@@ -3,7 +3,7 @@ package Classes.PlayerTypes;
 import Classes.Cannon;
 import Classes.Character;
 import Classes.NetworkCommunication.PlayerData;
-import Classes.Orb;
+import Classes.OrbData;
 
 import java.util.Random;
 
@@ -33,7 +33,7 @@ public class LocalPlayer extends Player {
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }
 
-    public double computeInitialDistance(Orb orb){
+    public double computeInitialDistance(OrbData orbData){
         return 0.0;
     }
 }

@@ -36,7 +36,7 @@ Instead of each bot having its own thread pool, generate a single pool in GameSc
 There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
 	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
-combine animation enums into 1 file instead of 3 (exception for orbImages)
+combine implodeAnimation enums into 1 file instead of 3 (exception for orbImages)
 There are 2 copies of numPlayers - one in PlayPanel and one in PlayPanelData. Reduce it to just 1 instance.
 
 -------polish-------

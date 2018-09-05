@@ -2,8 +2,8 @@ package Classes.NetworkCommunication;
 
 import Classes.Images.CannonImages;
 import Classes.Animation.CharacterAnimations;
-import Classes.Animation.OrbAnimations;
-import Classes.Orb;
+import Classes.Animation.OrbColor;
+import Classes.OrbData;
 
 import java.io.Serializable;
 import java.util.LinkedList;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 
-import static Classes.Orb.ORB_RADIUS;
+import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_X_POS;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
@@ -33,8 +33,8 @@ public class PlayerData implements Serializable {
     private int team;
     private boolean defeated;
     private long latency;
-    private List<Orb> ammunitionOrbs = new LinkedList<>();
-    private Queue<Orb> firedOrbs = new LinkedList<>();
+    private List<OrbData> ammunitionOrbs = new LinkedList<>();
+    private Queue<OrbData> firedOrbs = new LinkedList<>();
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private CharacterAnimations.CharacterAnimationState characterAnimationState = CharacterAnimations.CharacterAnimationState.CONTENT;
@@ -107,18 +107,18 @@ public class PlayerData implements Serializable {
     }
 
     // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
-    public List<Orb> deepCopyOrbList(List<Orb> other){
-        List<Orb> copiedList = new LinkedList<>();
-        for(Orb orb : other){
-            copiedList.add(new Orb(orb));
+    public List<OrbData> deepCopyOrbList(List<OrbData> other){
+        List<OrbData> copiedList = new LinkedList<>();
+        for(OrbData orbData : other){
+            copiedList.add(new OrbData(orbData));
         }
         return copiedList;
     }
 
-    public Queue<Orb> deepCopyOrbQueue(Queue<Orb> other){
-        Queue<Orb> copiedQueue = new LinkedList<>();
-        for(Orb orb : other){
-            copiedQueue.add(new Orb(orb));
+    public Queue<OrbData> deepCopyOrbQueue(Queue<OrbData> other){
+        Queue<OrbData> copiedQueue = new LinkedList<>();
+        for(OrbData orbData : other){
+            copiedQueue.add(new OrbData(orbData));
         }
         return copiedQueue;
     }
@@ -164,21 +164,21 @@ public class PlayerData implements Serializable {
         this.latency = latency;
         // no change flag is needed for latency
     }
-    public void changeAddAmunitionOrb(Orb newOrb){
+    public void changeAddAmunitionOrb(OrbData newOrb){
         ammunitionOrbs.add(newOrb);
         ammunitionOrbsChanged = true;
     }
-    public Orb changeFire(double angle, OrbAnimations newEnum){
+    public OrbData changeFire(double angle, OrbColor newEnum){
         // Remove the first ammunition orb and fire it
-        Orb firedOrb = ammunitionOrbs.remove(0);
+        OrbData firedOrb = ammunitionOrbs.remove(0);
         firedOrb.setRawTimestamp(System.nanoTime());
         firedOrb.setAngle(angle);
-        firedOrb.setSpeed(firedOrb.getOrbEnum().getOrbSpeed());
+        firedOrb.setSpeed(firedOrb.getOrbColor().getOrbSpeed());
         firedOrbs.add(firedOrb);
         firing = true;
 
         // Add a new ammunition orb to the end of the list
-        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new OrbData(newEnum,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
 
         positionAmmunitionOrbs();
 
@@ -196,10 +196,8 @@ public class PlayerData implements Serializable {
     // set the positions of the 1st and second shooting orbs for this player
     public void positionAmmunitionOrbs(){
         // update the positions of the next 2 ammunition orbs
-        ammunitionOrbs.get(0).setXPos(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(0).setYPos(CANNON_Y_POS);
-        ammunitionOrbs.get(1).setXPos(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos);
-        ammunitionOrbs.get(1).setYPos(CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
+        ammunitionOrbs.get(0).relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS);
+        ammunitionOrbs.get(1).relocate(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
     }
 
     public void changeFiringFlag(boolean firing){
@@ -209,11 +207,11 @@ public class PlayerData implements Serializable {
         this.ammunitionOrbsChanged = ammunitionOrbsChanged;
     }
 
-    public void setFire(OrbAnimations newEnum){
+    public void setFire(OrbColor newEnum){
         ammunitionOrbs.remove(0);
 
         // Add a new ammunition orb to the end of the list
-        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0,Orb.BubbleAnimationType.STATIC)); // Updates model
+        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new OrbData(newEnum,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
 
         positionAmmunitionOrbs();
     }
@@ -241,10 +239,10 @@ public class PlayerData implements Serializable {
     public void setLatency(long latency){
         this.latency = latency;
     }
-    public void setAmmunitionOrbs(List<Orb> ammunitionOrbs){
+    public void setAmmunitionOrbs(List<OrbData> ammunitionOrbs){
         this.ammunitionOrbs.clear();
-        for(Orb orb : ammunitionOrbs){
-            this.ammunitionOrbs.add(new Orb(orb));
+        for(OrbData orbData : ammunitionOrbs){
+            this.ammunitionOrbs.add(new OrbData(orbData));
         }
     }
     public void setFrozen(boolean newVal){
@@ -335,10 +333,10 @@ public class PlayerData implements Serializable {
     public long getLatency(){
         return latency;
     }
-    public List<Orb> getAmmunition(){
+    public List<OrbData> getAmmunition(){
         return ammunitionOrbs;
     }
-    public Queue<Orb> getFiredOrbs(){
+    public Queue<OrbData> getFiredOrbs(){
         return firedOrbs;
     }
     public boolean getFrozen(){
@@ -352,11 +350,11 @@ public class PlayerData implements Serializable {
         boolean inconsistent = false;
 
         // check for consistency in the ammunition Orbs:
-        List<Orb> hostAmmunition = other.getAmmunition();
+        List<OrbData> hostAmmunition = other.getAmmunition();
         if(ammunitionOrbs.size() != hostAmmunition.size()) inconsistent = true;
         else{
             for(int i=0; i<ammunitionOrbs.size(); i++){
-                if(ammunitionOrbs.get(i).getOrbEnum() != hostAmmunition.get(i).getOrbEnum()) inconsistent = true;
+                if(ammunitionOrbs.get(i).getOrbColor() != hostAmmunition.get(i).getOrbColor()) inconsistent = true;
             }
         }
 

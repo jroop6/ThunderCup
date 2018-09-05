@@ -6,7 +6,9 @@ import javafx.scene.effect.ColorAdjust;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.ImageView;
 
-public class AnimationData {
+import java.io.Serializable;
+
+public class AnimationData implements Serializable {
     private Animation animation;
     private double anchorX = 0.0;
     private double anchorY = 0.0;
