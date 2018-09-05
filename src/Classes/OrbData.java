@@ -128,7 +128,7 @@ public class OrbData extends PointInt implements Serializable{
     public void computeTimeStamp(long timeLastPacketSent){
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
-    public void setOrbEnum(OrbColor orbColor){
+    public void setOrbColor(OrbColor orbColor){
         this.orbColor = orbColor;
         orbAnimation.setAnimation(orbColor.getImplodeAnimation());
     }

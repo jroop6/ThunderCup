@@ -388,6 +388,7 @@ public class PlayerData implements Serializable {
         // determine which animation state we should be in, and increment animationFrame:
         if(characterAnimationState.inRange(lowestRow)){
             characterAnimationFrame++;
+            if(characterAnimationFrame > characterD)
             int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
             if(bounds[1] == characterAnimationFrame) characterAnimationFrame = bounds[0];
         }

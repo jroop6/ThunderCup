@@ -3,7 +3,7 @@ package Classes.PlayerTypes;
 import Classes.*;
 import Classes.Animation.OrbColor;
 import Classes.Audio.SoundEffect;
-import Classes.Character;
+import Classes.CharacterData;
 import Classes.Images.CannonImages;
 import Classes.Animation.CharacterAnimations;
 import Classes.NetworkCommunication.PlayerData;
@@ -54,8 +54,8 @@ public class BotPlayer extends Player {
 
         // initialize views:
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData.getCharacterEnum());
-        character.setCharacterEnum(characterEnum, playerData.getCannonAnimationFrame()); // character initializes with a default player, so change it to a bot, here.
+        this.characterData = new CharacterData(playerData.getCharacterEnum());
+        characterData.setCharacterEnum(characterEnum, playerData.getCannonAnimationFrame()); // character initializes with a default player, so change it to a bot, here.
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }

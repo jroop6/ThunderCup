@@ -1,7 +1,7 @@
 package Classes.PlayerTypes;
 
 import Classes.Cannon;
-import Classes.Character;
+import Classes.CharacterData;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.OrbData;
 
@@ -28,7 +28,7 @@ public class LocalPlayer extends Player {
 
         // Initialize the "views" (playerData will specify a default character and cannon):
         cannon = new Cannon(playerData);
-        character = new Character(playerData.getCharacterEnum());
+        characterData = new CharacterData(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }

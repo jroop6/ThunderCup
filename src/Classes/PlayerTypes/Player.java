@@ -2,13 +2,14 @@ package Classes.PlayerTypes;
 
 import Classes.*;
 import Classes.Animation.Sprite;
-import Classes.Character;
+import Classes.CharacterData;
 import Classes.Images.CannonImages;
 import Classes.Animation.CharacterAnimations;
 import Classes.Animation.OrbColor;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -23,22 +24,14 @@ import java.io.InputStreamReader;
 import java.util.*;
 
 
-/**
- * Think of this as the controller in an MVC pattern. Player has a PlayerData (model) as well as a Cannon, Character,
- * Label, and ComboBox to display that data (view).
- */
 public abstract class Player {
-    // model:
     protected PlayerData playerData;
+    protected CharacterData characterData;
+    protected Cannon cannon;
 
-    // view:
     protected Button usernameButton;
     protected ComboBox<String> teamChoice = new ComboBox<>();
     protected Label latencyLabel = new Label("Latency: 0 milliseconds");
-    protected Cannon cannon;
-
-    // additional component controllers, each with models and views:
-    protected Character character;
 
     // The PlayPanel associated with this player (needed for firing new shootingOrbs):
     PlayPanel playPanel;
@@ -93,7 +86,7 @@ public abstract class Player {
         return cannon.getMovingPart();
     }
     public Sprite getCharacterSprite(){
-        return character.getSprite();
+        return characterData.getSprite();
     }
     public Button getUsernameButton(){
         return usernameButton;
@@ -119,7 +112,7 @@ public abstract class Player {
             changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
         }
         playerData.changeCharacter(nextType); // updates model
-        character.setCharacterEnum(nextType, playerData.getCharacterAnimationFrame()); // updates view
+        characterData.setCharacterEnum(nextType); // updates view
     }
     private void incrementCannonEnum(){
         CannonImages nextType = playerData.getCannonEnum().next();
@@ -145,7 +138,7 @@ public abstract class Player {
     }
 
     public void freezePlayer(){
-        character.freeze(); // updates view (GameScene)
+        characterData.freeze(); // updates view (GameScene)
         cannon.freeze();// updates view (GameScene)
     }
 
@@ -199,11 +192,11 @@ public abstract class Player {
         cannon.relocate(x,y,playerData.getCannonAnimationFrame());
     }
     public void relocateCharacter(double x, double y){
-        character.relocate(x,y,playerData.getCharacterAnimationFrame());
+        characterData.relocate(x,y);
     }
     public void setScale(double scaleFactor){
         cannon.setScale(scaleFactor, playerData.getCannonAnimationFrame());
-        character.setScale(scaleFactor, playerData.getCharacterEnum(),playerData.getCharacterAnimationFrame());
+        characterData.setScale(scaleFactor);
     }
 
     // Called every frame by the host to update a player's data according to a packet received over the network
@@ -221,7 +214,7 @@ public abstract class Player {
         }
         if(newPlayerData.isCharacterChanged()){
             playerData.changeCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
+            characterData.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged()){
             playerData.changeDefeated(newPlayerData.getDefeated()); //updates model
@@ -269,7 +262,7 @@ public abstract class Player {
         }
         if(newPlayerData.isCharacterChanged() && !playerData.isCharacterChanged()){
             playerData.setCharacter(newPlayerData.getCharacterEnum()); //updates model
-            character.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
+            characterData.setCharacterEnum(newPlayerData.getCharacterEnum(), playerData.getCharacterAnimationFrame()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged() && !playerData.isDefeatedChanged()){
             playerData.setDefeated(newPlayerData.getDefeated()); //updates model
@@ -308,7 +301,7 @@ public abstract class Player {
         }
 
         cannon.setAngle(playerData.getCannonAngle(), playerData.getCannonAnimationFrame()); // updates view
-        character.getSprite().setFrame(playerData.getCharacterAnimationFrame()); // updates view
+        characterData.getSprite().setFrame(playerData.getCharacterAnimationFrame()); // updates view
 
 
 
@@ -371,6 +364,24 @@ public abstract class Player {
             ammunitionOrbs.add(new OrbData(orbImage,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
             // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
         }
+    }
+
+    //todo: implement this
+    public void tick(){
+        characterData.tick();
+        //cannonData.tick();
+    }
+
+    //todo: implement this
+    public void drawSelf(ImageView characterImageView, ImageView cannonImageView){
+        if(characterImageView!=null) characterData.drawSelf(characterImageView);
+        //if(cannonImageView!=null) cannonData.drawSelf(cannonImageView);
+    }
+
+    //todo: implement this
+    public void drawSelf(GraphicsContext graphicsContext){
+        characterData.drawSelf(graphicsContext);
+        //cannnonData.drawSelf(graphicsContext);
     }
 }
 

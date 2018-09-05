@@ -6,48 +6,40 @@ import Classes.PlayerTypes.BotPlayer;
  */
 public enum CharacterAnimations {
 
-    // About the animationIndexBound array:
-    // Each index is an "exclusive" bound of one of the character's animations. The index of the last frame of the
-    // corresponding animation is 1 less. The animations correspond to the CharacterAnimations.CharacterAnimationState enums
-    // (see below). Therefore, the length of the array must match Player.CharacterAnimationState.values().length. The
-    // numbers must be increasing, due to assumptions made in getAnimationBounds().
+    // Note: the order of animations in the Animation array matters. It must match the order of the enums in CharacterAnimationState, accordingly.
+    BLITZ(new Animation[] {Animation.BLITZ_VICTORY, Animation.BLITZ_CONTENT, Animation.BLITZ_WORRIED, Animation.BLITZ_DEFEAT, Animation.BLITZ_DISCONNECTED}, true, null),
+    GEARSHIFT(new Animation[] {Animation.GEARSHIFT_VICTORY, Animation.GEARSHIFT_CONTENT, Animation.GEARSHIFT_WORRIED, Animation.GEARSHIFT_DEFEAT, Animation.GEARSHIFT_DISCONNECTED}, true, null),
+    CLOUDESTINE(new Animation[] {Animation.CLOUDESTINE_VICTORY, Animation.CLOUDESTINE_CONTENT, Animation.CLOUDESTINE_WORRIED, Animation.CLOUDESTINE_DEFEAT, Animation.CLOUDESTINE_DISCONNECTED}, true, null),
+    CHARCOAL(new Animation[] {Animation.CHARCOAL_VICTORY, Animation.CHARCOAL_CONTENT, Animation.CHARCOAL_WORRIED, Animation.CHARCOAL_DEFEAT, Animation.CHARCOAL_DISCONNECTED}, true, null),
+    FILLY_BOT_EASY(new Animation[] {Animation.FILLY_BOT_EASY_VICTORY, Animation.FILLY_BOT_EASY_CONTENT, Animation.FILLY_BOT_EASY_WORRIED, Animation.FILLY_BOT_EASY_DEFEAT, Animation.FILLY_BOT_EASY_DISCONNECTED}, true, BotPlayer.Difficulty.EASY),
+    FILLY_BOT_MEDIUM(new Animation[] {Animation.FILLY_BOT_MEDIUM_VICTORY, Animation.FILLY_BOT_MEDIUM_CONTENT, Animation.FILLY_BOT_MEDIUM_WORRIED, Animation.FILLY_BOT_MEDIUM_DEFEAT, Animation.FILLY_BOT_MEDIUM_DISCONNECTED}, false, BotPlayer.Difficulty.MEDIUM),
+    FILLY_BOT_HARD(new Animation[] {Animation.FILLY_BOT_HARD_VICTORY, Animation.FILLY_BOT_HARD_CONTENT, Animation.FILLY_BOT_HARD_WORRIED, Animation.FILLY_BOT_HARD_DEFEAT, Animation.FILLY_BOT_HARD_DISCONNECTED}, false, BotPlayer.Difficulty.HARD),
+    UNKNOWN_CHARACTER(new Animation[] {Animation.UNKNOWN_CHARACTER, Animation.UNKNOWN_CHARACTER, Animation.UNKNOWN_CHARACTER, Animation.UNKNOWN_CHARACTER, Animation.UNKNOWN_CHARACTER}, false, null);
 
-    BLITZ("res/animations/characters/blitz/blitz_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
-    UNKNOWN_CHARACTER("res/animations/characters/unknownCharacter/unknownCharacter_spritesheet.png", false, null, new int[] {1, 2, 3, 4, 5}),
-    GEARSHIFT("res/animations/characters/gearshift/gearshift_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
-    CLOUDESTINE("res/animations/characters/cloudestine/cloudestine_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
-    CHARCOAL("res/animations/characters/charcoal/charcoal_spritesheet.png", true, null, new int[] {1, 2, 3, 4, 5}),
-    FILLY_BOT_EASY("res/animations/characters/botPony/botPonyEasy_spritesheet.png", true, BotPlayer.Difficulty.EASY, new int[] {1, 2, 3, 4, 5}),
-    FILLY_BOT_MEDIUM("res/animations/characters/botPony/botPonyMedium_spritesheet.png", false, BotPlayer.Difficulty.MEDIUM, new int[] {1, 2, 3, 4, 5}),
-    FILLY_BOT_HARD("res/animations/characters/botPony/botPonyHard_spritesheet.png", false, BotPlayer.Difficulty.HARD, new int[] {1, 2, 3, 4, 5});
-
-    private SpriteSheet spriteSheet;
+    private Animation[] animations;
     private boolean playable; // Can a human player use this character?
     private BotPlayer.Difficulty botDifficulty;
-    private int[] animationIndexBound;
 
-    CharacterAnimations(String url, boolean playable, BotPlayer.Difficulty botDifficulty, int[] animationIndexBound){
-        spriteSheet = new SpriteSheet(url);
-        this.playable = playable;
-        this.botDifficulty = botDifficulty;
-        this.animationIndexBound = animationIndexBound;
-
-        // Some sanity checks:
-        if(animationIndexBound.length != CharacterAnimationState.values().length){
-            System.err.println("Error! The animationIndexBound array for " + this + " is not of the correct length! The game will probably crash if you use this character.");
+    public enum CharacterAnimationState{VICTORY(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEAT(20,20), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
+        private int upperTriggerHeight;
+        private int lowerTriggerHeight;
+        CharacterAnimationState(int upperTriggerHeight, int lowerTriggerHeight){
+            this.upperTriggerHeight = upperTriggerHeight;
+            this.lowerTriggerHeight = lowerTriggerHeight;
         }
-        int previousBound = animationIndexBound[0];
-        for(int i = 1; i< animationIndexBound.length; i++){
-            if(previousBound >= animationIndexBound[i]){
-                System.err.println("Error! The animationIndexBound array for " + this + " is not strictly increasing. Animations might not behave as expected for this character.");
-                break;
-            }
-            previousBound = animationIndexBound[i];
+        public boolean inRange(int index){
+            return index >=upperTriggerHeight && index <= lowerTriggerHeight;
         }
     }
 
-    public SpriteSheet getSpriteSheet(){
-        return spriteSheet;
+    CharacterAnimations(Animation[] animations, boolean playable, BotPlayer.Difficulty botDifficulty){
+        this.animations = animations;
+        this.playable = playable;
+        this.botDifficulty = botDifficulty;
+    }
+
+    public Animation getAnimation(CharacterAnimationState characterAnimationType){
+        return animations[characterAnimationType.ordinal()];
     }
 
     // Retrieves the next Character in the enumeration.
@@ -62,30 +54,5 @@ public enum CharacterAnimations {
 
     public BotPlayer.Difficulty getBotDifficulty() {
         return botDifficulty;
-    }
-
-    public int[] getAnimationBounds(CharacterAnimationState characterAnimationState){
-        // find the (inclusive) lower bound:
-        int lowerBound;
-        if(characterAnimationState.ordinal()==0) lowerBound = 0;
-        else lowerBound = animationIndexBound[characterAnimationState.ordinal()-1];
-
-        // find the (exclusive) upper bound:
-        int upperBound = animationIndexBound[characterAnimationState.ordinal()];
-
-        return new int[] {lowerBound, upperBound};
-    }
-
-    // Character animation control:
-    public enum CharacterAnimationState{VICTORY(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEAT(20, 20), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
-        private int upperTriggerHeight;
-        private int lowerTriggerHeight;
-        CharacterAnimationState(int upperTriggerHeight, int lowerTriggerHeight){
-            this.upperTriggerHeight = upperTriggerHeight;
-            this.lowerTriggerHeight = lowerTriggerHeight;
-        }
-        public boolean inRange(int index){
-            return index>=upperTriggerHeight && index <= lowerTriggerHeight;
-        }
     }
 }

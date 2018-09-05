@@ -1,7 +1,7 @@
 package Classes.PlayerTypes;
 
 import Classes.Cannon;
-import Classes.Character;
+import Classes.CharacterData;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.OrbData;
 
@@ -11,7 +11,7 @@ public class RemotePlayer extends Player {
     public RemotePlayer(PlayerData playerData){
         this.playerData = playerData;
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData.getCharacterEnum());
+        this.characterData = new CharacterData(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
         teamChoice.getSelectionModel().select(playerData.getTeam()-1);
     }

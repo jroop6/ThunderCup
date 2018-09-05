@@ -176,6 +176,12 @@ public class MultiplayerSelectionScene extends Scene {
 
                     // Display new-received messages in the chat box:
                     chatBox.displayNewMessagesIn();
+
+                    // update character animations:
+                    for (PlayerSlot playerSlot : playerSlotContainer.getContents()){
+                        playerSlot.tick();
+                        playerSlot.repaint();
+                    }
                 }
 
                 // Latency probes are sent by the host 3 times per second:

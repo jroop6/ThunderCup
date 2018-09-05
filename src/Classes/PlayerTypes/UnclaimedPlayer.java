@@ -1,7 +1,7 @@
 package Classes.PlayerTypes;
 
 import Classes.*;
-import Classes.Character;
+import Classes.CharacterData;
 import Classes.NetworkCommunication.PlayerData;
 
 /**
@@ -13,7 +13,7 @@ public class UnclaimedPlayer extends Player {
     public UnclaimedPlayer(){
         this.playerData = new PlayerData("Open Slot",-1);
         this.cannon = new Cannon(playerData);
-        this.character = new Character(playerData.getCharacterEnum());
+        this.characterData = new CharacterData(playerData.getCharacterEnum());
         usernameButton.setText(playerData.getUsername());
     }
 

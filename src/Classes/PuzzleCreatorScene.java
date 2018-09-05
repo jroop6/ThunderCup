@@ -102,7 +102,7 @@ public class PuzzleCreatorScene extends Scene {
                 if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbColor().next(); // left-click
                 else newEnum = orbArray[iPos][jPos].getOrbColor().previous(); // right-click
                 if(newEnum == null) orbArray[iPos][jPos] = EMPTY;
-                else orbArray[iPos][jPos].setOrbEnum(newEnum);
+                else orbArray[iPos][jPos].setOrbColor(newEnum);
             }
         });
 

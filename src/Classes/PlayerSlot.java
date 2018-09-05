@@ -32,6 +32,8 @@ public class PlayerSlot extends StackPane{
     private final double CANNON_Y = 822.0; // The y-position of the cannon's axis of rotation on the PlayerSlot.
 
     private Player player;
+    private ImageView character;
+    private ImageView cannon;
 
     PlayerSlot(Player player, boolean isHost){
         this.player = player;
@@ -43,7 +45,12 @@ public class PlayerSlot extends StackPane{
 
         // Add CharacterAnimations and cannon images. They are placed on a Pane for more control over positioning:
         Pane characterAndCannonPositioner = new Pane();
-        characterAndCannonPositioner.getChildren().addAll(player.getCharacterSprite() , player.getCannonMovingPart());
+        //characterAndCannonPositioner.getChildren().addAll(player.getCharacterSprite() , player.getCannonMovingPart());
+
+        character = new ImageView();
+        cannon = new ImageView();
+        characterAndCannonPositioner.getChildren().addAll(character,cannon);
+
         /*player.relocateCharacter(CHARACTER_X-player.getPlayerData().getCharacterEnum().getHoovesX(),
                 CHARACTER_Y-player.getPlayerData().getCharacterEnum().getHoovesY());*/
         player.relocateCharacter(CHARACTER_X, CHARACTER_Y);
@@ -137,6 +144,16 @@ public class PlayerSlot extends StackPane{
             clickToChange.setFont(new Font(36.0));
             gridPane.add(clickToChange,0,59);
         }
+    }
+
+    // todo: finish implementing this
+    public void tick(){
+        player.tick();
+    }
+
+    // todo: finish implementing this
+    public void repaint(){
+        player.drawSelf(character, cannon);
     }
 
     public Player getPlayer(){
