@@ -130,6 +130,7 @@ public class OrbData extends PointInt implements Serializable{
     }
     public void setOrbEnum(OrbColor orbColor){
         this.orbColor = orbColor;
+        orbAnimation.setAnimation(orbColor.getImplodeAnimation());
     }
 
     public double getXPos(){

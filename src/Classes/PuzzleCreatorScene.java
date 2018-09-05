@@ -97,7 +97,7 @@ public class PuzzleCreatorScene extends Scene {
                 else newEnum = OrbColor.values()[OrbColor.values().length-1]; // right-click
                 orbArray[iPos][jPos] = new OrbData(newEnum,iPos,jPos, OrbData.OrbAnimationState.STATIC);
             }
-            else if(orbArray[iPos][jPos] != NULL){
+            else if(orbArray[iPos][jPos] != EMPTY){
                 OrbColor newEnum;
                 if(event.isPrimaryButtonDown()) newEnum = orbArray[iPos][jPos].getOrbColor().next(); // left-click
                 else newEnum = orbArray[iPos][jPos].getOrbColor().previous(); // right-click
