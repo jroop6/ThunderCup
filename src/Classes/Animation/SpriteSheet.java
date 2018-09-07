@@ -4,15 +4,11 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
-import javafx.scene.paint.ImagePattern;
-import javafx.scene.shape.Arc;
-import javafx.scene.shape.Shape;
+import javafx.scene.transform.Affine;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-
-import static Classes.PlayPanel.ROW_HEIGHT;
 
 /**
  * A class for handling spritesheets. Includes methods for reading spritesheets and their metadata from disk and drawing
@@ -36,29 +32,6 @@ public class SpriteSheet extends Image {
     public SpriteSheet(String spriteSheetURL){
         super(spriteSheetURL);
         readSpriteMetadata(spriteSheetURL);
-    }
-
-    /**
-     * Deprecated Constructor used for spritesheets whose frames are arranged on a regular grid. It is assumed that the
-     *  sprites are arranged in the order you would read English text (left to right, then top to bottom). Anchor points
-     *  are simply placed in the top-left corner of each frame.
-     * @param spriteSheetURL The URL of the image file containing the spritesheet.
-     * @param frameWidth The width of a single sprite
-     * @param frameHeight The height of a single sprite
-     */
-    public SpriteSheet(String spriteSheetURL, int frameWidth, int frameHeight){
-        super(spriteSheetURL);
-        int numCols = (int)getWidth()/frameWidth;
-        int numRows = (int)getHeight()/frameHeight;
-        int numSprites = numCols*numRows;
-        for(int i=0; i<numSprites; i++){
-            int row = i/numCols;
-            int col = i%numCols;
-            Rectangle2D posAndDim = new Rectangle2D(col*frameWidth,row*frameHeight,frameWidth,frameHeight);
-            Point2D anchorPoint = new Point2D(0, 0);
-            FrameBound newFrameBound = new FrameBound(posAndDim, anchorPoint);
-            frameBounds.add(newFrameBound);
-        }
     }
 
     public void readSpriteMetadata(String spriteSheetURL){
@@ -121,21 +94,17 @@ public class SpriteSheet extends Image {
         return frameBounds.get(index);
     }
 
-    // For drawing directly on a GraphicsContext
-    // todo: take scale into account
-    public int drawFrame(GraphicsContext graphicsContext, double anchorX, double anchorY, int frameIndex){
+    // todo: I think using the Affine transform introduced some lag. Confirm this, and see whether there's a more efficient way to accomplish scale+rotation+translation.
+    // Draws the specified frame to the graphicsContext. By default, the frame is drawn in the top-left corner. To apply
+    // translation, rotation, and scale, apply an affine transformation to the graphics context before calling this
+    // method. See AnimationData.drawSelf(GraphicsContext) for an example.
+    public int drawFrame(GraphicsContext graphicsContext, int frameIndex){
         // First, a sanity check
         if(frameIndex >= frameBounds.size()){
             System.err.println("frame index " + frameIndex + " exceeds the maximum sprite index in spritesheet "
                     + this + ", which has only " + frameBounds.size() + "sprites. Note: frames are 0-indexed.");
             return 1;
         }
-
-        // Determine where the top-left corner of the sprite should be:
-        Point2D anchorPoint = frameBounds.get(frameIndex).anchorPoint;
-
-        double topLeftX = anchorX - anchorPoint.getX();
-        double topLeftY = anchorY - anchorPoint.getY();
 
         // draw the sprite:
         Rectangle2D spritePosAndDim = frameBounds.get(frameIndex).posAndDim;
@@ -144,8 +113,8 @@ public class SpriteSheet extends Image {
                 spritePosAndDim.getMinY(),    // source y
                 spritePosAndDim.getWidth(),   // source width
                 spritePosAndDim.getHeight(),  // source height
-                topLeftX,                     // destination x
-                topLeftY,                     // destination y
+                0,                     // destination x
+                0,                     // destination y
                 spritePosAndDim.getWidth(),   // destination width
                 spritePosAndDim.getHeight()); // destination height
 

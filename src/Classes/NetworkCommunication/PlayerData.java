@@ -1,15 +1,19 @@
 package Classes.NetworkCommunication;
 
-import Classes.Images.CannonImages;
-import Classes.Animation.CharacterAnimations;
+import Classes.CannonData;
+import Classes.CharacterData;
+import Classes.Images.CannonType;
+import Classes.Animation.CharacterType;
 import Classes.Animation.OrbColor;
 import Classes.OrbData;
+import Classes.PlayPanel;
+import Classes.PlayerTypes.LocalPlayer;
+import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.ImageView;
 
-import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Random;
+import java.io.*;
+import java.util.*;
 
 import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_X_POS;
@@ -17,27 +21,21 @@ import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
 /**
- * Having separate "changers" and "setters" prevents an undesirable feedback loop that would undo changes.
+ * Having separate "changers" and "setters" prevents an undesirable feedback loop in network communications that would undo changes.
  */
 public class PlayerData implements Serializable {
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which ammunitionOrbs data that is inconsistent with the host is tolerated. After this many frames, the ammunitionOrbs list is overwritten with the host's data.
 
-    private double cannonAngle;
-    private int cannonAnimationFrame;
     private final long playerID;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private String username;
-    private CharacterAnimations characterEnum;
-    private int characterAnimationFrame;
-    private CannonImages cannonEnum;
     private int team;
-    private boolean defeated;
     private long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
     private Queue<OrbData> firedOrbs = new LinkedList<>();
+    private boolean defeated; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
-    private CharacterAnimations.CharacterAnimationState characterAnimationState = CharacterAnimations.CharacterAnimationState.CONTENT;
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
@@ -51,6 +49,17 @@ public class PlayerData implements Serializable {
     private boolean frozenChanged = false;
     private boolean cannonDisabledChanged = false;
 
+    protected CharacterData characterData;
+    protected CannonData cannonData;
+
+    // The PlayPanel associated with this player (needed for firing new shootingOrbs):
+    protected PlayPanel playPanel;
+
+    // Data needed for constructing the shooter Orbs. These values are determined *once* by the host at the start
+    // of the game and are never changed. Host and client maintain their own copies separately.
+    private int seed;
+    private Random ammunitionGenerator;
+
     // Counter for how many frames the local ammunitionOrbs list has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
 
@@ -58,34 +67,31 @@ public class PlayerData implements Serializable {
     // default values for everything else.
     public PlayerData(String username, long playerID){
         //BubbleData = new BubbleData();
-        cannonAngle = -80.0; // recall that JavaFx rotates things clockwise instead of counterclockwise
-        cannonAnimationFrame = 0;
         this.username = username;
         this.playerID = playerID;
+        CharacterType characterEnum;
+        CannonType cannonType;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
-            characterEnum = CharacterAnimations.UNKNOWN_CHARACTER;
-            cannonEnum = CannonImages.UNKNOWN_CANNON;
+            characterEnum = CharacterType.UNKNOWN_CHARACTER;
+            cannonType = CannonType.UNKNOWN_CANNON;
             team = 0;
         }
         else{ // Otherwise, assign the player the default character and cannon:
-            characterEnum = CharacterAnimations.BLITZ;
-            cannonEnum = CannonImages.BASIC_CANNON;
+            characterEnum = CharacterType.BLITZ;
+            cannonType = CannonType.BASIC_CANNON;
             team = 1;
         }
-        characterAnimationFrame = 0;
         defeated = false;
+
+        this.cannonData = new CannonData(cannonType);
+        this.characterData = new CharacterData(characterEnum);
     }
 
     // Copy constructor
     public PlayerData(PlayerData other){
-        cannonAngle = other.getCannonAngle();
-        cannonAnimationFrame = other.getCannonAnimationFrame();
         username = other.getUsername();
         playerID = other.getPlayerID();
         playerPos = other.getPlayerPos();
-        characterEnum = other.getCharacterEnum();
-        characterAnimationFrame = other.getCharacterAnimationFrame();
-        cannonEnum = other.getCannonEnum();
         team = other.getTeam();
         defeated = other.getDefeated();
         frozen = other.getFrozen();
@@ -104,6 +110,14 @@ public class PlayerData implements Serializable {
         ammunitionOrbsChanged = other.isAmmunitionChanged();
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
+
+        characterData = new CharacterData(other.getCharacterData());
+        cannonData = new CannonData(other.getCannonData());
+    }
+
+    /* Concrete methods from old Player class: */
+    public void registerToPlayPanel(PlayPanel playPanel){
+        this.playPanel = playPanel;
     }
 
     // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
@@ -140,12 +154,12 @@ public class PlayerData implements Serializable {
         this.username = username;
         usernameChanged = true;
     }
-    public void changeCharacter(CharacterAnimations characterEnum){
-        this.characterEnum = characterEnum;
+    public void changeCharacter(CharacterType characterEnum){
+        characterData.setCharacterType(characterEnum);
         characterChanged = true;
     }
-    public void changeCannon(CannonImages cannonEnum){
-        this.cannonEnum = cannonEnum;
+    public void changeCannon(CannonType cannonType){
+        cannonData.setCannonType(cannonType);
         cannonChanged = true;
     }
     public void changeTeam(int team){
@@ -157,7 +171,7 @@ public class PlayerData implements Serializable {
         defeatedChanged = true;
     }
     public void changeCannonAngle(double cannonAngle){
-        this.cannonAngle = cannonAngle;
+        cannonData.setAngle(cannonAngle);
         // no change flag is needed for cannon angle
     }
     public void changeLatency(long latency){
@@ -197,7 +211,7 @@ public class PlayerData implements Serializable {
     public void positionAmmunitionOrbs(){
         // update the positions of the next 2 ammunition orbs
         ammunitionOrbs.get(0).relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS);
-        ammunitionOrbs.get(1).relocate(CANNON_X_POS + getCannonEnum().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS + getCannonEnum().getAmmunitionRelativeY());
+        ammunitionOrbs.get(1).relocate(CANNON_X_POS + getCannonType().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS + getCannonType().getAmmunitionRelativeY());
     }
 
     public void changeFiringFlag(boolean firing){
@@ -221,11 +235,11 @@ public class PlayerData implements Serializable {
     public void setUsername(String username){
         this.username = username;
     }
-    public void setCharacter(CharacterAnimations characterEnum){
-        this.characterEnum = characterEnum;
+    public void setCharacter(CharacterType characterEnum){
+        characterData.setCharacterType(characterEnum);
     }
-    public void setCannon(CannonImages cannonEnum){
-        this.cannonEnum = cannonEnum;
+    public void setCannonType(CannonType cannonType){
+        cannonData.setCannonType(cannonType);
     }
     public void setTeam(int team){
         this.team = team;
@@ -234,7 +248,7 @@ public class PlayerData implements Serializable {
         this.defeated = defeated;
     }
     public void setCannonAngle(double cannonAngle){
-        this.cannonAngle = cannonAngle;
+        cannonData.setAngle(cannonAngle);
     }
     public void setLatency(long latency){
         this.latency = latency;
@@ -301,10 +315,7 @@ public class PlayerData implements Serializable {
 
     /* Direct Getters: These are called to get the actual player data*/
     public double getCannonAngle(){
-        return cannonAngle;
-    }
-    public int getCannonAnimationFrame(){
-        return cannonAnimationFrame;
+        return cannonData.getAngle();
     }
     public String getUsername(){
         return username;
@@ -315,14 +326,11 @@ public class PlayerData implements Serializable {
     public int getPlayerPos() {
         return playerPos;
     }
-    public CharacterAnimations getCharacterEnum(){
-        return characterEnum;
+    private CharacterData getCharacterData(){
+        return characterData;
     }
-    public int getCharacterAnimationFrame(){
-        return characterAnimationFrame;
-    }
-    public CannonImages getCannonEnum(){
-        return cannonEnum;
+    public CannonType getCannonType(){
+        return cannonData.getCannonType();
     }
     public int getTeam(){
         return team;
@@ -344,6 +352,9 @@ public class PlayerData implements Serializable {
     }
     public boolean getCannonDisabled(){
         return cannonDisabled;
+    }
+    public CannonData getCannonData(){
+        return cannonData;
     }
 
     public void checkForConsistency(PlayerData other){
@@ -381,30 +392,265 @@ public class PlayerData implements Serializable {
         }
     }
 
-    // lowestRow is the index of the lowest Orb on this Player's PlayPanel this frame.
-    //    Lowest possible value: -1 if there aren't any Orbs
-    //    Highest possible value: ARRAY_HEIGHT , if there's an orb on the deathOrbs list.
-    public void tick(int lowestRow, Random miscRandomGenerator){
-        // determine which animation state we should be in, and increment animationFrame:
-        if(characterAnimationState.inRange(lowestRow)){
-            characterAnimationFrame++;
-            if(characterAnimationFrame > characterD)
-            int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
-            if(bounds[1] == characterAnimationFrame) characterAnimationFrame = bounds[0];
-        }
-        else{
-            for(CharacterAnimations.CharacterAnimationState state : CharacterAnimations.CharacterAnimationState.values()){
-                if(state.inRange(lowestRow)){
-                    characterAnimationState = state;
-                    int[] bounds = characterEnum.getAnimationBounds(characterAnimationState);
-                    characterAnimationFrame = miscRandomGenerator.nextInt(bounds[1]-bounds[0]) + bounds[0];
-                    //System.out.println("new state: " + state + " animation bounds: " + bounds[0] + ", " + bounds[1]);
-                    //System.out.println("new animationFrame: " + animationFrame);
-                    break;
-                }
+
+
+
+
+
+
+
+
+
+
+
+
+    /* More methods from the old Player class*/
+
+
+    public void incrementCharacterEnum(){
+        CharacterType nextType = characterData.getCharacterType().next();
+        if (this instanceof LocalPlayer){
+            while(!nextType.isPlayable()){
+                nextType = nextType.next();
             }
         }
-        //System.out.println("current animation frame: " + animationFrame);
-        //Note to self: DO NOT update the character view here. Remember that we're not in the JavaFX application thread.
+        else{ // player must be an instance of BotPlayer
+            while(nextType.getBotDifficulty()==null){
+                nextType = nextType.next();
+            }
+            changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
+        }
+        changeCharacter(nextType);
+        characterData.setCharacterType(nextType);
+    }
+    public void incrementCannonEnum(){
+        CannonType nextType = getCannonType().next();
+        while(!nextType.isSelectable()){
+            nextType = nextType.next();
+        }
+        changeCannon(nextType); // updates model
+        cannonData.setCannonType(nextType); // updates view
+    }
+
+    public void changeResignPlayer(){
+        changeDefeated(true); // updates model
+        changeFrozen(true); // updates model
+        changeCannonDisabled(true); // updates model
+        // freezePlayer(); // updates view (GameScene) // This ought to be done in updateView(), to prevent a race condition.
+        // in the MultiplayerSceneSelection, the view is updated in either the deleteRemovedPlayer() or
+        // processPacketAsClient() methods, for host and clients respectively.
+    }
+
+    public void changeDisableCannon(){
+        changeCannonDisabled(true); // updates model
+        // There is no change to the view, other than the fact that the player is no longer able to fire.
+    }
+
+    public void freezePlayer(){
+        characterData.freeze(); // updates view (GameScene)
+        cannonData.freeze();// updates view (GameScene)
+    }
+
+    // Points the cannon at a position given in scene coordinates.
+    public void pointCannon(double sceneX, double sceneY){
+        if(getDefeated()) return;
+        Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
+        double mouseRelativeX = localLoc.getX() - cannonData.getPosX();
+        double mouseRelativeY = localLoc.getY() - cannonData.getPosY(); // recall that the y-axis points down.
+        double newAngleRad = Math.atan2(mouseRelativeY,mouseRelativeX);
+        double newAngleDeg = newAngleRad*180.0/Math.PI; // 0 degrees points to the right, 90 degrees points straight up.
+        pointCannon(newAngleDeg); // updates model and view.
+    }
+
+    // Points the cannon at a given angle, in degrees (0 degrees points to the right)
+    public void pointCannon(double angle){
+        if(getDefeated()) return;
+        changeCannonAngle(angle); // updates model
+    }
+
+    private void setFireCannon(){
+        if(getDefeated()) return;
+        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        setFire(newShooterOrbEnum); // updates Player model
+        // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
+        // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
+    }
+
+    public void changeFireCannon(){
+        if(getCannonDisabled()) return;
+        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+        OrbData firedOrb = changeFire(cannonData.getAngle()*(Math.PI/180), newShooterOrbEnum); // updates Player model
+        Queue<OrbData> firedOrbList = new LinkedList<>();
+        firedOrbList.add(firedOrb);
+        playPanel.getPlayPanelData().changeAddShootingOrbs(firedOrbList); // updates PlayPanel model
+        // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
+    }
+
+    public void relocateCannon(double x, double y){
+        cannonData.relocate(x,y);
+    }
+    public void relocateCharacter(double x, double y){
+        characterData.relocate(x,y);
+    }
+    public void setScale(double scaleFactor){
+        cannonData.setScale(scaleFactor);
+        characterData.setScale(scaleFactor);
+    }
+
+    // Called every frame by the host to update a player's data according to a packet received over the network
+    public void updateWithChangers(PlayerData newPlayerData, Map<Long, Long> latencies){
+        if(newPlayerData.isFiring()){
+            getFiredOrbs().addAll(newPlayerData.getFiredOrbs()); // updates model
+            changeFiringFlag(true); // marks data as updated
+            for(int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon(); // updates model
+            changeAmmunitionFlag(true); // marks data as updated
+            // note: view will be updated in the PlayPanel's repaint() method.
+        }
+        if(newPlayerData.isCannonChanged()){
+            changeCannon(newPlayerData.getCannonType()); // updates model
+            cannonData.setCannonType(newPlayerData.getCannonType()); // updates view //todo: update the view in a different method
+        }
+        if(newPlayerData.isCharacterChanged()){
+            changeCharacter(newPlayerData.getCharacterData().getCharacterType()); //updates model
+            characterData.setCharacterType(newPlayerData.getCharacterData().getCharacterType()); //updates view //todo: update the view in a different method
+        }
+        if(newPlayerData.isDefeatedChanged()){
+            changeDefeated(newPlayerData.getDefeated()); //updates model
+            // Note: In the MultiplayerSceneSelection, this player's corresponding PlayerSlot will be removed in either
+            // the deleteRemovedPlayer() or processPacketAsClient() methods, for host and clients respectively.
+            // In the GameScene, the player should also have been frozen. Updating the frozen state updates the view.
+        }
+        if(newPlayerData.isFrozenChanged()){
+            changeFrozen(newPlayerData.getFrozen()); // updates model
+        }
+        if(newPlayerData.isTeamChanged()){
+            changeTeam(newPlayerData.getTeam()); // updates model
+        }
+        if(newPlayerData.isUsernameChanged()){
+            changeUsername(newPlayerData.getUsername()); // updates model
+        }
+
+        changeCannonAngle(newPlayerData.getCannonAngle()); //updates model
+
+    }
+
+
+    // Called every frame by a client to update a player's data according to a packet received over the network. The
+    // data is *not* updated if the locally-stored flags indicate that the player has manually changed something
+    // since the last packet was sent. This is to prevent the host from overwriting the client's change request with
+    // old data.
+    public void updateWithSetters(PlayerData newPlayerData, boolean isLocalPlayer){
+        if(newPlayerData.isFiring() && !isLocalPlayer){
+            System.out.println("CLIENT: Another player has fired. Incrementing their ammunitionOrbs");
+            for (int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon();
+            // note: view will be updated in the PlayPanel's repaint() method.
+        }
+        if(newPlayerData.isCannonChanged() && !isCannonChanged()){
+            setCannonType(newPlayerData.getCannonType()); // updates model
+            cannonData.setCannonType(newPlayerData.getCannonType()); // updates view //todo: update the view in a different method
+        }
+        if(newPlayerData.isCharacterChanged() && !isCharacterChanged()){
+            setCharacter(newPlayerData.getCharacterData().getCharacterType()); //updates model
+            characterData.setCharacterType(newPlayerData.getCharacterData().getCharacterType()); //updates view //todo: update the view in a different method
+        }
+        if(newPlayerData.isDefeatedChanged() && !isDefeatedChanged()){
+            setDefeated(newPlayerData.getDefeated()); //updates model
+        }
+        if(newPlayerData.isFrozenChanged() && !isFrozenChanged()){
+            setFrozen(newPlayerData.getFrozen()); // updates model
+        }
+        if(newPlayerData.isTeamChanged() && !isTeamChanged()){
+            setTeam(newPlayerData.getTeam()); // updates model
+        }
+        if(newPlayerData.isUsernameChanged() && !isUsernameChanged()){
+            setUsername(newPlayerData.getUsername()); // updates model
+        }
+
+        // remote players' cannon angles are always updated:
+        if(!isLocalPlayer){
+            setCannonAngle(newPlayerData.getCannonAngle()); //updates model
+        }
+
+        // players' latencies are always updated:
+        setLatency(newPlayerData.getLatency()); // updates model
+
+        // check for consistency between this player's ammunitionOrbs and the host's data for ammunitionOrbs. If they
+        // are different for too long, then override the client's data with the host's data.
+        checkForConsistency(newPlayerData);
+
+    }
+
+    // Attempt to load Orbs from the file first. If the file doesn't exist or if "RANDOM" is specified or if there are
+    // only a few orbs in the file, then add random Orbs to the ammunition until we have 10.
+    public void readAmmunitionOrbs(String filename, int seed, int positionIndex){
+        this.seed = seed;
+        if(ammunitionGenerator==null) ammunitionGenerator = new Random(seed);
+        List<OrbData> ammunitionOrbs = getAmmunition();
+        ammunitionOrbs.clear();
+        if(!filename.substring(0,6).equals("RANDOM")){
+            InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+
+            try{
+                // skip ahead to where the shooter orbs are:
+                String line;
+                while(!(line = reader.readLine()).equals("***SHOOTER_ORBS***"));
+
+                // skip ahead to the line for this player's positionIndex:
+                for(int i=0; i<positionIndex; i++){
+                    reader.readLine();
+                }
+
+                // Add the Orbs specified in the file to the ammunitionOrbs Queue:
+                int nextOrbSymbol;
+                int temp = 0;
+                while((nextOrbSymbol = reader.read())!=-1 && nextOrbSymbol!='\n' && nextOrbSymbol!='\r'){
+                    OrbColor orbEnum = OrbColor.lookupOrbImageBySymbol((char)nextOrbSymbol);
+                    if(orbEnum==null){
+                        System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");
+                        continue;
+                    }
+                    ammunitionOrbs.add(new OrbData(orbEnum,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
+                    temp++;
+                    // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
+                }
+                // System.out.println("read " + temp + "orbs from file");
+            } catch(IOException e){
+                e.printStackTrace();
+            }
+        }
+        // Add random Orbs to the ammunitionOrbs Queue after that:
+        while(ammunitionOrbs.size()<2){
+            System.out.println();
+            int randomOrdinal = ammunitionGenerator.nextInt(OrbColor.values().length);
+            OrbColor orbImage = OrbColor.values()[randomOrdinal];
+            ammunitionOrbs.add(new OrbData(orbImage,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
+            // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
+        }
+    }
+
+    //todo: implement this
+    public void tick(int lowestRow){
+        characterData.tick(lowestRow);
+        //cannonData.tick();
+    }
+
+    //todo: implement this
+    public void drawSelf(ImageView characterImageView, ImageView cannonImageView){
+        if(isFrozenChanged()){
+            freezePlayer(); // updates view
+        }
+        if(characterImageView!=null) characterData.drawSelf(characterImageView);
+        if(cannonImageView!=null) cannonData.drawSelf(cannonImageView);
+
+    }
+
+    //todo: implement this
+    public void drawSelf(GraphicsContext graphicsContext){
+        if(isFrozenChanged()){
+            freezePlayer(); // updates view
+        }
+        characterData.drawSelf(graphicsContext);
+        cannonData.drawSelf(graphicsContext);
     }
 }

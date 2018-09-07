@@ -1,12 +1,17 @@
 package Classes.Animation;
 
 import javafx.application.Platform;
+import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.ColorAdjust;
-import javafx.scene.effect.Effect;
 import javafx.scene.image.ImageView;
+import javafx.scene.transform.Affine;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Scale;
+import javafx.scene.transform.Translate;
 
 import java.io.Serializable;
+import java.util.Random;
 
 public class AnimationData implements Serializable {
     private Animation animation;
@@ -45,6 +50,7 @@ public class AnimationData implements Serializable {
     }
     public void setAnimation(Animation newAnimation){
         animation = newAnimation;
+        frame = 0;
     }
 
     public double getAnchorX(){
@@ -71,6 +77,9 @@ public class AnimationData implements Serializable {
     public void rotate(double amount){
         rotation += amount;
     }
+    public void setRotation(double amount){
+        rotation = amount;
+    }
 
     public VisibilityOption getVisibility(){
         return visibility;
@@ -96,8 +105,11 @@ public class AnimationData implements Serializable {
     public int getFrame(){
         return frame;
     }
-    public void setFrame(int index){
+    private void setFrame(int index){
         frame = index;
+    }
+    public void setRandomFrame(){
+        frame = (new Random()).nextInt(animation.getSpriteSheet().getMaxFrameIndex()+1);
     }
     private boolean incrementFrame(){
         return ++frame > animation.getSpriteSheet().getMaxFrameIndex();
@@ -148,7 +160,6 @@ public class AnimationData implements Serializable {
         return finished;
     }
 
-    // todo: take scale into account
     // This method should only ever be called by the JavaFX application thread.
     public int drawSelf(GraphicsContext graphicsContext){
         if (!Platform.isFxApplicationThread()){
@@ -157,15 +168,15 @@ public class AnimationData implements Serializable {
             return 1;
         }
 
-        if(visibility == VisibilityOption.INVISIBLE) return 0;
-
         // Save the existing effect:
-        Effect previousEffect = graphicsContext.getEffect(new ColorAdjust());
-        double previousAlpha = graphicsContext.getGlobalAlpha();
+        graphicsContext.save();
 
-        // Determine which effect to apply for this sprite:
+        // Determine which visual effect, if any, to apply for this sprite:
         switch(visibility){
+            case INVISIBLE:
+                graphicsContext.setGlobalAlpha(0);
             case NORMAL:
+                graphicsContext.setGlobalAlpha(1);
                 break;
             case GREYSCALE:
                 graphicsContext.setEffect(new ColorAdjust(0,-1,0,0));
@@ -177,22 +188,32 @@ public class AnimationData implements Serializable {
                 break;
         }
 
+        // Apply translation, rotation, and scale transforms. Note: Order matters! Contrary to logic, translation should occur before rotation:
+        Point2D anchorPoint = animation.getSpriteSheet().getFrameBound(frame).getAnchorPoint();
+        Affine transform = new Affine();
+        transform.appendTranslation(anchorX-anchorPoint.getX(),anchorY-anchorPoint.getY());
+        transform.appendRotation(rotation, anchorPoint);
+        transform.appendScale(scale,scale,anchorPoint);
+        graphicsContext.setTransform(transform);
+
         // Draw the sprite:
-        animation.getSpriteSheet().drawFrame(graphicsContext, anchorX, anchorY, frame);
+        animation.getSpriteSheet().drawFrame(graphicsContext, frame);
 
         // Restore the previous effect:
-        graphicsContext.setEffect(previousEffect);
-        graphicsContext.setGlobalAlpha(previousAlpha);
+        graphicsContext.restore();
 
         return 0;
     }
 
-    // todo: take scale into account
     // This method should only ever be called by the JavaFX application thread.
-    // Note: AnimationData may be best suited for use with a GraphicsContext. Why? You usually only have to keep track
-    // of a single GraphicsContext and pass it to many AnimationDatas. If you used ImageViews, on the other hand, you
-    // would have to keep track of a unique ImageView for each and every instance of AnimationData. Having many
-    // instances of ImageView also takes more memory than having a single instance of GraphicsContext.
+    // Note: I recommend using drawSelf(GraphicsContext) instead, in most cases. Why? You usually only have to keep
+    // track of a single GraphicsContext and pass it to many AnimationDatas. If you used ImageViews, on the other hand,
+    // you would have to keep track of a unique ImageView for each and every instance of AnimationData. Having many
+    // instances of ImageView also takes more memory than having a single instance of GraphicsContext. Also, this
+    // implementation of drawSelf() is clearly suboptimal, seeing as how it clears all transforms and creates new ones
+    // each frame. A more efficient implementation might cache the transforms somehow. I did not do this because I
+    // wanted this method to take *any* ImageView. Since the ImageView can theoretically change from one frame to the
+    // next, we can't cache pointers to its transforms.
     public int drawSelf(ImageView imageView){
         if (!Platform.isFxApplicationThread()){
             System.err.println("ERROR! A non-JavaFX thread is attempting to call AnimationData.drawSelf(). " +
@@ -200,18 +221,40 @@ public class AnimationData implements Serializable {
             return 1;
         }
 
-        if(visibility == VisibilityOption.INVISIBLE){
-            imageView.setVisible(false);
-            return 0;
+        switch(visibility){
+            case INVISIBLE:
+                imageView.setVisible(false);
+            case NORMAL:
+                imageView.setVisible(true);
+                imageView.setEffect(null);
+                break;
+            case GREYSCALE:
+                imageView.setVisible(true);
+                imageView.setEffect(new ColorAdjust(0,-1,0,0));
+                break;
+            case GREYSCALE_TRANSPARENT:
+                imageView.setEffect(new ColorAdjust(0,-1,0,0));
+            case TRANSPARENT:
+                imageView.setVisible(true);
+                imageView.setOpacity(0.5);
+                break;
         }
 
-        imageView.setImage(animation.getSpriteSheet());
-
+        // Set the viewport to display only the current frame:
         SpriteSheet.FrameBound frameBound = animation.getSpriteSheet().getFrameBound(frame);
+        imageView.setImage(animation.getSpriteSheet());
         imageView.setViewport(frameBound.getPosAndDim());
-        double layoutX = anchorX-frameBound.getAnchorPoint().getX();
-        double layoutY = anchorY-frameBound.getAnchorPoint().getY();
-        imageView.relocate(layoutX,layoutY);
+
+        // clear the existing transforms on this object:
+        imageView.getTransforms().clear();
+
+        // Apply translation, rotation, and scale transforms:
+        Point2D anchorPoint = frameBound.getAnchorPoint();
+        Translate translator = new Translate(anchorX-anchorPoint.getX(), anchorY-anchorPoint.getY());
+        Rotate rotater = new Rotate(rotation, anchorPoint.getX(), anchorPoint.getY());
+        Scale scaler = new Scale(scale, scale, anchorPoint.getX(), anchorPoint.getY());
+        imageView.getTransforms().addAll(translator, rotater, scaler);
+
         return 0;
     }
 }

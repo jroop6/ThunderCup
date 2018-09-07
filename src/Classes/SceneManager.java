@@ -2,12 +2,12 @@ package Classes;
 
 import Classes.Audio.Music;
 import Classes.Audio.SoundManager;
-import Classes.Animation.CharacterAnimations;
+import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
+import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.BotPlayer;
 import Classes.PlayerTypes.LocalPlayer;
-import Classes.PlayerTypes.Player;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -118,7 +118,7 @@ public class SceneManager extends Application {
     static void switchToPuzzleMode(){
         System.out.println("building puzzle mode...");
 
-        List<Player> playerList = new LinkedList<>();
+        List<PlayerData> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
 
         // Create the GameScene, passing the PlayPanel to it:
@@ -143,7 +143,7 @@ public class SceneManager extends Application {
         }
     }
 
-    static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<Player> players){
+    static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<PlayerData> players){
         GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME, 1);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
@@ -152,7 +152,7 @@ public class SceneManager extends Application {
     // Todo: multi-cannon mode is currently broken.
     static void switchTo2PlayerTestMode(){
         // add two players, controlled by the mouse:
-        List<Player> playerList = new LinkedList<>();
+        List<PlayerData> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
         playerList.add(new LocalPlayer("YOU",false));
 
@@ -164,9 +164,9 @@ public class SceneManager extends Application {
 
     static void switchToPuzzleVsMode(){
         // add a player and a bot, each with the same puzzle:
-        List<Player> playerList = new LinkedList<>();
+        List<PlayerData> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
-        BotPlayer botPlayer = new BotPlayer(CharacterAnimations.FILLY_BOT_HARD);
+        BotPlayer botPlayer = new BotPlayer(CharacterType.FILLY_BOT_HARD);
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 
@@ -179,7 +179,7 @@ public class SceneManager extends Application {
     static void switchToPuzzleMode(int puzzleGroupIndex){
         System.out.println("switching to puzzle mode...");
 
-        List<Player> playerList = new LinkedList<>();
+        List<PlayerData> playerList = new LinkedList<>();
         playerList.add(new LocalPlayer("YOU",true));
 
         // Create the GameScene, passing the PlayPanel to it:

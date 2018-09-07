@@ -44,6 +44,18 @@ public enum Animation {
     FILLY_BOT_HARD_DEFEAT("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
     FILLY_BOT_HARD_DISCONNECTED("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
 
+    /* CANNONS */
+    BASIC_CANNON_STATIC("res/animations/cannons/BasicCannon_spritesheet.png"),
+    BASIC_CANNON_BACKGROUND("res/animations/cannons/BasicCannonBackground_spritesheet.png"),
+    BASIC_CANNON_FOREGROUND("res/animations/cannons/BasicCannonForeground_spritesheet.png"),
+
+    UNKNOWN_CANNON_STATIC("res/animations/cannons/UnknownCannon_spritesheet.png"),
+    //UNKNOWN_CANNON_BACKGROUND("res/animations/cannons/UnknownCannonBackground_spritesheet.png"),
+    //UNKNOWN_CANNON_FOREGROUND("res/animations/cannons/UnknownCannonForeground_spritesheet.png"),
+
+    BOT_CANNON_STATIC("res/animations/cannons/BotCannon_spritesheet.png"),
+    //BOT_CANNON_BACKGROUND("res/animations/cannons/BotCannonBackground_spritesheet.png"),
+    //BOT_CANNON_FOREGROUND("res/animations/cannons/BotCannonForeground_spritesheet.png"),
 
     /* ORBS */
     RED_ORB_IMPLODING("res/images/orbs/highRes/redOrb_spritesheet.png"),

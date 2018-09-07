@@ -46,8 +46,7 @@ public class GameScene extends Scene {
     private GameData gameData = new GameData();
     private ChatBox chatBox;
     private LocalPlayer localPlayer;
-    private List<Player> players;
-    private int numPlayers;
+    private List<PlayerData> players;
 
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
@@ -82,36 +81,35 @@ public class GameScene extends Scene {
     private boolean victoryDisplayStarted2 = false;
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
-    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
+    public GameScene(boolean isHost, ConnectionManager connectionManager, List<PlayerData> players, LocationType locationType, int puzzleGroupIndex){
         super(new StackPane());
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
         this.connectionManager = connectionManager;
         this.players = players;
-        numPlayers = players.size();
         maxConsecutivePacketsMissed = FRAME_RATE * 5;
 
         // Arrange the players into their teams by adding each one to an appropriate List:
-        Map<Integer, List<Player>> teams = new HashMap<>();
-        for (Player player: players) {
-            int team = player.getPlayerData().getTeam();
+        Map<Integer, List<PlayerData>> teams = new HashMap<>();
+        for (PlayerData player: players) {
+            int team = player.getTeam();
             if(teams.containsKey(team)){
                 teams.get(team).add(player);
             }
             else{
-                List<Player> newTeam = new LinkedList<>();
+                List<PlayerData> newTeam = new LinkedList<>();
                 newTeam.add(player);
                 teams.put(team,newTeam);
             }
 
             // while we're here, check to see if this is the LocalPlayer.
             if(player instanceof LocalPlayer) localPlayer = (LocalPlayer) player;
-            gameData.getMissedPacketsCount().put(player.getPlayerData().getPlayerID(),0);
+            gameData.getMissedPacketsCount().put(player.getPlayerID(),0);
         }
 
         // Now create one PlayPanel for each team and assign its players:
-        for (List<Player> playerList: teams.values()){
-            int team = playerList.get(0).getPlayerData().getTeam();
+        for (List<PlayerData> playerList: teams.values()){
+            int team = playerList.get(0).getTeam();
             String puzzleURL;
             if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
             else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01",playerList.size(),puzzleGroupIndex);
@@ -126,9 +124,9 @@ public class GameScene extends Scene {
         rootNode.getChildren().add(playPanels);
 
         // Add a chat overlay. Put it at the bottom of the screen, with no background:
-        chatBox = new ChatBox(gameData, localPlayer.getPlayerData(), 125, false);
-        chatBox.addNewMessageIn(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerData().getPlayerID()));
-        chatBox.addNewMessageIn(new Message("Press p to pause", localPlayer.getPlayerData().getPlayerID()));
+        chatBox = new ChatBox(gameData, localPlayer, 125, false);
+        chatBox.addNewMessageIn(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerID()));
+        chatBox.addNewMessageIn(new Message("Press p to pause", localPlayer.getPlayerID()));
 
         AnchorPane chatBoxPositioner = new AnchorPane();
         chatBoxPositioner.getChildren().add(chatBox);
@@ -272,13 +270,10 @@ public class GameScene extends Scene {
             PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
             playPanel.repaint(playPanelData, playerDataList);
 
-            // update each player's visual display:
-            for(Player player : playPanel.getPlayerList()){
-                player.updateView();
-
-                // If the player has been gone for too long (and they have not resigned), ask the host what to do:
-                Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerData().getPlayerID());
-                if(missedPackets==maxConsecutivePacketsMissed && !player.getPlayerData().getDefeated()){
+            // If a player has been gone for too long (and they have not resigned), ask the host what to do:
+            for(PlayerData player : playPanel.getPlayerList()){
+                Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
+                if(missedPackets==maxConsecutivePacketsMissed && !player.getDefeated()){
                     showConnectionLostDialog(player);
                 }
             }
@@ -300,8 +295,8 @@ public class GameScene extends Scene {
         // In competitive multiplayer (or Vs Computer) games, check to see whether there's only 1 live team left
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
-            for(Player player : players){
-                if(!player.getPlayerData().getDefeated()) liveTeams.add(player.getPlayerData().getTeam());
+            for(PlayerData player : players){
+                if(!player.getDefeated()) liveTeams.add(player.getTeam());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -316,7 +311,7 @@ public class GameScene extends Scene {
 
         // In puzzle games, check to see whether the only existing team has lost:
         else{
-            if(players.get(0).getPlayerData().getDefeated()) startVictoryPause_Model(-1);
+            if(players.get(0).getDefeated()) startVictoryPause_Model(-1);
         }
 
         // If someone has won, handle the delay before the victory graphics are actually displayed:
@@ -370,8 +365,8 @@ public class GameScene extends Scene {
 
             // Copy the playerData
             List<PlayerData> playerDataList = new LinkedList<>();
-            for(Player player : players){
-                playerDataList.add(new PlayerData(player.getPlayerData()));
+            for(PlayerData player : players){
+                playerDataList.add(new PlayerData(player));
             }
 
             return new FrameResult(soundEffectsToPlay, new GameData(gameData) , playPanelDataList, playerDataList);
@@ -422,7 +417,7 @@ public class GameScene extends Scene {
             // compile all the individual bot retargeting times.
             long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time.
             for(PlayPanel playPanel : playPanelMap.values()){
-                for (Player player : playPanel.getPlayerList()){
+                for (PlayerData player : playPanel.getPlayerList()){
                     if (player instanceof BotPlayer){
                         long[] times = ((BotPlayer) player).getBotRetargetTime();
                         botRetargetTime[0] += times[0];
@@ -440,7 +435,7 @@ public class GameScene extends Scene {
 
     private void processBots(){
         for(PlayPanel playPanel : playPanelMap.values()){
-            for (Player player : playPanel.getPlayerList()){
+            for (PlayerData player : playPanel.getPlayerList()){
                 if (player instanceof BotPlayer){
                     ((BotPlayer) player).tick();
                 }
@@ -477,16 +472,16 @@ public class GameScene extends Scene {
         // We must create a copy of the local PlayerData, GameData, and PlayPanelData and add those copies to the packet. This
         // is to prevent the change flags within the local PlayerData and GameData from being reset before the packet is
         // sent (note the last 4 lines of this method).
-        PlayerData localPlayerData = new PlayerData(localPlayer.getPlayerData());
+        PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
         PlayPanelData localPlayPanelData = new PlayPanelData(playPanelMap.get(localPlayerData.getTeam()).getPlayPanelData());
         Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanelData);
 
-        for (Player player: players) {
-            if(player.getPlayerData().getPlayerID()==0) continue; // we've already added the localPlayer's PlayerData to the packet.
-            PlayerData playerData = new PlayerData(player.getPlayerData()); // Yes, these need to be *new* PlayerData instances because there may be locally-stored bot data. see note regarding local player data, above.
+        for (PlayerData player: players) {
+            if(player.getPlayerID()==0) continue; // we've already added the localPlayer's PlayerData to the packet.
+            PlayerData playerData = new PlayerData(player); // Yes, these need to be *new* PlayerData instances because there may be locally-stored bot data. see note regarding local player data, above.
             outPacket.addPlayerData(playerData);
-            player.getPlayerData().resetFlags(); // reset the local change flags so that they are only broadcast once
+            player.resetFlags(); // reset the local change flags so that they are only broadcast once
         }
 
         for (PlayPanel playPanel: playPanelMap.values()){
@@ -499,20 +494,19 @@ public class GameScene extends Scene {
         connectionManager.send(outPacket);
 
         // reset the local change flags so that they are only broadcast once:
-        localPlayer.getPlayerData().resetFlags();
+        localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam()).getPlayPanelData().resetFlags();
         gameData.resetFlags();
         gameData.resetMessages();
     }
 
     private void incrementMissedPacketsCounts(){
-        for (Player player: players) {
-            PlayerData playerData = player.getPlayerData();
+        for (PlayerData player: players) {
             if(!(player instanceof RemotePlayer)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
-            if(!isHost && playerData.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
+            if(!isHost && player.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
 
             // increment the missed packets count. The count will be reset whenever the next packet is received:
-            gameData.incrementMissedPacketsCount(playerData.getPlayerID());
+            gameData.incrementMissedPacketsCount(player.getPlayerID());
         }
     }
 
@@ -581,7 +575,7 @@ public class GameScene extends Scene {
         // The network must create a copy of the local PlayerData and GameData and send those copies instead of the
         // originals. This is to prevent the change flags within the PlayerData and GameData from being reset before the
         // packet is sent.
-        PlayerData localPlayerData = new PlayerData(localPlayer.getPlayerData());
+        PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
         PlayPanelData localPlayPanelData = new PlayPanelData(playPanelMap.get(localPlayerData.getTeam()).getPlayPanelData());
 
@@ -589,15 +583,15 @@ public class GameScene extends Scene {
         connectionManager.send(outPacket);
 
         // reset local change flags so that they are sent only once:
-        localPlayer.getPlayerData().resetFlags();
+        localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam()).getPlayPanelData().resetFlags();
         gameData.resetFlags();
         gameData.resetMessages();
     }
 
     // Todo: make this dialog automatically disappear if the player reconnects
-    private void showConnectionLostDialog(Player player){
-        boolean droppedPlayerIsHost = player.getPlayerData().getPlayerID()==0;
+    private void showConnectionLostDialog(PlayerData player){
+        boolean droppedPlayerIsHost = player.getPlayerID()==0;
 
         // The dialog box is nonmodal and is constructed on a new stage:
         Stage dialogStage = new Stage();
@@ -611,7 +605,7 @@ public class GameScene extends Scene {
         dialogStage.initStyle(StageStyle.UNDECORATED);
 
         // Add an informational label:
-        Label dialogLabel = new Label("Communication with player " + player.getPlayerData().getUsername() + " seems to have been lost.\n What would you like to do?");
+        Label dialogLabel = new Label("Communication with player " + player.getUsername() + " seems to have been lost.\n What would you like to do?");
         if(droppedPlayerIsHost){
             dialogLabel.setText("Communication with the host seems to have been lost. What would you like to do?");
         }
@@ -642,7 +636,7 @@ public class GameScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            gameData.setMissedPacketsCount(player.getPlayerData().getPlayerID(), (int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
+            gameData.setMissedPacketsCount(player.getPlayerID(), (int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
             dialogStage.close();
         });
 
@@ -694,7 +688,7 @@ public class GameScene extends Scene {
         animationTimer.stop();
         connectionManager.cleanUp(); // stops the receiver and sender workers in the connectionManager
         for(PlayPanel playPanel : playPanelMap.values()){
-            for(Player player : playPanel.getPlayerList()){
+            for(PlayerData player : playPanel.getPlayerList()){
                 if(player instanceof BotPlayer){
                     ((BotPlayer) player).cleanUp(); // shuts down the BotPlayer's thread pool
                 }
@@ -817,7 +811,7 @@ public class GameScene extends Scene {
         gameData.setVictoriousTeam(victoriousTeam);
 
         // Disable all cannons and freeze all defeated players:
-        for(Player player : players){
+        for(PlayerData player : players){
             //if(player.getPlayerData().getTeam() == victoriousTeam){
             player.changeDisableCannon();
             //}
@@ -858,7 +852,7 @@ public class GameScene extends Scene {
                 else playPanel.displayVictoryResults(PlayPanel.VictoryType.VS_LOSE);
             }
         }
-        if(localPlayer.getPlayerData().getTeam() == victoriousTeam) SoundManager.playSong(Music.GO_TAKE_FLIGHT,false);
+        if(localPlayer.getTeam() == victoriousTeam) SoundManager.playSong(Music.GO_TAKE_FLIGHT,false);
         else SoundManager.playSong(Music.GAME_OVER,false);
 
         VBox vBox = new VBox();

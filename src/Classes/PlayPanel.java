@@ -6,7 +6,6 @@ import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.LocalPlayer;
-import Classes.PlayerTypes.Player;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -54,7 +53,7 @@ public class PlayPanel extends Pane {
     public static final double FOUR_R_SQUARED = 4 * ORB_RADIUS * ORB_RADIUS;
     public static final double ROW_HEIGHT = Math.sqrt(Math.pow(2* ORB_RADIUS,2) - Math.pow(ORB_RADIUS,2)); // Vertical distance between Orb rows.
 
-    private List<Player> playerList = new LinkedList<>();
+    private List<PlayerData> playerList = new LinkedList<>();
     private Rectangle liveBoundary;
 
     private StaticBgImages foregroundCloudsEnum;
@@ -72,7 +71,7 @@ public class PlayPanel extends Pane {
     // Audio
     MediaPlayer rumbleSoundEffect;
 
-    PlayPanel(int team, List<Player> players, LocationType locationType, int seed, String puzzleUrl){
+    PlayPanel(int team, List<PlayerData> players, LocationType locationType, int seed, String puzzleUrl){
         this.numPlayers = players.size();
         this.randomTransferOrbGenerator = new Random(seed);
         this.puzzleUrl = puzzleUrl;
@@ -98,21 +97,17 @@ public class PlayPanel extends Pane {
         playPanelData = new PlayPanelData(team, numPlayers, seed, puzzleUrl);
     }
 
-    private void addPlayers(List<Player> players){
+    private void addPlayers(List<PlayerData> players){
         playerList.addAll(players);
 
         for(int i=0; i<numPlayers; ++i){
-            Player player = players.remove(0);
+            PlayerData player = players.remove(0);
 
             // register the new player, add his/her cannon and character to the UI, and add other background image components:
             player.registerToPlayPanel(this);
-            getChildren().add(player.getCannonStaticBackground());
-            getChildren().add(player.getCannonMovingPart());
-            getChildren().add(player.getCannonStaticForeground());
             player.relocateCannon(CANNON_X_POS + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
-            player.relocateCharacter(player.getPlayerData().getCannonEnum().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
-                    player.getPlayerData().getCannonEnum().getCharacterY());
-            getChildren().add(player.getCharacterSprite());
+            player.relocateCharacter(player.getCannonType().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
+                    player.getCannonType().getCharacterY());
             ImageView foregroundClouds = foregroundCloudsEnum.getImageView();
             foregroundClouds.relocate(PLAYPANEL_WIDTH_PER_PLAYER*i,PLAYPANEL_HEIGHT-foregroundCloudsEnum.getHeight());
             getChildren().add(foregroundClouds);
@@ -124,8 +119,8 @@ public class PlayPanel extends Pane {
             player.readAmmunitionOrbs(puzzleUrl, seed, i);
 
             // Inform the player where they are located in the playpanel and initialize the positions of the 1st two shooting orbs:
-            player.getPlayerData().initializePlayerPos(i);
-            player.getPlayerData().positionAmmunitionOrbs();
+            player.initializePlayerPos(i);
+            player.positionAmmunitionOrbs();
         }
 
     }
@@ -135,10 +130,10 @@ public class PlayPanel extends Pane {
     // Called from GameScene only
     void updatePlayer(PlayerData playerData, boolean isHost){
         //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
-        //Todo: note: simply adding a getPlayer() method to PlayerData won't work (the reference has been lost over transmission).
-        Player player = playerList.get(0);
-        for(Player tempPlayer: playerList){
-            if(tempPlayer.getPlayerData().getPlayerID() == playerData.getPlayerID()){
+        //Todo: note: simply adding a getPlayerData() method to PlayerData won't work (the reference has been lost over transmission).
+        PlayerData player = playerList.get(0);
+        for(PlayerData tempPlayer: playerList){
+            if(tempPlayer.getPlayerID() == playerData.getPlayerID()){
                 player = tempPlayer;
                 break;
             }
@@ -237,9 +232,9 @@ public class PlayPanel extends Pane {
                 }
                 else{
                     for(int i=0; i<playerList.size(); i++){
-                        Player player = playerList.get(i);
+                        PlayerData player = playerList.get(i);
                         player.readAmmunitionOrbs(puzzleUrl,seed,i);
-                        player.getPlayerData().positionAmmunitionOrbs();
+                        player.positionAmmunitionOrbs();
                     }
                 }
             }
@@ -258,15 +253,15 @@ public class PlayPanel extends Pane {
 
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!getPlayPanelData().isDeathOrbsEmpty()){
-            for(Player defeatedPlayer : getPlayerList()){
+            for(PlayerData defeatedPlayer : getPlayerList()){
                 defeatedPlayer.changeResignPlayer();
             }
         }
 
         // update each player's animation state:
         int lowestRow = playPanelData.getLowestOccupiedRow(orbArray, deathOrbs);
-        for(Player player : playerList){
-            player.getPlayerData().tick(lowestRow, miscRandomGenerator);
+        for(PlayerData player : playerList){
+            player.tick(lowestRow);
         }
 
         removeStrayOrbs();
@@ -730,9 +725,10 @@ public class PlayPanel extends Pane {
             orbData.drawSelf(orbDrawer, vibrationOffset);
         }
 
-        // Paint ammunition orbs:
+        // Paint each player and his/her ammunition orbs:
         for(PlayerData playerData : playerDataList){
             if(playerData.getTeam() == playPanelData.getTeam()){
+                playerData.drawSelf(orbDrawer);
                 List<OrbData> ammunitionOrbs = playerData.getAmmunition();
                 ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
                 ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
@@ -805,7 +801,7 @@ public class PlayPanel extends Pane {
         }
     }
 
-    public List<Player> getPlayerList(){
+    public List<PlayerData> getPlayerList(){
         return playerList;
     }
 

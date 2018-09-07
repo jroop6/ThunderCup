@@ -91,9 +91,10 @@ public class MainMenuScene extends Scene {
         // Add the foreground cloud and character:
         ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
-        CharacterData characterData = new CharacterData(CharacterAnimations.BLITZ);
-        characterData.getSprite().relocate(550,850,0);
-        scaledRoot.getChildren().addAll(nearCloud, characterData.getSprite());
+        ImageView characterView = new ImageView();
+        CharacterData characterData = new CharacterData(CharacterType.BLITZ);
+        characterData.relocate(550,850);
+        scaledRoot.getChildren().addAll(nearCloud, characterView);
 
         // Add the animated title:
         AnimationData title = new AnimationData(Classes.Animation.Animation.TITLE,1920/2, 550/2, PlayOption.PLAY_ONCE_THEN_PAUSE);
@@ -173,6 +174,8 @@ public class MainMenuScene extends Scene {
                 if(now>nextAnimationFrameInstance){
                     title.tick();
                     title.drawSelf(titleView);
+                    characterData.tick(0);
+                    characterData.drawSelf(characterView);
                     nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
                 }
             }

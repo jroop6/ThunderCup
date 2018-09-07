@@ -7,14 +7,11 @@ import Classes.NetworkCommunication.PlayerData;
 /**
  * Created by HydrusBeta on 8/2/2017.
  */
-public class UnclaimedPlayer extends Player {
+public class UnclaimedPlayer extends PlayerData {
 
     // The playerData came from the network and contains all of this player's information. Use it to initialize the RemotePlayer.
     public UnclaimedPlayer(){
-        this.playerData = new PlayerData("Open Slot",-1);
-        this.cannon = new Cannon(playerData);
-        this.characterData = new CharacterData(playerData.getCharacterEnum());
-        usernameButton.setText(playerData.getUsername());
+        super("Open Slot",-1);
     }
 
     /* Implementing abstract methods from Player class: */

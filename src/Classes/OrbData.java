@@ -101,7 +101,6 @@ public class OrbData extends PointInt implements Serializable{
             case ELECTRIFYING:
                 // Get an electrification animation Todo: randomize this once I have more than 1 type of animation
                 orbElectrification = new AnimationData(Animation.ELECTRIFICATION_1, orbAnimation.getAnchorX(), orbAnimation.getAnchorY(), PlayOption.PLAY_ONCE_THEN_VANISH);
-                orbElectrification.setFrame(0);
                 break;
             case TRANSFERRING:
                 speed = 0.0;

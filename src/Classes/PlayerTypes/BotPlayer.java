@@ -3,9 +3,8 @@ package Classes.PlayerTypes;
 import Classes.*;
 import Classes.Animation.OrbColor;
 import Classes.Audio.SoundEffect;
-import Classes.CharacterData;
-import Classes.Images.CannonImages;
-import Classes.Animation.CharacterAnimations;
+import Classes.Images.CannonType;
+import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.PlayerData;
 
 import java.util.*;
@@ -16,7 +15,7 @@ import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
-public class BotPlayer extends Player {
+public class BotPlayer extends PlayerData {
 
     // Targeting
     private final double ANGLE_INCREMENT = 1.0; // The resolution of the bot's simulated shots. Smaller == higher resolution but more computation.
@@ -38,30 +37,27 @@ public class BotPlayer extends Player {
     // Misc, for debugging
     private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
 
-    public BotPlayer(CharacterAnimations characterEnum){
-        // create a (probably) unique player ID:
+    public BotPlayer(CharacterType characterEnum){
+        super("fillyBot [" + characterEnum.getBotDifficulty() +"]", createID());
+
+        // initialize model:
+        setCharacter(characterEnum);
+        setCannonType(CannonType.BOT_CANNON);
+        transitionFrame = characterEnum.getBotDifficulty().getThinkingFrames();
+    }
+
+    // create a (probably) unique player ID
+    private static long createID(){
         long playerID;
         do{
             playerID = (new Random()).nextLong();
             System.out.println("player ID is: " + playerID);
         } while (playerID == 0 || playerID == -1); // A non-host player absolutely cannot have an ID of 0 or -1. These are reserved for the host and unclaimed player slots, respectively.
-
-        // initialize model:
-        this.playerData = new PlayerData("fillyBot [" + characterEnum.getBotDifficulty() +"]", playerID);
-        playerData.setCharacter(characterEnum);
-        playerData.setCannon(CannonImages.BOT_CANNON);
-        transitionFrame = characterEnum.getBotDifficulty().getThinkingFrames();
-
-        // initialize views:
-        this.cannon = new Cannon(playerData);
-        this.characterData = new CharacterData(playerData.getCharacterEnum());
-        characterData.setCharacterEnum(characterEnum, playerData.getCannonAnimationFrame()); // character initializes with a default player, so change it to a bot, here.
-        usernameButton.setText(playerData.getUsername());
-        teamChoice.getSelectionModel().select(playerData.getTeam()-1);
+        return playerID;
     }
 
     public void tick(){
-        if(playerData.getCannonDisabled()) return;
+        if(getCannonDisabled()) return;
 
         // Handle the current frame:
         switch(currentPhase){
@@ -81,14 +77,14 @@ public class BotPlayer extends Player {
             case PRE_MOVEMENT:
                 break;
             case BROAD_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannon.getAngle();
+                if(currentFrame == 0) startingAngle = cannonData.getAngle();
                 if(currentFrame==transitionFrame-1) pointCannon(target+broadMovementOffset);
                 else pointCannon(getSmoothedAngle(broadMovementOffset));
                 break;
             case INTERCESSION:
                 break;
             case FINE_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannon.getAngle();
+                if(currentFrame == 0) startingAngle = cannonData.getAngle();
                 if(currentFrame==transitionFrame-1) pointCannon(target + fineMovementOffset);
                 else pointCannon(getSmoothedAngle(fineMovementOffset));
                 break;
@@ -104,7 +100,7 @@ public class BotPlayer extends Player {
                 case THINKING:
                     if(target<0){
                         currentPhase = Phase.PRE_MOVEMENT;
-                        transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getPreMovementFrames();
+                        transitionFrame = characterData.getCharacterType().getBotDifficulty().getPreMovementFrames();
                     }
                     else{
                         // The bot does not see any orbs on the orb array. Perhaps the next puzzle is still being loaded. Wait a bit.
@@ -113,22 +109,22 @@ public class BotPlayer extends Player {
                     break;
                 case PRE_MOVEMENT:
                     currentPhase = Phase.BROAD_MOVEMENT;
-                    transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getBroadMovementFrames();
+                    transitionFrame = characterData.getCharacterType().getBotDifficulty().getBroadMovementFrames();
                     break;
                 case BROAD_MOVEMENT:
                     currentPhase = Phase.INTERCESSION;
-                    transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getIntercessionFrames();
+                    transitionFrame = characterData.getCharacterType().getBotDifficulty().getIntercessionFrames();
                 case INTERCESSION:
                     currentPhase = Phase.FINE_MOVEMENT;
-                    transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getFineMovementFrames();
+                    transitionFrame = characterData.getCharacterType().getBotDifficulty().getFineMovementFrames();
                     break;
                 case FINE_MOVEMENT:
                     currentPhase = Phase.FIRING;
-                    transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getFiringFrames();
+                    transitionFrame = characterData.getCharacterType().getBotDifficulty().getFiringFrames();
                     break;
                 case FIRING:
                     currentPhase = Phase.THINKING;
-                    transitionFrame = playerData.getCharacterEnum().getBotDifficulty().getThinkingFrames();
+                    transitionFrame = characterData.getCharacterType().getBotDifficulty().getThinkingFrames();
                     break;
             }
         }
@@ -236,14 +232,14 @@ public class BotPlayer extends Player {
         LinkedList<OutcomeBin> choiceBins = binSort(choices);
         int binChoice;
         do{
-            binChoice = (int)Math.round(offsetGenerator.nextDouble()*playerData.getCharacterEnum().getBotDifficulty().getStupidity());
+            binChoice = (int)Math.round(offsetGenerator.nextDouble()*characterData.getCharacterType().getBotDifficulty().getStupidity());
         } while(binChoice>=choiceBins.size());
         OutcomeBin chosenBin = choiceBins.get(binChoice);
-        Outcome choice = chosenBin.selectChoice(playerData.getCharacterEnum().getBotDifficulty().getStupidity());
+        Outcome choice = chosenBin.selectChoice(characterData.getCharacterType().getBotDifficulty().getStupidity());
 
         target = choice.angle;
-        broadMovementOffset = playerData.getCharacterEnum().getBotDifficulty().getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
-        fineMovementOffset = playerData.getCharacterEnum().getBotDifficulty().getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+        broadMovementOffset = characterData.getCharacterType().getBotDifficulty().getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+        fineMovementOffset = characterData.getCharacterType().getBotDifficulty().getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
     }
 
     private class HypotheticalOrbSimulator implements Callable<List<Outcome>>{
@@ -278,9 +274,9 @@ public class BotPlayer extends Player {
                 /*-- Simulate the outcome if we were to fire at this angle --*/
 
                 // Create a hypothetical shooter orb for the simulated shot:
-                OrbColor currentShooterOrbEnum = playerData.getAmmunition().get(0).getOrbColor();
+                OrbColor currentShooterOrbEnum = getAmmunition().get(0).getOrbColor();
                 OrbData hypotheticalOrb = new OrbData(currentShooterOrbEnum,0,0, OrbData.OrbAnimationState.STATIC);
-                hypotheticalOrb.relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerData.getPlayerPos(),CANNON_Y_POS);
+                hypotheticalOrb.relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*getPlayerPos(),CANNON_Y_POS);
                 hypotheticalOrb.setAngle(Math.toRadians(angle));
                 hypotheticalOrb.setSpeed(hypotheticalOrb.getOrbColor().getOrbSpeed());
                 List<OrbData> shootingOrbCopy = new LinkedList<>();
@@ -360,7 +356,7 @@ public class BotPlayer extends Player {
         if (hypotheticalOrb.getI()==0) score-=5;
 
         // It looks nicer if the computer doesn't keep shooting in the same direction:
-        if((cannon.getAngle()<-90 && angle<-90) || (cannon.getAngle()>-90 && angle>-90)) --score;
+        if((cannonData.getAngle()<-90 && angle<-90) || (cannonData.getAngle()>-90 && angle>-90)) --score;
 
         // If the orb brings us closer to the death line, it is unfavorable
         if(hypotheticalOrb.getI() > lowestRow) score-=2;

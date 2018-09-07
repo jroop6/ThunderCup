@@ -4,7 +4,7 @@ import Classes.PlayerTypes.BotPlayer;
 /**
  * Created by Jonathan Roop on 8/1/2017.
  */
-public enum CharacterAnimations {
+public enum CharacterType {
 
     // Note: the order of animations in the Animation array matters. It must match the order of the enums in CharacterAnimationState, accordingly.
     BLITZ(new Animation[] {Animation.BLITZ_VICTORY, Animation.BLITZ_CONTENT, Animation.BLITZ_WORRIED, Animation.BLITZ_DEFEAT, Animation.BLITZ_DISCONNECTED}, true, null),
@@ -32,7 +32,7 @@ public enum CharacterAnimations {
         }
     }
 
-    CharacterAnimations(Animation[] animations, boolean playable, BotPlayer.Difficulty botDifficulty){
+    CharacterType(Animation[] animations, boolean playable, BotPlayer.Difficulty botDifficulty){
         this.animations = animations;
         this.playable = playable;
         this.botDifficulty = botDifficulty;
@@ -43,7 +43,7 @@ public enum CharacterAnimations {
     }
 
     // Retrieves the next Character in the enumeration.
-    public CharacterAnimations next(){
+    public CharacterType next(){
         return values()[(this.ordinal()+1) % values().length];
     }
 
