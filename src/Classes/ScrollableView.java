@@ -1,12 +1,11 @@
 package Classes;
 
-import Classes.Images.ButtonImages;
+import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
@@ -30,11 +29,11 @@ import java.util.List;
 public class ScrollableView<T extends Node> extends AnchorPane {
 
     // The contents of this ScrollableView:
-    List<T> contents = new LinkedList<>();
-    HBox contentsContainer = new HBox();
-    Node background;
-    Node midground;
-    StaticBgImages spacerEnum = null;
+    private List<T> contents = new LinkedList<>();
+    private HBox contentsContainer = new HBox();
+    private Node background;
+    private Node midground;
+    private StaticBgImages spacerEnum = null;
     private int numSpecialItems = 0; // special items that are *not* of type T within the contentsContainer.
 
     // Values used for scrolling:
@@ -162,7 +161,7 @@ public class ScrollableView<T extends Node> extends AnchorPane {
     }
 
     // If the item does not exist in the container, this method has no effect.
-    public void removeSpecialItem(T item){
+    public void removeSpecialItem(Node item){
         if(!contents.contains(item)) return;
         contentsContainer.getChildren().remove(item);
     }
@@ -172,8 +171,8 @@ public class ScrollableView<T extends Node> extends AnchorPane {
     }
 
     private Button createScrollButton(boolean flipped){
-        ImageView scrollImage = ButtonImages.SCROLL.getUnselectedImage();
-        ImageView scrollImageEngaged = ButtonImages.SCROLL.getSelectedImage();
+        ImageView scrollImage = ButtonType.SCROLL.getUnselectedImageView();
+        ImageView scrollImageEngaged = ButtonType.SCROLL.getSelectedImageView();
         Button scrollButton = new Button(null,scrollImage);
         if(flipped) scrollButton.setScaleX(-1.0);
         scrollButton.setBackground(null);

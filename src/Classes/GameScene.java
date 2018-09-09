@@ -3,7 +3,7 @@ package Classes;
 import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
-import Classes.Images.ButtonImages;
+import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
@@ -648,7 +648,7 @@ public class GameScene extends Scene {
         cancelAlert.initOwner(SceneManager.getPrimaryStage());
         cancelAlert.setTitle("Game Cancelled");
         cancelAlert.setHeaderText("The host is no longer connected. Game Cancelled.");
-        ButtonType returnBtn = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+        javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
         cancelAlert.getButtonTypes().setAll(returnBtn);
         cancelAlert.setGraphic(null);
         cancelAlert.show();
@@ -713,7 +713,7 @@ public class GameScene extends Scene {
         StackPane pauseMenu = new StackPane();
 
         // Get the pause menu background:
-        ImageView background = StaticBgImages.GAME_PAUSED.getImageView();
+        ImageView background = StaticBgImages.PAUSE_MENU_BACKDROP.getImageView();
         pauseMenu.getChildren().add(background);
 
         // place the title and buttons:
@@ -722,18 +722,18 @@ public class GameScene extends Scene {
         buttonsHolder.setSpacing(3.0);
         Rectangle spacer = new Rectangle(1,120); // Spacer so that the buttons don't run into the title
         spacer.setFill(Color.TRANSPARENT);
-        Button resignBtn = createButton(ButtonImages.RESIGN);
-        Button unpauseBtn = createButton(ButtonImages.UNPAUSE);
+        Button resignBtn = createButton(ButtonType.RESIGN);
+        Button unpauseBtn = createButton(ButtonType.UNPAUSE);
         buttonsHolder.getChildren().addAll(spacer, resignBtn, unpauseBtn);
         pauseMenu.getChildren().add(buttonsHolder);
 
         return pauseMenu;
     }
 
-    private Button createButton(ButtonImages buttonEnum){
+    private Button createButton(ButtonType buttonEnum){
         Button btn = new Button();
-        ImageView unselectedImage = buttonEnum.getUnselectedImage();
-        ImageView selectedImage = buttonEnum.getSelectedImage();
+        ImageView unselectedImage = buttonEnum.getUnselectedImageView();
+        ImageView selectedImage = buttonEnum.getSelectedImageView();
         btn.setGraphic(unselectedImage);
         btn.setBackground(null);
         btn.setPadding(Insets.EMPTY);
@@ -748,11 +748,11 @@ public class GameScene extends Scene {
                     exitConfirmation.initOwner(SceneManager.getPrimaryStage());
                     exitConfirmation.setTitle("Close Application?");
                     exitConfirmation.setHeaderText("Are you sure you want to exit the game?");
-                    ButtonType cancel = new ButtonType("Cancel");
-                    ButtonType yes = new ButtonType("Exit");
+                    javafx.scene.control.ButtonType cancel = new javafx.scene.control.ButtonType("Cancel");
+                    javafx.scene.control.ButtonType yes = new javafx.scene.control.ButtonType("Exit");
                     exitConfirmation.getButtonTypes().setAll(yes,cancel);
                     exitConfirmation.setGraphic(null);
-                    Optional<ButtonType> result = exitConfirmation.showAndWait();
+                    Optional<javafx.scene.control.ButtonType> result = exitConfirmation.showAndWait();
                     if(result.isPresent() && result.get() == yes) {
                         cleanUp();
                         SceneManager.switchToMainMenu();
@@ -857,7 +857,7 @@ public class GameScene extends Scene {
 
         VBox vBox = new VBox();
         vBox.setMaxWidth(1.0); // to prevent the VBox from covering the scroll buttons
-        Button returnToMain = createButton(ButtonImages.RETURN_TO_MAIN_MENU_CLIENT);
+        Button returnToMain = createButton(ButtonType.RETURN_TO_MAIN_MENU_CLIENT);
         vBox.getChildren().add(returnToMain);
         vBox.setAlignment(Pos.TOP_CENTER);
         rootNode.getChildren().add(vBox);

@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Images.ButtonImages;
+import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.BotPlayer;
@@ -111,8 +111,8 @@ public class PlayerSlot extends StackPane{
         // If the player is the localPlayer, then allow the user to click on his/her username to modify it. Unfortunately,
         // the createButton() method can't be reused here, because usernameBtn is stored inside the Player class.
         if(playerData instanceof LocalPlayer){
-            ImageView unselectedImage = ButtonImages.USERNAME.getUnselectedImage();
-            ImageView selectedImage = ButtonImages.USERNAME.getSelectedImage();
+            ImageView unselectedImage = ButtonType.USERNAME.getUnselectedImageView();
+            ImageView selectedImage = ButtonType.USERNAME.getSelectedImageView();
             usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
             usernameBtn.setMaxWidth(background.getImage().getWidth());
             usernameBtn.setOnAction((event) -> {
@@ -129,7 +129,7 @@ public class PlayerSlot extends StackPane{
 
         // Add a "Remove Player" button to allow the host to remove the player. If this is not the host, hide it. The
         // host does not get a remove player button for their own character:
-        Button removePlayerBtn = createButton(ButtonImages.REMOVE_PLAYER);
+        Button removePlayerBtn = createButton(ButtonType.REMOVE_PLAYER);
         gridPane.add(removePlayerBtn,0,9);
         if(!isHost || playerData instanceof LocalPlayer){
             removePlayerBtn.setVisible(false);
@@ -201,10 +201,10 @@ public class PlayerSlot extends StackPane{
         getChildren().addAll((new PlayerSlot(playerData,isHost).getChildren()));
     }
 
-    private Button createButton(ButtonImages buttonEnum){
+    private Button createButton(ButtonType buttonEnum){
         Button btn = new Button();
-        ImageView unselectedImage = buttonEnum.getUnselectedImage();
-        ImageView selectedImage = buttonEnum.getSelectedImage();
+        ImageView unselectedImage = buttonEnum.getUnselectedImageView();
+        ImageView selectedImage = buttonEnum.getSelectedImageView();
         btn.setGraphic(unselectedImage);
         btn.setBackground(null);
 

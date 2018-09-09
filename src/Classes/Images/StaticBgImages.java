@@ -32,12 +32,12 @@ public enum StaticBgImages {
     DAY_SKY("res/images/backgrounds/daySky.png"),
     CHATBOX_SCROLLPANE_BACKGROUND("res/images/backgrounds/chatBoxScrollPaneBackground.png"),
     CHATBOX_TEXTFIELD_BACKGROUND("res/images/backgrounds/chatBoxTextFieldBackground.png"),
-    MSS_BUTTONS_BACKGROUND("res/images/backgrounds/MSSButtonsBackground.png"),
+    MSS_BUTTONS_BACKDROP("res/images/backgrounds/MSSButtonsBackground.png"),
     PLAYPANEL_NIGHTSKY_DROPCLOUD("res/images/backgrounds/PlayPanelNightSkyDropCloud.png"),
     PLAYPANEL_NIGHTSKY_BACKGROUND_CLOUDS("res/images/backgrounds/PlayPanelNightSkyBackgroundClouds.png"),
     PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS("res/images/backgrounds/PlayPanelNightSkyForegroundClouds.png"),
     PLAYPANEL_NIGHTSKY_SEPARATOR("res/images/backgrounds/PlayPanelNightSkySeparator.png"),
-    GAME_PAUSED("res/images/backgrounds/GamePaused.png"),
+    PAUSE_MENU_BACKDROP("res/images/backgrounds/GamePaused.png"),
     PUZZLE_COMPLETE("res/images/backgrounds/GamePaused.png"); // todo: update this last one.
 
     Image image;

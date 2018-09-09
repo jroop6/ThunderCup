@@ -1,8 +1,8 @@
 package Classes;
 
 import Classes.Audio.SoundManager;
-import Classes.Images.ButtonImages;
-import Classes.Images.PuzzleSetSelectorImages;
+import Classes.Images.ButtonType;
+import Classes.Images.PuzzleSet;
 import Classes.Images.StaticBgImages;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -28,95 +28,38 @@ public class PuzzleSelectionScene extends Scene {
         // Create a ScrollableView and place big Buttons in it:
         ScrollableView<Button> puzzleButtonContainer = new ScrollableView<>(scrollableViewBackground,new Rectangle(0.0,0.0,Color.TRANSPARENT));
         rootNode.getChildren().add(puzzleButtonContainer);
-        for(PuzzleSetSelectorImages puzzleSet : PuzzleSetSelectorImages.values()){
-            Button btn = createGameChoiceButton(puzzleSet);
+        for(PuzzleSet puzzleSet : PuzzleSet.values()){
+            ThunderButton btn = new ThunderButton(puzzleSet.getButtonType(), (event)->SceneManager.switchToPuzzleMode(puzzleSet.getPuzzleGroupIndex()));
             puzzleButtonContainer.addItem(btn);
         }
 
         // There are buttons directly beneath the ScrollPanel which allow the player to either return to the main menu or mute music.
         AnchorPane buttonHolder = new AnchorPane();
-        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
         buttonHolder.setPickOnBounds(false);
         HBox leftSideButtonsHolder = new HBox();
         leftSideButtonsHolder.setPickOnBounds(false);
-        Button returnToMainMenu = createButton(ButtonImages.RETURN_TO_MAIN_MENU_HOST);
+        ThunderButton returnToMainMenu = new ThunderButton(ButtonType.RETURN_TO_MAIN_MENU_HOST, (event)->{
+            System.out.println("pressed Exit!");
+            SceneManager.switchToMainMenu();
+        });
         returnToMainMenu.setAlignment(Pos.CENTER_LEFT);
         leftSideButtonsHolder.getChildren().add(returnToMainMenu);
-        Button mute = createButton(ButtonImages.MUTE);
-        buttonHolder.getChildren().addAll(leftSideButtonsHolder, mute);
+        ThunderButton muteButton = new ThunderButton(ButtonType.MUTE, null);
+        muteButton.setOnAction((event) -> {
+            if(SoundManager.isMuted()){
+                SoundManager.unMuteMusic();
+                muteButton.setButtonType(ButtonType.MUTE);
+            }
+            else{
+                SoundManager.muteMusic();
+                muteButton.setButtonType(ButtonType.MUTED);
+            }
+        });
+        buttonHolder.getChildren().addAll(leftSideButtonsHolder, muteButton);
         setLeftAnchor(leftSideButtonsHolder, 0.0);
-        /*setTopAnchor(leftSideButtonsHolder, 0.0);
-        setBottomAnchor(leftSideButtonsHolder, 0.0);*/
-        setRightAnchor(mute,0.0);
+        setRightAnchor(muteButton,0.0);
         buttonHolder.setBorder(new Border(new BorderStroke(Color.BLACK,BorderStrokeStyle.SOLID,new CornerRadii(0.0),new BorderWidths(2.0))));
         rootNode.getChildren().add(buttonHolder);
-    }
-
-
-    private Button createGameChoiceButton(PuzzleSetSelectorImages puzzleSetSelectorImage) {
-        Button btn = new Button();
-        ImageView unselectedImage = puzzleSetSelectorImage.getUnselectedImage();
-        ImageView selectedImage = puzzleSetSelectorImage.getSelectedImage();
-        btn.setGraphic(unselectedImage);
-        btn.setBackground(null);
-        btn.setPadding(Insets.EMPTY);
-
-        // choose appropriate action when the button is clicked:
-        btn.setOnAction((event) -> SceneManager.switchToPuzzleMode(puzzleSetSelectorImage.getPuzzleGroupIndex()));
-
-        // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> btn.setGraphic(selectedImage));
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> btn.setGraphic(unselectedImage));
-
-        return btn;
-    }
-
-    private Button createButton(ButtonImages buttonEnum){
-        Button btn = new Button();
-        ImageView unselectedImage = buttonEnum.getUnselectedImage();
-        ImageView selectedImage = buttonEnum.getSelectedImage();
-        if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-            btn.setGraphic(ButtonImages.MUTED.getUnselectedImage());
-        }
-        else btn.setGraphic(unselectedImage);
-        btn.setBackground(null);
-        btn.setPadding(Insets.EMPTY);
-
-
-        // choose appropriate action when the button is clicked:
-        btn.setOnAction((event) -> {
-            switch (buttonEnum) {
-                case RETURN_TO_MAIN_MENU_HOST:
-                    System.out.println("pressed Exit!");
-                    SceneManager.switchToMainMenu();
-                    break;
-                case MUTE:
-                    if(SoundManager.isMuted()){
-                        SoundManager.unMuteMusic();
-                        btn.setGraphic(selectedImage);
-                    }
-                    else{
-                        SoundManager.muteMusic();
-                        btn.setGraphic(ButtonImages.MUTED.getSelectedImage());
-                    }
-                    break;
-            }
-        });
-
-        // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> {
-            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-                btn.setGraphic(ButtonImages.MUTED.getSelectedImage());
-            }
-            else btn.setGraphic(selectedImage);
-        });
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> {
-            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-                btn.setGraphic(ButtonImages.MUTED.getUnselectedImage());
-            }
-            else btn.setGraphic(unselectedImage);
-        });
-
-        return btn;
     }
 }

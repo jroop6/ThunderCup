@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Images.ButtonImages;
+import Classes.Images.ButtonType;
 import Classes.Animation.CharacterType;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
@@ -82,8 +82,11 @@ public class MultiplayerSelectionScene extends Scene {
         if(isHost){
             PlayerSlot hostPlayerSlot = new PlayerSlot(localPlayer, true);
             playerSlotContainer.addItem(hostPlayerSlot);
-            Button addPlayerBtn = createButton(ButtonImages.ADD_PLAYER);
-            Button addBotBtn = createButton(ButtonImages.ADD_BOT);
+            Button addPlayerBtn = new ThunderButton(ButtonType.ADD_PLAYER,(event)->{
+                playerSlotContainer.addItem(new PlayerSlot(new UnclaimedPlayer(),isHost));
+                ((HostConnectionManager)connectionManager).addOpenSlot();
+            });
+            Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterType.FILLY_BOT_MEDIUM),true)));
             VBox addButtonHolder = new VBox();
             addButtonHolder.setAlignment(Pos.CENTER);
             addButtonHolder.getChildren().addAll(addPlayerBtn,addBotBtn);
@@ -93,17 +96,43 @@ public class MultiplayerSelectionScene extends Scene {
         // There are one or more buttons directly beneath the PlayerSlots, which allow the player to return to the main
         // menu, ask for the computer's name and port (host only), and start the game (host only)
         AnchorPane buttonHolder = new AnchorPane();
-        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
         buttonHolder.setPickOnBounds(false);
         HBox rightSideButtonsHolder = new HBox();
         rightSideButtonsHolder.setPickOnBounds(false);
-        Button start = createButton(ButtonImages.START);
+        ThunderButton start = new ThunderButton(ButtonType.START, (event)->{
+            // Todo: check whether there are any unclaimed open spots before starting the game.
+            System.out.println("pressed Start!");
+            gameData.changeGameStarted(true);
+            prepareAndSendServerPacket();
+            // wait a little bit to make sure the packet gets through:
+            try{
+                Thread.sleep(2000/FRAME_RATE);
+            } catch (InterruptedException e){
+                System.err.println("InterruptedException encountered while trying to start the game. Other players" +
+                        "might not be informed that the game has started but... oh well, starting anyways.");
+                e.printStackTrace();
+            }
+            startGame();
+        });
         start.setScaleX(-1.0);
-        Button hostNameAndPort = createButton(ButtonImages.HOST_AND_PORT);
+        ThunderButton hostNameAndPort = new ThunderButton(ButtonType.HOST_AND_PORT, (event)->{
+            System.out.println("pressed Hostname/Port!");
+            showHostNameDialog();
+        });
         hostNameAndPort.setScaleX(-1.0);
         if(isHost) rightSideButtonsHolder.getChildren().addAll(hostNameAndPort, start);
-        Button returnToMainMenu = createButton(ButtonImages.RETURN_TO_MAIN_MENU_CLIENT);
-        if(isHost) returnToMainMenu = createButton(ButtonImages.RETURN_TO_MAIN_MENU_HOST); // The host gets a special, cancel game button.
+        ThunderButton returnToMainMenu;
+        if(isHost) returnToMainMenu = new ThunderButton(ButtonType.RETURN_TO_MAIN_MENU_HOST, (event)->{
+            System.out.println("pressed Exit!");
+            cleanUp();
+            SceneManager.switchToMainMenu();
+        });
+        else returnToMainMenu = new ThunderButton(ButtonType.RETURN_TO_MAIN_MENU_CLIENT, (event)->{
+            System.out.println("pressed Exit!");
+            cleanUp();
+            SceneManager.switchToMainMenu();
+        });
         returnToMainMenu.setPadding(Insets.EMPTY);
         buttonHolder.getChildren().addAll(returnToMainMenu,rightSideButtonsHolder);
         setLeftAnchor(returnToMainMenu, 0.0);
@@ -516,7 +545,7 @@ public class MultiplayerSelectionScene extends Scene {
         hostNameDialog.setHeaderText("Port you are using: " + ((HostConnectionManager)connectionManager).getPort() + "\n" +
                 "(Your computer name could not be determined...)");
     }
-    ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+    javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         hostNameDialog.getButtonTypes().setAll(returnBtn);
         hostNameDialog.setGraphic(null);
         hostNameDialog.showAndWait();
@@ -526,7 +555,7 @@ public class MultiplayerSelectionScene extends Scene {
         kickAlert = new Alert(Alert.AlertType.CONFIRMATION);
         kickAlert.setTitle("You've been kicked");
         kickAlert.setHeaderText("The host has removed you from the game.");
-        ButtonType returnBtn = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+        javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
         kickAlert.getButtonTypes().setAll(returnBtn);
         kickAlert.setGraphic(null);
     }
@@ -539,7 +568,7 @@ public class MultiplayerSelectionScene extends Scene {
         Alert cancelAlert = new Alert(Alert.AlertType.CONFIRMATION);
         cancelAlert.setTitle("Game Cancelled");
         cancelAlert.setHeaderText("The host is no longer connected. Game Cancelled.");
-        ButtonType returnBtn = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+        javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
         cancelAlert.getButtonTypes().setAll(returnBtn);
         cancelAlert.setGraphic(null);
         cancelAlert.show();
@@ -568,72 +597,6 @@ public class MultiplayerSelectionScene extends Scene {
 
     public boolean isConnected(){
         return connectionManager.isConnected();
-    }
-
-    private Button createButton(ButtonImages buttonEnum){
-        Button btn = new Button();
-        ImageView unselectedImage = buttonEnum.getUnselectedImage();
-        ImageView selectedImage = buttonEnum.getSelectedImage();
-        /*btn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
-        btn.setPrefWidth(unselectedImage.getImage().getWidth());
-        btn.setPrefWidth(unselectedImage.getImage().getWidth());
-        btn.setPrefHeight(unselectedImage.getImage().getHeight());
-        btn.setPrefHeight(unselectedImage.getImage().getHeight());*/
-        btn.setGraphic(unselectedImage);
-        btn.setBackground(null);
-        btn.setPadding(Insets.EMPTY);
-
-
-        // choose appropriate action when the button is clicked:
-        btn.setOnAction((event) -> {
-            switch (buttonEnum) {
-                case ADD_PLAYER:
-                    playerSlotContainer.addItem(new PlayerSlot(new UnclaimedPlayer(),isHost));
-                    ((HostConnectionManager)connectionManager).addOpenSlot();
-                    break;
-                case ADD_BOT:
-                    playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterType.FILLY_BOT_MEDIUM),isHost));
-                    break;
-                case START:
-                    // Todo: check whether there are any unclaimed open spots before starting the game.
-                    System.out.println("pressed Start!");
-                    gameData.changeGameStarted(true);
-                    prepareAndSendServerPacket();
-                    // wait a little bit to make sure the packet gets through:
-                    try{
-                        Thread.sleep(2000/FRAME_RATE);
-                    } catch (InterruptedException e){
-                        System.err.println("InterruptedException encountered while trying to start the game. Other players" +
-                                "might not be informed that the game has started but... oh well, starting anyways.");
-                        e.printStackTrace();
-                    }
-                    startGame();
-                    break;
-                case RETURN_TO_MAIN_MENU_HOST:
-                    System.out.println("pressed Exit!");
-                    cleanUp();
-                    SceneManager.switchToMainMenu();
-                    break;
-                case RETURN_TO_MAIN_MENU_CLIENT:
-                    System.out.println("pressed Exit!");
-                    cleanUp();
-                    SceneManager.switchToMainMenu();
-                    break;
-                case HOST_AND_PORT:
-                    System.out.println("pressed Hostname/Port!");
-                    showHostNameDialog();
-                    break;
-                case MUTE:
-                    System.out.println("pressed Mute!");
-                    break;
-            }
-        });
-
-        // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> btn.setGraphic(selectedImage));
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> btn.setGraphic(unselectedImage));
-
-        return btn;
     }
 
     public void cleanUp(){

@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Animation.*;
 import Classes.Audio.SoundManager;
-import Classes.Images.ButtonImages;
+import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
@@ -13,10 +13,8 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -102,45 +100,80 @@ public class MainMenuScene extends Scene {
         scaledRoot.getChildren().add(titleView);
 
         // Create buttons and add them to the scene:
-        Button puzzleModeButton = createGameChoiceButton(ButtonImages.PUZZLE);
-        Button randomPuzzleModeButton = createGameChoiceButton(ButtonImages.RANDOM_PUZZLE);
-        Button multiplayerModeButton = createGameChoiceButton(ButtonImages.MULTIPLAYER);
-        Button vsComputerModeButton = createGameChoiceButton(ButtonImages.VS_COMPUTER);
-        Button adventureModeButton = createGameChoiceButton(ButtonImages.ADVENTURE);
-        Button tutorialModeButton = createGameChoiceButton(ButtonImages.TUTORIAL);
-        Button creditsButton = createGameChoiceButton(ButtonImages.CREDITS);
+        ThunderButton puzzleModeButton = new ThunderButton(ButtonType.PUZZLE, (event) -> {
+            System.out.println("clicked puzzle mode");
+            SceneManager.switchToPuzzleSelectionMode();
+        });
+        ThunderButton randomPuzzleModeButton = new ThunderButton(ButtonType.RANDOM_PUZZLE, (event) -> {
+            System.out.println("clicked random puzzle mode");
+            animationTimer.stop();
+            SceneManager.switchToPuzzleMode(-5);
+        });
+        ThunderButton multiplayerModeButton = new ThunderButton(ButtonType.MULTIPLAYER, (event) -> {
+            System.out.println("clicked multiplayer mode");
+            boolean[] canceled = {false}; // detects when the user cancels a dialog to return to the main menu.
+            boolean isHost;
+            String hostName = "";
+            int port = 5000;
+            String username = "";
+
+            // Ask whether the user wishes to host a new game or join an existing game:
+            isHost = showHostOrJoinDialog(canceled);
+
+            // If the user is NOT the host, ask him/her for a computer name to connect to:
+            if(!canceled[0] && !isHost) hostName = showHostNameDialog(canceled);
+
+            // Ask the user for a port number to connect with:
+            if(!canceled[0]) port = showPortNumberDialog(canceled);
+
+            // Ask the player for his/her name:
+            if(!canceled[0]) username = showUsernameDialog(canceled);
+
+            // Switch to the multiplayer staging area:
+            if(!canceled[0]){
+                animationTimer.stop();
+                SceneManager.switchToMultiplayerMode(isHost, hostName, port, username);
+            }
+        });
+        ThunderButton vsComputerModeButton = new ThunderButton(ButtonType.VS_COMPUTER, (event) -> {
+            System.out.println("clicked vs computer");
+            animationTimer.stop();
+            SceneManager.switchToPuzzleVsMode();
+        });
+        ThunderButton adventureModeButton = new ThunderButton(ButtonType.ADVENTURE, (event) -> {
+            System.out.println("clicked adventure mode");
+        });
+        ThunderButton tutorialModeButton = new ThunderButton(ButtonType.TUTORIAL, (event) -> {
+            System.out.println("clicked tutorial mode");
+        });
+        ThunderButton creditsButton = new ThunderButton(ButtonType.CREDITS, (event) -> {
+            showCreditsDialog();
+        });
         Rectangle spacer = new Rectangle(1,30,Color.TRANSPARENT);
-        Button exitButton = createGameChoiceButton(ButtonImages.EXIT);
-        Button muteButton = createGameChoiceButton(ButtonImages.MUTE);
+        ThunderButton exitButton = new ThunderButton(ButtonType.EXIT, (event) -> {
+            System.out.println("clicked exit");
+            if(SceneManager.confirmClose()){
+                System.out.println("exiting with code 0");
+                System.exit(0);
+            }
+        });
+        ThunderButton muteButton = new ThunderButton(ButtonType.MUTE, null);
+        muteButton.setOnAction((event) -> {
+            if(SoundManager.isMuted()){
+                SoundManager.unMuteMusic();
+                muteButton.setButtonType(ButtonType.MUTE);
+            }
+            else{
+                SoundManager.muteMusic();
+                muteButton.setButtonType(ButtonType.MUTED);
+            }
+        });
         VBox buttonHolder = new VBox();
         buttonHolder.getChildren().addAll(puzzleModeButton,randomPuzzleModeButton,multiplayerModeButton,vsComputerModeButton,
                 creditsButton,spacer,exitButton);
         buttonHolder.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION);
         muteButton.relocate(10,955);
         scaledRoot.getChildren().addAll(buttonHolder,muteButton);
-
-/*
-        // Position the buttons:
-        puzzleModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION);
-        randomPuzzleModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 1*BUTTON_HEIGHT);
-        multiplayerModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 2*BUTTON_HEIGHT);
-        vsComputerModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 3*BUTTON_HEIGHT);
-        adventureModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 4*BUTTON_HEIGHT);
-        tutorialModeButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 5*BUTTON_HEIGHT);
-        exitButton.relocate(BUTTONS_HORIZONTAL_STARTING_POSITION,BUTTONS_VERTICAL_STARTING_POSITION + 6*BUTTON_HEIGHT + EXIT_BUTTON_SEPARATION_DISTANCE);
-*/
-
-/*        // Create and position labels with credits:
-        Font creditsFont = new Font(24.0);
-        Label programmerCredit = new Label("Programming by Jonathan Roop");
-        programmerCredit.setFont(creditsFont);
-        programmerCredit.setTextFill(Color.web("#a945ff"));
-        programmerCredit.relocate(20.0,1000.0);
-        Label musicCredit = new Label("Music by AllLevelsAtOnce");
-        musicCredit.setFont(creditsFont);
-        musicCredit.setTextFill(Color.web("#a945ff"));
-        musicCredit.relocate(400.0,1000.0);
-        scaledRoot.getChildren().addAll(programmerCredit,musicCredit);*/
 
         // listen for window resizing and scale content accordingly:
         scaledRoot.getTransforms().add(scaler);
@@ -202,124 +235,18 @@ public class MainMenuScene extends Scene {
         scaler.setY(scaleValue);
     }
 
-    private Button createGameChoiceButton(ButtonImages buttonEnum){
-        Button btn = new Button();
-        ImageView unselectedImage = buttonEnum.getUnselectedImage();
-        ImageView selectedImage = buttonEnum.getSelectedImage();
-        if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-            btn.setGraphic(ButtonImages.MUTED.getUnselectedImage());
-        }
-        else btn.setGraphic(unselectedImage);
-        btn.setBackground(null);
-
-        // choose appropriate action when the button is clicked:
-        btn.setOnAction((event) -> {
-            switch(buttonEnum){
-                case TUTORIAL:
-                    System.out.println("clicked tutorial mode");
-                    break;
-                case ADVENTURE:
-                    System.out.println("clicked adventure mode");
-                    break;
-                case PUZZLE:
-                    System.out.println("clicked puzzle mode");
-                    SceneManager.switchToPuzzleSelectionMode();
-                    break;
-                case RANDOM_PUZZLE:
-                    System.out.println("clicked random puzzle mode");
-                    animationTimer.stop();
-                    SceneManager.switchToPuzzleMode(-5);
-                    break;
-                case MULTIPLAYER:
-                    System.out.println("clicked multiplayer mode");
-                    boolean[] canceled = {false}; // detects when the user cancels a dialog to return to the main menu.
-                    boolean isHost;
-                    String hostName = "";
-                    int port = 5000;
-                    String username = "";
-
-                    // Ask whether the user wishes to host a new game or join an existing game:
-                    isHost = showHostOrJoinDialog(canceled);
-
-                    // If the user is NOT the host, ask him/her for a computer name to connect to:
-                    if(!canceled[0] && !isHost){
-                        hostName = showHostNameDialog(canceled);
-                    }
-
-                    // Ask the user for a port number to connect with:
-                    if(!canceled[0]){
-                        port = showPortNumberDialog(canceled);
-                    }
-
-                    // Ask the player for his/her name:
-                    if(!canceled[0]){
-                        username = showUsernameDialog(canceled);
-                    }
-
-                    // Switch to the multiplayer staging area:
-                    if(!canceled[0]){
-                        animationTimer.stop();
-                        SceneManager.switchToMultiplayerMode(isHost, hostName, port, username);
-                    }
-                    break;
-                case VS_COMPUTER:
-                    System.out.println("clicked vs computer");
-                    animationTimer.stop();
-                    SceneManager.switchToPuzzleVsMode();
-                    break;
-                case CREDITS:
-                    showCreditsDialog();
-                    break;
-                case EXIT:
-                    System.out.println("clicked exit");
-                    //WindowEvent closeEvent = new WindowEvent(getWindow(),WindowEvent.WINDOW_CLOSE_REQUEST);
-                    if(SceneManager.confirmClose()){
-                        System.out.println("exiting with code 0");
-                        System.exit(0);
-                    }
-                    break;
-                case MUTE:
-                    if(SoundManager.isMuted()){
-                        SoundManager.unMuteMusic();
-                        btn.setGraphic(selectedImage);
-                    }
-                    else{
-                        SoundManager.muteMusic();
-                        btn.setGraphic(ButtonImages.MUTED.getSelectedImage());
-                    }
-                    break;
-            }
-        });
-
-        // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> {
-            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-                btn.setGraphic(ButtonImages.MUTED.getSelectedImage());
-            }
-            else btn.setGraphic(selectedImage);
-        });
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> {
-            if(buttonEnum==ButtonImages.MUTE && SoundManager.isMuted()){ // The mute button's graphic is affected by whether the music is muted
-                btn.setGraphic(ButtonImages.MUTED.getUnselectedImage());
-            }
-            else btn.setGraphic(unselectedImage);
-        });
-
-        return btn;
-    }
-
     private boolean showHostOrJoinDialog(boolean[] canceled){
         boolean isHost = true;
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.initOwner(SceneManager.getPrimaryStage());
         alert.setTitle("Select multiplayer option");
         alert.setHeaderText("Select an option:");
-        ButtonType createGame = new ButtonType("Create new Game");
-        ButtonType joinGame = new ButtonType("Join a game");
-        ButtonType returnBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        javafx.scene.control.ButtonType createGame = new javafx.scene.control.ButtonType("Create new Game");
+        javafx.scene.control.ButtonType joinGame = new javafx.scene.control.ButtonType("Join a game");
+        javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
         alert.getButtonTypes().setAll(createGame,joinGame,returnBtn);
         alert.setGraphic(null);
-        Optional<ButtonType> result = alert.showAndWait();
+        Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
         if(result.isPresent()){
             if(result.get()==createGame){
                 System.out.println("create Game clicked");
@@ -368,10 +295,10 @@ public class MainMenuScene extends Scene {
                 errorAlert.initOwner(SceneManager.getPrimaryStage());
                 errorAlert.setTitle("Could not understand input");
                 errorAlert.setHeaderText("Parser could not convert your input into an integer value. Please try again with an integer value.");
-                ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+                javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
                 errorAlert.getButtonTypes().setAll(returnBtn);
                 errorAlert.setGraphic(null);
-                Optional<ButtonType> result = errorAlert.showAndWait();
+                Optional<javafx.scene.control.ButtonType> result = errorAlert.showAndWait();
             }
         }
         else canceled[0] = true;
@@ -485,7 +412,7 @@ public class MainMenuScene extends Scene {
         versionContainer.setAlignment(Pos.CENTER);
         vBox.getChildren().addAll(credits1, links, credits2, versionContainer);
         creditsDialog.getDialogPane().contentProperty().set(vBox);
-        ButtonType returnBtn = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         creditsDialog.getButtonTypes().setAll(returnBtn);
         creditsDialog.setGraphic(null);
         creditsDialog.showAndWait();

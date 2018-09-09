@@ -11,7 +11,9 @@ import java.util.Random;
  * Created by Jonathan D. Roop on 7/21/2017.
  * manages the playing of sound effects and music
  * Everything in here is static in order to make accessing the SoundManager from anywhere easy; no instance of
- * SoundManager is needed to call its member functions.
+ * SoundManager is needed to call its member functions. (I figure that audio is a very global feature of most programs
+ * anyways because you only have 1 set of speakers and you aren't going to be instantiating multiple SoundManagers on
+ * the same computer).
  *
  * Sounds are the accessed using the Music and SoundEffect enumerations. This makes it easy to identify a particular
  * song or sound, because useful enum names can be used instead of cryptic indices, like playSong(Music.GO_TAKE_FLIGHT)

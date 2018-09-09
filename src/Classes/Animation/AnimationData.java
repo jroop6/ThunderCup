@@ -136,7 +136,7 @@ public class AnimationData implements Serializable {
                 break;
         }
 
-        // note: you MUST call setFrame if finished==true.
+        // note: setFrame MUST be called if finished==true. Otherwise, you'll get an IndexOutOfBounds exception.
         if(finished){
             switch (playOption){
                 case LOOP:
@@ -168,10 +168,10 @@ public class AnimationData implements Serializable {
             return 1;
         }
 
-        // Save the existing effect:
+        // Save the existing effects:
         graphicsContext.save();
 
-        // Determine which visual effect, if any, to apply for this sprite:
+        // apply this animation's visibility effect:
         switch(visibility){
             case INVISIBLE:
                 graphicsContext.setGlobalAlpha(0);
@@ -206,10 +206,10 @@ public class AnimationData implements Serializable {
     }
 
     // This method should only ever be called by the JavaFX application thread.
-    // Note: I recommend using drawSelf(GraphicsContext) instead, in most cases. Why? You usually only have to keep
-    // track of a single GraphicsContext and pass it to many AnimationDatas. If you used ImageViews, on the other hand,
-    // you would have to keep track of a unique ImageView for each and every instance of AnimationData. Having many
-    // instances of ImageView also takes more memory than having a single instance of GraphicsContext. Also, this
+    // Note: I recommend trying to use drawSelf(GraphicsContext) instead in most cases. Why? You usually only have to
+    // keep track of a single GraphicsContext and pass it to many AnimationDatas. If you used ImageViews, on the other
+    // hand, you would have to keep track of a unique ImageView for each and every instance of AnimationData. Having
+    // many instances of ImageView also takes more memory than having a single instance of GraphicsContext. Also, this
     // implementation of drawSelf() is clearly suboptimal, seeing as how it clears all transforms and creates new ones
     // each frame. A more efficient implementation might cache the transforms somehow. I did not do this because I
     // wanted this method to take *any* ImageView. Since the ImageView can theoretically change from one frame to the
