@@ -41,8 +41,8 @@ public class BotPlayer extends PlayerData {
         super("fillyBot [" + characterEnum.getBotDifficulty() +"]", createID());
 
         // initialize model:
-        setCharacter(characterEnum);
-        setCannonType(CannonType.BOT_CANNON);
+        characterData.setCharacterType(characterEnum);
+        cannonData.setCannonType(CannonType.BOT_CANNON);
         transitionFrame = characterEnum.getBotDifficulty().getThinkingFrames();
     }
 

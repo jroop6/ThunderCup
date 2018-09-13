@@ -6,6 +6,7 @@ import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
 import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.SynchronizedData;
 import Classes.PlayerTypes.BotPlayer;
 import Classes.PlayerTypes.LocalPlayer;
 import javafx.application.Application;
@@ -37,6 +38,12 @@ public class SceneManager extends Application {
 
     public void start(Stage applicationStage)
     {
+        List<SynchronizedData> datas = new LinkedList<>();
+        SynchronizedData<Integer> myInt = new SynchronizedData<>(datas);
+
+        System.out.println("my list " );
+
+
         primaryStage = applicationStage;
         primaryStage.setTitle("Thunder Cup");
 

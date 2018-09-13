@@ -235,12 +235,6 @@ public class PlayerData implements Serializable {
     public void setUsername(String username){
         this.username = username;
     }
-    public void setCharacter(CharacterType characterEnum){
-        characterData.setCharacterType(characterEnum);
-    }
-    public void setCannonType(CannonType cannonType){
-        cannonData.setCannonType(cannonType);
-    }
     public void setTeam(int team){
         this.team = team;
     }
@@ -508,11 +502,9 @@ public class PlayerData implements Serializable {
         }
         if(newPlayerData.isCannonChanged()){
             changeCannon(newPlayerData.getCannonType()); // updates model
-            cannonData.setCannonType(newPlayerData.getCannonType()); // updates view //todo: update the view in a different method
         }
         if(newPlayerData.isCharacterChanged()){
             changeCharacter(newPlayerData.getCharacterData().getCharacterType()); //updates model
-            characterData.setCharacterType(newPlayerData.getCharacterData().getCharacterType()); //updates view //todo: update the view in a different method
         }
         if(newPlayerData.isDefeatedChanged()){
             changeDefeated(newPlayerData.getDefeated()); //updates model
@@ -546,12 +538,10 @@ public class PlayerData implements Serializable {
             // note: view will be updated in the PlayPanel's repaint() method.
         }
         if(newPlayerData.isCannonChanged() && !isCannonChanged()){
-            setCannonType(newPlayerData.getCannonType()); // updates model
-            cannonData.setCannonType(newPlayerData.getCannonType()); // updates view //todo: update the view in a different method
+            cannonData.setCannonType(newPlayerData.getCannonType());
         }
         if(newPlayerData.isCharacterChanged() && !isCharacterChanged()){
-            setCharacter(newPlayerData.getCharacterData().getCharacterType()); //updates model
-            characterData.setCharacterType(newPlayerData.getCharacterData().getCharacterType()); //updates view //todo: update the view in a different method
+            characterData.setCharacterType(newPlayerData.getCharacterData().getCharacterType());
         }
         if(newPlayerData.isDefeatedChanged() && !isDefeatedChanged()){
             setDefeated(newPlayerData.getDefeated()); //updates model

@@ -8,8 +8,6 @@ import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.animation.TranslateTransition;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -177,21 +175,15 @@ public class MainMenuScene extends Scene {
 
         // listen for window resizing and scale content accordingly:
         scaledRoot.getTransforms().add(scaler);
-        scaledRoot.widthProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                System.out.println("New width:  " + newValue);
-                scaleAssertionFromWidth = (double)newValue/1920.0;
-                scale();
-            }
+        scaledRoot.widthProperty().addListener((observable, oldValue, newValue) -> {
+            System.out.println("New width:  " + newValue);
+            scaleAssertionFromWidth = (double)newValue/1920.0;
+            scale();
         });
-        scaledRoot.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                System.out.println("New height: " + newValue);
-                scaleAssertionFromHeight = (double)newValue/1080.0;
-                scale();
-            }
+        scaledRoot.heightProperty().addListener((observable, oldValue, newValue) -> {
+            System.out.println("New height: " + newValue);
+            scaleAssertionFromHeight = (double)newValue/1080.0;
+            scale();
         });
 
         // Start the animation timer, which will play the title animation

@@ -1,6 +1,7 @@
 package Classes;
 
 import Classes.Animation.*;
+import Classes.NetworkCommunication.SynchronizedData;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 

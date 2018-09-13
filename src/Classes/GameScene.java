@@ -81,6 +81,7 @@ public class GameScene extends Scene {
     private boolean victoryDisplayStarted2 = false;
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
+    // todo: don't use indices for the puzzles. Instead, pass a PuzzleSet enum, and have the PuzzleSet store pointers to the various puzzles. Include special enums for random puzzles.
     public GameScene(boolean isHost, ConnectionManager connectionManager, List<PlayerData> players, LocationType locationType, int puzzleGroupIndex){
         super(new StackPane());
         rootNode = (StackPane) getRoot();
