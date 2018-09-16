@@ -6,6 +6,7 @@ import Classes.Audio.SoundEffect;
 import Classes.Images.CannonType;
 import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.Synchronizer;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,8 +38,8 @@ public class BotPlayer extends PlayerData {
     // Misc, for debugging
     private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
 
-    public BotPlayer(CharacterType characterEnum){
-        super("fillyBot [" + characterEnum.getBotDifficulty() +"]", createID());
+    public BotPlayer(CharacterType characterEnum, Synchronizer synchronizer){
+        super("fillyBot [" + characterEnum.getBotDifficulty() +"]", createID(), synchronizer);
 
         // initialize model:
         characterData.setCharacterType(characterEnum);

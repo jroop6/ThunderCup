@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Animation.*;
-import Classes.NetworkCommunication.SynchronizedData;
+import Classes.NetworkCommunication.SynchronizedParent;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 
@@ -14,18 +14,21 @@ public class CharacterData implements Serializable {
     private CharacterType characterType; // basically, a collection of all of this character's possible animations.
     private AnimationData currentAnimation; // The currently playing animation from among the collection.
     private CharacterType.CharacterAnimationState characterAnimationState; // i.e. Content, Worried, Defeated, etc.
+    private SynchronizedParent synchronizedParent; // For distinguishing this data from similar data owned by other players.
 
     // Initialize with a content display of the character:
-    public CharacterData(CharacterType characterType){
+    public CharacterData(CharacterType characterType, SynchronizedParent synchronizedParent){
         this.characterType = characterType;
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
         currentAnimation = new AnimationData(characterType.getAnimation(characterAnimationState));
+        this.synchronizedParent = synchronizedParent;
     }
 
-    public CharacterData(CharacterData other){
+    public CharacterData(CharacterData other, SynchronizedParent synchronizedParent){
         characterType = other.getCharacterType();
         characterAnimationState = other.getCharacterAnimationState();
         currentAnimation = new AnimationData(other.getAnimationData());
+        this.synchronizedParent = synchronizedParent;
     }
 
     public void relocate(double x, double y){

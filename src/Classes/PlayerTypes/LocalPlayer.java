@@ -1,6 +1,7 @@
 package Classes.PlayerTypes;
 
 import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.Synchronizer;
 import Classes.OrbData;
 
 import java.util.Random;
@@ -10,8 +11,8 @@ import java.util.Random;
  */
 public class LocalPlayer extends PlayerData {
 
-    public LocalPlayer(String username, boolean isHost){
-        super(username,LocalPlayer.createID(isHost));
+    public LocalPlayer(String username, boolean isHost, Synchronizer synchronizer){
+        super(username,LocalPlayer.createID(isHost), synchronizer);
     }
 
     // create a (probably) unique player ID

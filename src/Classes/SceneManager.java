@@ -38,12 +38,6 @@ public class SceneManager extends Application {
 
     public void start(Stage applicationStage)
     {
-        List<SynchronizedData> datas = new LinkedList<>();
-        SynchronizedData<Integer> myInt = new SynchronizedData<>(datas);
-
-        System.out.println("my list " );
-
-
         primaryStage = applicationStage;
         primaryStage.setTitle("Thunder Cup");
 
@@ -126,10 +120,11 @@ public class SceneManager extends Application {
         System.out.println("building puzzle mode...");
 
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("YOU",true));
+        NullConnectionManager nullConnectionManager = new NullConnectionManager();
+        playerList.add(new LocalPlayer("YOU",true, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the PlayPanel to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
+        GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, 1);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }
@@ -159,26 +154,28 @@ public class SceneManager extends Application {
     // Todo: multi-cannon mode is currently broken.
     static void switchTo2PlayerTestMode(){
         // add two players, controlled by the mouse:
+        NullConnectionManager nullConnectionManager = new NullConnectionManager();
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("YOU",true));
-        playerList.add(new LocalPlayer("YOU",false));
+        playerList.add(new LocalPlayer("YOU",true, nullConnectionManager.getSynchronizer()));
+        playerList.add(new LocalPlayer("YOU",false, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the playerList to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, -5);
+        GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, -5);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }
 
     static void switchToPuzzleVsMode(){
         // add a player and a bot, each with the same puzzle:
+        NullConnectionManager nullConnectionManager = new NullConnectionManager();
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("YOU",true));
-        BotPlayer botPlayer = new BotPlayer(CharacterType.FILLY_BOT_HARD);
+        playerList.add(new LocalPlayer("YOU",true, nullConnectionManager.getSynchronizer()));
+        BotPlayer botPlayer = new BotPlayer(CharacterType.FILLY_BOT_HARD, nullConnectionManager.getSynchronizer());
         botPlayer.changeTeam(2);
         playerList.add(botPlayer);
 
         // Create the GameScene, passing the playerList to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, 1);
+        GameScene gameScene = new GameScene(true, nullConnectionManager, playerList, LocationType.NIGHTTIME, 1);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }
@@ -186,11 +183,13 @@ public class SceneManager extends Application {
     static void switchToPuzzleMode(int puzzleGroupIndex){
         System.out.println("switching to puzzle mode...");
 
+        NullConnectionManager nullConnectionManager = new NullConnectionManager();
+
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new LocalPlayer("YOU",true));
+        playerList.add(new LocalPlayer("YOU",true, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the PlayPanel to it:
-        GameScene gameScene = new GameScene(true, new NullConnectionManager(), playerList, LocationType.NIGHTTIME, puzzleGroupIndex);
+        GameScene gameScene = new GameScene(true, nullConnectionManager, playerList, LocationType.NIGHTTIME, puzzleGroupIndex);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }

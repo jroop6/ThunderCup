@@ -11,12 +11,14 @@ public class Packet implements Serializable{
     private Queue<PlayerData> playerDataList = new LinkedList<>();
     private GameData gameData;
     private Queue<PlayPanelData> playPanelDataList = new LinkedList<>();
+    private Synchronizer synchronizer;
     private boolean connectionRejected = false;
 
     // Constructor used in MultiplayerSelectionScene
-    public Packet(PlayerData playerData, GameData gameData){
+    public Packet(PlayerData playerData, GameData gameData, Synchronizer synchronizer){
         this.gameData = gameData;
         playerDataList.add(playerData);
+        this.synchronizer = new Synchronizer(synchronizer);
     }
 
     // Constructor used in GameScene, where playPanelData is also relevant.
@@ -44,6 +46,10 @@ public class Packet implements Serializable{
 
     public Queue<PlayPanelData> getPlayPanelDataList(){
         return playPanelDataList;
+    }
+
+    public Synchronizer getSynchronizer(){
+        return synchronizer;
     }
 
     public PlayerData popPlayerData(){

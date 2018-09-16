@@ -43,7 +43,7 @@ public class GameScene extends Scene {
 
     // Fields containing data, controllers, or mix of data and JavaFx nodes:
     private Map<Integer, PlayPanel> playPanelMap = new HashMap<>(); // For quick access to a PlayPanel using the team number
-    private GameData gameData = new GameData();
+    private GameData gameData;
     private ChatBox chatBox;
     private LocalPlayer localPlayer;
     private List<PlayerData> players;
@@ -87,6 +87,7 @@ public class GameScene extends Scene {
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
         this.connectionManager = connectionManager;
+        gameData = new GameData(connectionManager.getSynchronizer());
         this.players = players;
         maxConsecutivePacketsMissed = FRAME_RATE * 5;
 
@@ -113,9 +114,9 @@ public class GameScene extends Scene {
             int team = playerList.get(0).getTeam();
             String puzzleURL;
             if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
-            else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01",playerList.size(),puzzleGroupIndex);
+            else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01", playerList.size(), puzzleGroupIndex);
             System.out.println("puzzle url: " + puzzleURL);
-            PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED,puzzleURL);
+            PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED, puzzleURL);
             playPanelMap.put(team,newPlayPanel);
         }
 

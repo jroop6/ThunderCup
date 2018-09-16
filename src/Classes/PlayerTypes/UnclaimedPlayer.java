@@ -3,6 +3,7 @@ package Classes.PlayerTypes;
 import Classes.*;
 import Classes.CharacterData;
 import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.Synchronizer;
 
 /**
  * Created by HydrusBeta on 8/2/2017.
@@ -10,8 +11,8 @@ import Classes.NetworkCommunication.PlayerData;
 public class UnclaimedPlayer extends PlayerData {
 
     // The playerData came from the network and contains all of this player's information. Use it to initialize the RemotePlayer.
-    public UnclaimedPlayer(){
-        super("Open Slot",-1);
+    public UnclaimedPlayer(Synchronizer synchronizer){
+        super("Open Slot",-1,synchronizer);
     }
 
     /* Implementing abstract methods from Player class: */

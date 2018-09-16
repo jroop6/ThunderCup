@@ -5,6 +5,7 @@ import Classes.Audio.SoundEffect;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayPanelData;
 import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.SynchronizedParent;
 import Classes.PlayerTypes.LocalPlayer;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
@@ -33,7 +34,7 @@ import static java.lang.Math.PI;
  * Think of this as the Controller part of a Model-View-Controller scheme. The Model part is the PlayPanelData and the View
  * part is the Canvas (and the Orb class in a sense, because orbs know how to draw themselves).
  */
-public class PlayPanel extends Pane {
+public class PlayPanel extends Pane implements SynchronizedParent {
 
     PlayPanelData playPanelData;
 
@@ -68,10 +69,13 @@ public class PlayPanel extends Pane {
     private Random randomTransferOrbGenerator;
     private Random miscRandomGenerator = new Random();
 
+    private int team;
+
     // Audio
     MediaPlayer rumbleSoundEffect;
 
     PlayPanel(int team, List<PlayerData> players, LocationType locationType, int seed, String puzzleUrl){
+        this.team = team;
         this.numPlayers = players.size();
         this.randomTransferOrbGenerator = new Random(seed);
         this.puzzleUrl = puzzleUrl;
@@ -125,7 +129,10 @@ public class PlayPanel extends Pane {
 
     }
 
-
+    // SynchronizedParent interface
+    public String getID(){
+        return "TEAM" + team;
+    }
 
     // Called from GameScene only
     void updatePlayer(PlayerData playerData, boolean isHost){

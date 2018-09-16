@@ -17,9 +17,8 @@ import java.net.UnknownHostException;
  */ // Initiates 1 connection with the host computer
 public class ClientConnectionManager extends ConnectionManager{
 
-    public ClientConnectionManager(String host, int port, long playerID){
+    public ClientConnectionManager(String host, int port){
         try{
-            this.playerID = playerID;
             Socket clientSideSocket = new Socket(host, port);
             SenderWorker newSenderWorker = new SenderWorker(clientSideSocket);
             ReceiverWorker newReceiverWorker = new ReceiverWorker(this, clientSideSocket);

@@ -35,7 +35,7 @@ public class MultiplayerSelectionScene extends Scene {
     // misc variables accessed by different methods in this class:
     private ConnectionManager connectionManager;
     private LocalPlayer localPlayer;
-    private GameData gameData = new GameData();
+    private GameData gameData;
     private ScrollableView<PlayerSlot> playerSlotContainer;
     private Scale scaler = new Scale();
     private ChatBox chatBox;
@@ -59,17 +59,21 @@ public class MultiplayerSelectionScene extends Scene {
     MultiplayerSelectionScene(boolean isHost, String username, String host, int port){
         super(new VBox());
         VBox rootNode = (VBox)getRoot();
-        localPlayer = new LocalPlayer(username,isHost);
         this.isHost = isHost;
 
         // set up connection framework:
-        if(isHost) connectionManager = new HostConnectionManager(port, localPlayer.getPlayerID());
-        else connectionManager = new ClientConnectionManager(host, port, localPlayer.getPlayerID());
+        if(isHost) connectionManager = new HostConnectionManager(port);
+        else connectionManager = new ClientConnectionManager(host, port);
+        localPlayer = new LocalPlayer(username,isHost, connectionManager.getSynchronizer());
+        connectionManager.setPlayerID(localPlayer.getPlayerID());
+
         maxConsecutivePacketsMissed = FRAME_RATE * 5;
         if (!connectionManager.isConnected()){
             SceneManager.switchToMainMenu();
             return;
         }
+
+        gameData = new GameData(connectionManager.getSynchronizer());
 
         // Get a background for the PlayerSlot container:
         ImageView scrollableViewbackground = StaticBgImages.DAY_SKY.getImageView();
@@ -83,10 +87,10 @@ public class MultiplayerSelectionScene extends Scene {
             PlayerSlot hostPlayerSlot = new PlayerSlot(localPlayer, true);
             playerSlotContainer.addItem(hostPlayerSlot);
             Button addPlayerBtn = new ThunderButton(ButtonType.ADD_PLAYER,(event)->{
-                playerSlotContainer.addItem(new PlayerSlot(new UnclaimedPlayer(),isHost));
+                playerSlotContainer.addItem(new PlayerSlot(new UnclaimedPlayer(connectionManager.getSynchronizer()),isHost));
                 ((HostConnectionManager)connectionManager).addOpenSlot();
             });
-            Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterType.FILLY_BOT_MEDIUM),true)));
+            Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterType.FILLY_BOT_MEDIUM, connectionManager.getSynchronizer()),true)));
             VBox addButtonHolder = new VBox();
             addButtonHolder.setAlignment(Pos.CENTER);
             addButtonHolder.getChildren().addAll(addPlayerBtn,addBotBtn);
@@ -145,7 +149,7 @@ public class MultiplayerSelectionScene extends Scene {
         chatBox = new ChatBox(gameData, localPlayer, 200, true);
         rootNode.getChildren().add(chatBox);
 
-        // Make everything scale correctly when the window is resized
+        // Make everything scales correctly when the window is resized
         chatBoxBackground.getTransforms().add(scaler);
         returnToMainMenu.getTransforms().add(scaler);
         hostNameAndPort.getTransforms().add(scaler);
@@ -155,7 +159,7 @@ public class MultiplayerSelectionScene extends Scene {
             double scaleValue = (double)newValue/1080.0;
             scaler.setX(scaleValue);
             scaler.setY(scaleValue);
-            // The buttonHolder's minHeight property need to be specially set, because scaling works weird with Buttons
+            // The buttonHolder's minHeight property needs to be specially set, because scaling works weird with Buttons
             // (although the Buttons are visually scaled, the amount of space they take up stays the same. Setting the
             // minHeightProperty here remedies that problem).
             //Todo: This is buggy right now and I have no idea why.
@@ -165,7 +169,7 @@ public class MultiplayerSelectionScene extends Scene {
         // buttonHolder.minHeightProperty().bind(Bindings.multiply(hostNameAndPort.heightProperty(),scaler.yProperty()));
 
         // Create the kick dialog in case the player gets kicked (but don't show it yet, of course):
-        createKickDialog();
+        kickAlert = createKickDialog();
 
         // Start network communications:
         if(connectionManager.isConnected()) {
@@ -189,6 +193,7 @@ public class MultiplayerSelectionScene extends Scene {
                 // Incoming packets are processed every frame, if there are any:
                 if(isHost) processPacketsAsHost();
                 else processPacketsAsClient();
+
 
                 // Tasks that occur 24 times per second.
                 if(now>nextAnimationFrameInstance){
@@ -222,7 +227,7 @@ public class MultiplayerSelectionScene extends Scene {
                     }
                 }
 
-                // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this
+                // Outgoing Packets are transmitted 24 times per second. The game also deals with dropped players at this
                 // time and displays messages to the chat box:
                 if(now>nextSendInstance){
                     nextSendInstance += 1000000000L/FRAME_RATE;
@@ -233,12 +238,12 @@ public class MultiplayerSelectionScene extends Scene {
                     if(isHost){
                         prepareAndSendServerPacket();
                         deleteRemovedPlayers();
-                        resetFlags(); // reset the local change flags so that they are only broadcast once:
                     }
                     else{
                         prepareAndSendClientPacket();
-                        resetFlags(); // reset the local change flags so that they are only sent to the server once:
                     }
+                    resetFlags(); // reset the local change flags so that they are only broadcast once:
+                    connectionManager.getSynchronizer().resetChangedData();
                     checkForDisconnectedPlayers();
                 }
 
@@ -278,8 +283,6 @@ public class MultiplayerSelectionScene extends Scene {
         System.out.print("\n");
     }
 
-    //ToDo: check for player disconnection. Maybe have a counter that increments any time a packet is NOT received from a
-    //TODO: player. If the counter goes above a prescribed amount, then resign that player (or ask the host what to do?)
     private void processPacketsAsHost(){
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         Packet packet = connectionManager.retrievePacket();
@@ -314,6 +317,7 @@ public class MultiplayerSelectionScene extends Scene {
                 chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
 
+            connectionManager.getSynchronizer().synchronizeWith(packet.getSynchronizer(),isHost);
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
         }
@@ -337,7 +341,7 @@ public class MultiplayerSelectionScene extends Scene {
         if(latencies.containsKey(localPlayerData.getPlayerID())){
             localPlayerData.changeLatency(latencies.get(localPlayerData.getPlayerID()));
         }
-        Packet outPacket = new Packet(localPlayerData, localGameData);
+        Packet outPacket = new Packet(localPlayerData, localGameData, connectionManager.getSynchronizer());
 
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots) {
@@ -530,6 +534,9 @@ public class MultiplayerSelectionScene extends Scene {
                 chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
 
+
+            connectionManager.getSynchronizer().synchronizeWith(packet.getSynchronizer(),isHost);
+
             // Prepare for next iteration:
             packet = connectionManager.retrievePacket();
         }
@@ -551,13 +558,14 @@ public class MultiplayerSelectionScene extends Scene {
         hostNameDialog.showAndWait();
 }
 
-    private void createKickDialog(){
-        kickAlert = new Alert(Alert.AlertType.CONFIRMATION);
+    private Alert createKickDialog(){
+        Alert kickAlert = new Alert(Alert.AlertType.CONFIRMATION);
         kickAlert.setTitle("You've been kicked");
         kickAlert.setHeaderText("The host has removed you from the game.");
         javafx.scene.control.ButtonType returnBtn = new javafx.scene.control.ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
         kickAlert.getButtonTypes().setAll(returnBtn);
         kickAlert.setGraphic(null);
+        return kickAlert;
     }
 
     private void showKickDialog(){
@@ -591,7 +599,7 @@ public class MultiplayerSelectionScene extends Scene {
         PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
 
-        Packet outPacket = new Packet(localPlayerData, localGameData);
+        Packet outPacket = new Packet(localPlayerData, localGameData, connectionManager.getSynchronizer());
         connectionManager.send(outPacket);
     }
 

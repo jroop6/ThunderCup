@@ -23,18 +23,19 @@ import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 /**
  * Having separate "changers" and "setters" prevents an undesirable feedback loop in network communications that would undo changes.
  */
-public class PlayerData implements Serializable {
+public class PlayerData implements Serializable, SynchronizedParent {
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which ammunitionOrbs data that is inconsistent with the host is tolerated. After this many frames, the ammunitionOrbs list is overwritten with the host's data.
 
     private final long playerID;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
+    private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
+
     private String username;
     private int team;
     private long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
     private Queue<OrbData> firedOrbs = new LinkedList<>();
     private boolean defeated; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
-    private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
 
     // Flags indicating changes to playerData:
@@ -63,10 +64,13 @@ public class PlayerData implements Serializable {
     // Counter for how many frames the local ammunitionOrbs list has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
 
+    private SynchronizedComparable<String> testString;
+
     // When the server first initializes a PlayerData object, it will only know the player's username and userID. Use
     // default values for everything else.
-    public PlayerData(String username, long playerID){
+    public PlayerData(String username, long playerID, Synchronizer synchronizer){
         //BubbleData = new BubbleData();
+        testString = new SynchronizedComparable<>("testString","MYNAME",null,null, SynchronizedData.Precedence.HOST,this, synchronizer,0);
         this.username = username;
         this.playerID = playerID;
         CharacterType characterEnum;
@@ -84,7 +88,7 @@ public class PlayerData implements Serializable {
         defeated = false;
 
         this.cannonData = new CannonData(cannonType);
-        this.characterData = new CharacterData(characterEnum);
+        this.characterData = new CharacterData(characterEnum, this);
     }
 
     // Copy constructor
@@ -111,7 +115,7 @@ public class PlayerData implements Serializable {
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
-        characterData = new CharacterData(other.getCharacterData());
+        characterData = new CharacterData(other.getCharacterData(), this);
         cannonData = new CannonData(other.getCannonData());
     }
 
@@ -143,6 +147,11 @@ public class PlayerData implements Serializable {
         positionAmmunitionOrbs();
     }
 
+    // SynchronizedParent method:
+    public String getID(){
+        return "PLAYER" + playerID;
+    }
+
 
     /* Changers: These are called when a client wants to notify the host that he/she is actively changing something
      * (e.g. Changing character, team, username, etc). The host will then notify all clients that the data has changed. */
@@ -170,7 +179,7 @@ public class PlayerData implements Serializable {
         this.defeated = defeated;
         defeatedChanged = true;
     }
-    public void changeCannonAngle(double cannonAngle){
+    public void changeCannonAngle(double cannonAngle) {
         cannonData.setAngle(cannonAngle);
         // no change flag is needed for cannon angle
     }

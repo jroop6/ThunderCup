@@ -26,7 +26,7 @@ public class HostConnectionManager extends ConnectionManager{
 
     // The Constructor is a lot less complicated than it looks! It simply attempts to open a ServerSocket, and then
     // there's just a bunch of code for error handling and for helping with user troubleshooting.
-    public HostConnectionManager(int port, long playerID) {
+    public HostConnectionManager(int port) {
         this.playerID = playerID;
         try {
             serverSocket = new ServerSocket(DEFAULT_PORT);
@@ -132,8 +132,8 @@ public class HostConnectionManager extends ConnectionManager{
             tempOutputStream = new ObjectOutputStream(hostSideSocket.getOutputStream());
 
             // Create said rejection notice:
-            PlayerData tempPlayerData = new PlayerData("Host",0);
-            Packet tempServerPacket = new Packet(tempPlayerData, new GameData());
+            PlayerData tempPlayerData = new PlayerData("Host",0, synchronizer);
+            Packet tempServerPacket = new Packet(tempPlayerData, new GameData(synchronizer), new Synchronizer());
             tempServerPacket.rejectConnection();
 
             // Send the rejection notice

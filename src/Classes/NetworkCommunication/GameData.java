@@ -22,12 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *    the JavaFX application thread adds a new message to gameData (bad timing!)
  *    the worker thread sends the Packet off and calls resetMessages(), destroying the message that was just added.
  */
-public class GameData implements Serializable{
+public class GameData implements Serializable, SynchronizedParent{
     private boolean pause;
     private boolean cancelGame;
-    private List<Message> messages; // new messages to send to other players
+    private List<Message> messages = new ArrayList<>(); // new messages to send to other players
     private String ammunitionUrl = "";
-    private Map<Long,Integer> missedPacketsCount; // maps playerIDs to the number of misssed packets for that player.
+    private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
     private boolean gameStarted;
 
     // Flags indicating changes to GameData:
@@ -43,10 +43,11 @@ public class GameData implements Serializable{
     private long victoryTime = 0;
     private int victoriousTeam;
 
-    // Default constructor:
-    public GameData(){
-        messages = new ArrayList<>();
-        missedPacketsCount = new ConcurrentHashMap<>();
+    // TEST
+    SynchronizedComparable<Integer> myTestInteger;
+
+    public GameData(Synchronizer synchronizer){
+        myTestInteger = new SynchronizedComparable<>("myTestInteger", 42, SynchronizedData.Precedence.HOST, this, synchronizer);
     }
 
     // Copy constructor:
@@ -200,6 +201,10 @@ public class GameData implements Serializable{
         missedPacketsCount.replace(playerID, newVal);
     }
 
+    // SynchronizedParent interface
+    public String getID(){
+        return "GAME";
+    }
 
 
 }
