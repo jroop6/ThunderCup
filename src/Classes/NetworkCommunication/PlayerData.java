@@ -64,15 +64,15 @@ public class PlayerData implements Serializable, SynchronizedParent {
     // Counter for how many frames the local ammunitionOrbs list has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
 
-    private SynchronizedComparable<String> testString;
+    private Synchronizer synchronizer;
 
     // When the server first initializes a PlayerData object, it will only know the player's username and userID. Use
     // default values for everything else.
     public PlayerData(String username, long playerID, Synchronizer synchronizer){
         //BubbleData = new BubbleData();
-        testString = new SynchronizedComparable<>("testString","MYNAME",null,null, SynchronizedData.Precedence.HOST,this, synchronizer,0);
         this.username = username;
         this.playerID = playerID;
+        this.synchronizer = synchronizer;
         CharacterType characterEnum;
         CannonType cannonType;
         if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
@@ -152,6 +152,9 @@ public class PlayerData implements Serializable, SynchronizedParent {
         return "PLAYER" + playerID;
     }
 
+    public Synchronizer getSynchronizer(){
+        return synchronizer;
+    }
 
     /* Changers: These are called when a client wants to notify the host that he/she is actively changing something
      * (e.g. Changing character, team, username, etc). The host will then notify all clients that the data has changed. */

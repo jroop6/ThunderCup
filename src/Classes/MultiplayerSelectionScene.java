@@ -296,6 +296,15 @@ public class MultiplayerSelectionScene extends Scene {
                 // A new player has connected. Place him/her in an open slot. If there is no open slot, then ignore the
                 // packet (this can happen if the player was just kicked by the host and the client doesn't realize it
                 // yet and is still sending packets to the host):
+
+                // note: this doesn't work. you must call changePlayer() or else your datastructures will lose track of this playerData.
+                /*for(int i=0; i<playerSlots.size(); i++){
+                    if(playerSlots.get(i).getPlayerData().getPlayerID()==-1){
+                        playerSlots.remove(i);
+                        playerSlots.add(i,new PlayerSlot(new RemotePlayer(playerData.getUsername(), playerData.getPlayerID(), connectionManager.getSynchronizer()), isHost));
+                    }
+                }*/
+
                 PlayerSlot openPlayerSlot = getPlayerSlotByID(-1,playerSlots);
                 if(openPlayerSlot!=null){
                     openPlayerSlot.changePlayer(playerData,isHost);

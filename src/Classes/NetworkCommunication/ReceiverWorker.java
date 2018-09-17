@@ -49,8 +49,7 @@ class ReceiverWorker extends Thread{
                 }
             } catch(SocketException e){
                 //ToDo: I *think* this specific exception is only thrown if kill() is called. But it might be called if, say a network cable gets unplugged. In the latter case, we should maybe pause the game until the player's connection is reaffirmed (so ToDo under IOException)
-                System.out.println("socket closed. shutting down ReceiverWorker");
-                e.printStackTrace();
+                System.err.println("socket closed. shutting down ReceiverWorker");
             } catch (IOException e){
                 // If an IOException occurred, assume this means that the player disconnected. For now, just shut down this ReceiverWorker
                 //ToDo: Instead of just shutting down the ReceiverWorker, try pausing the game for a bit first to see whether the player reconnects?

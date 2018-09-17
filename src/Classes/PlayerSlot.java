@@ -5,6 +5,7 @@ import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.PlayerTypes.BotPlayer;
 import Classes.PlayerTypes.LocalPlayer;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -30,21 +31,24 @@ public class PlayerSlot extends StackPane{
     private final double CANNON_Y = 822.0; // The y-position of the cannon's axis of rotation on the PlayerSlot.
 
     private PlayerData playerData;
+
+    // Various JavaFX nodes on this component:
     private ImageView characterImageView;
     private ImageView cannonImageView;
-
-    // The PlayerSlot will have one of the following, for displaying a Player's team:
     private ComboBox<String> teamChoice;
     private Label teamLabel;
-
-    // Displays latency time between the client and the host
     private Label latencyLabel;
-
-    // A button for displaying the username:
     private Button usernameBtn;
+    private Label clickToChange;
+    private Button removePlayerBtn;
+
+    // EventHandlers whose references are needed so they can be de-registered:
+    private EventHandler<MouseEvent> characterClickHandler;
+    private EventHandler<MouseEvent> cannonClickHandler;
+    private EventHandler<MouseEvent> usernameBtnEnteredHandler;
+    private EventHandler<MouseEvent> usernameBtnExitedHandler;
 
     PlayerSlot(PlayerData playerData, boolean isHost){
-        this.playerData = playerData;
         setAlignment(Pos.TOP_LEFT);
 
         // Add background image:
@@ -53,34 +57,10 @@ public class PlayerSlot extends StackPane{
 
         // Add CharacterAnimations and cannon images. They are placed on a Pane for more control over positioning:
         Pane characterAndCannonPositioner = new Pane();
-        //characterAndCannonPositioner.getChildren().addAll(player.getCharacterSprite() , player.getCannonMovingPart());
-
         characterImageView = new ImageView();
         cannonImageView = new ImageView();
         characterAndCannonPositioner.getChildren().addAll(characterImageView, cannonImageView);
-
-        /*player.relocateCharacter(CHARACTER_X-player.getPlayerData().getCharacterEnum().getHoovesX(),
-                CHARACTER_Y-player.getPlayerData().getCharacterEnum().getHoovesY());*/
-        playerData.relocateCharacter(CHARACTER_X, CHARACTER_Y);
-        playerData.relocateCannon(CANNON_X, CANNON_Y);
         getChildren().add(characterAndCannonPositioner);
-
-        // Scale the Cannon and Character:
-        playerData.setScale(1.42);
-
-        // The character and Cannon can be changed by clicking on them (but only by the player that owns them or by the
-        // host if the player is a bot). Note: the eventHandlers here are named so that they can later be removed with
-        // removeEventHandlers():
-        if(playerData instanceof LocalPlayer || (playerData instanceof BotPlayer && isHost)){
-            characterImageView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
-                System.out.println("clicky click on character");
-                playerData.incrementCharacterEnum();
-            });
-            cannonImageView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
-                System.out.println("clicky click on cannon");
-                playerData.incrementCannonEnum();
-            });
-        }
 
         // Add foreground image:
         ImageView foreground = StaticBgImages.PLAYER_SLOT_FOREGROUND.getImageView();
@@ -100,7 +80,12 @@ public class PlayerSlot extends StackPane{
         // Display the username at the top of the player slot:
         usernameBtn = new Button();
         usernameBtn.setFont(new Font(48.0));
-        usernameBtn.setBackground(null);
+        ImageView unselectedImage = ButtonType.USERNAME.getUnselectedImageView();
+        ImageView selectedImage = ButtonType.USERNAME.getSelectedImageView();
+        usernameBtnEnteredHandler = (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(selectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
+        usernameBtnExitedHandler = (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
+        usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
+        usernameBtn.setMaxWidth(background.getImage().getWidth());
         gridPane.add(usernameBtn,0,7);
 
         // Display the player's latency value:
@@ -108,60 +93,105 @@ public class PlayerSlot extends StackPane{
         latencyLabel.setFont(new Font(36.0));
         gridPane.add(latencyLabel,0,8);
 
-        // If the player is the localPlayer, then allow the user to click on his/her username to modify it. Unfortunately,
-        // the createButton() method can't be reused here, because usernameBtn is stored inside the Player class.
+        // Add a "Remove Player" button to allow the host to remove the player.
+        removePlayerBtn = createButton(ButtonType.REMOVE_PLAYER);
+        gridPane.add(removePlayerBtn,0,9);
+
+        // Add A ComboBox for the player to select a team. It will only be shown it if this is the local player or if this is
+        // the host and the player is a bot:
+        teamChoice = new ComboBox<>();
+        teamChoice.getItems().addAll("Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6", "Team 7", "Team 8", "Team 9", "Team 10");
+        teamChoice.setStyle("-fx-font: 36.0px \"Comic Sans\";");
+        gridPane.add(teamChoice, 0, 10);
+        // otherwise, just the team name of that player will be shown:
+        teamLabel = new Label();
+        teamLabel.setFont(new Font(48.0));
+        gridPane.add(teamLabel,0,11);
+
+        // At the very bottom, include a label informing the player that he/she can change the character and cannon by
+        // clicking on them:
+        clickToChange = new Label("Click cannon or character\n to change them.");
+        clickToChange.setTextAlignment(TextAlignment.CENTER);
+        clickToChange.setFont(new Font(36.0));
+        gridPane.add(clickToChange, 0, 59);
+
+        // Link the playerData to the controls in this PlayerSlot:
+        changePlayer(playerData, isHost);
+    }
+
+    // Updates the PlayerSlot to reflect the type of PlayerData, and links up the playerData to various EventHandlers.
+    public void changePlayer(PlayerData playerData, boolean isHost){
+        // horrible, awful, obsolete code:
+        /*getChildren().clear();
+        this.playerData = new RemotePlayer(playerData, synchronizer);
+        getChildren().addAll((new PlayerSlot(this.playerData, isHost).getChildren()));*/
+
+        this.playerData = playerData;
+
+        // make sure the character and cannon are positioned and scaled appropriately:
+        playerData.relocateCharacter(CHARACTER_X, CHARACTER_Y);
+        playerData.relocateCannon(CANNON_X, CANNON_Y);
+        playerData.setScale(1.42);
+
+        // The character and Cannon can be changed by clicking on them (but only by the player that owns them or by the
+        // host if the player is a bot). Any old event handlers are de-registered and new ones are registered with the
+        // new PlayerData.
+        if(characterClickHandler!=null) characterImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, characterClickHandler);
+        if(cannonClickHandler!=null) cannonImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, cannonClickHandler);
+        if(playerData instanceof LocalPlayer || (playerData instanceof BotPlayer && isHost)) {
+            characterClickHandler = event -> {
+                System.out.println("clicky click on character");
+                playerData.incrementCharacterEnum();
+            };
+            characterImageView.addEventHandler(MouseEvent.MOUSE_CLICKED, characterClickHandler);
+            cannonClickHandler = event -> {
+                System.out.println("clicky click on cannon");
+                playerData.incrementCannonEnum();
+            };
+            cannonImageView.addEventHandler(MouseEvent.MOUSE_CLICKED, cannonClickHandler);
+            clickToChange.setVisible(true);
+        }
+        else clickToChange.setVisible(false);
+
+        // If the player is the localPlayer, then allow the user to click on his/her username to modify it. Any old
+        // EventHandlers are de-registered before the new ones are registered with the new PlayerData.
+        usernameBtn.setOnAction(null);
+        if(usernameBtnEnteredHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
+        if(usernameBtnExitedHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnExitedHandler);
         if(playerData instanceof LocalPlayer){
-            ImageView unselectedImage = ButtonType.USERNAME.getUnselectedImageView();
-            ImageView selectedImage = ButtonType.USERNAME.getSelectedImageView();
-            usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
-            usernameBtn.setMaxWidth(background.getImage().getWidth());
             usernameBtn.setOnAction((event) -> {
                 String newName = displayChangeUsernameDialog(playerData.getUsername());
                 playerData.changeUsername(newName);
             });
-            usernameBtn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> {
-                usernameBtn.setBackground(new Background(new BackgroundImage(selectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
-            });
-            usernameBtn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> {
-                usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
-            });
+            usernameBtn.addEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
+            usernameBtn.addEventHandler(MouseEvent.MOUSE_EXITED, usernameBtnExitedHandler);
         }
+        else usernameBtn.setBackground(null);
 
-        // Add a "Remove Player" button to allow the host to remove the player. If this is not the host, hide it. The
-        // host does not get a remove player button for their own character:
-        Button removePlayerBtn = createButton(ButtonType.REMOVE_PLAYER);
-        gridPane.add(removePlayerBtn,0,9);
+        // If this is not the host, hide the remove player button. The host does not get a remove player button for
+        // their own character. De-register any existing ActionListener before registering one to the new PlayerData:
+        removePlayerBtn.setOnAction(null);
         if(!isHost || playerData instanceof LocalPlayer){
             removePlayerBtn.setVisible(false);
-        }
-
-        // Add A ComboBox for the player to select a team, but only show it if this is the local player or if this is
-        // the host and the player is a bot:
-        if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
-            teamChoice = new ComboBox<>();
-            teamChoice.getItems().addAll("Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6", "Team 7", "Team 8", "Team 9", "Team 10");
-            teamChoice.setStyle("-fx-font: 36.0px \"Comic Sans\";");
-            gridPane.add(teamChoice,0,10);
-            teamChoice.setOnAction((event)->{
-                playerData.changeTeam(teamChoice.getSelectionModel().getSelectedIndex()+1);
+            removePlayerBtn.setOnAction((event) -> {
+                System.out.println("Clicked Remove Player.");
+                playerData.changeResignPlayer();
             });
         }
+        else removePlayerBtn.setVisible(true);
 
-        // ...otherwise, just display the team name of that player:
-        else{
-            teamLabel = new Label();
-            teamLabel.setFont(new Font(48.0));
-            teamLabel.setText("Team " + playerData.getTeam());
-            gridPane.add(teamLabel,0,11);
+        // Register the EventHandler for the teamChoice combo box. De-register any existing one, first:
+        teamChoice.setOnAction(null);
+        if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
+            teamChoice.setVisible(true);
+            teamLabel.setVisible(false);
+            teamChoice.setOnAction((event)-> playerData.changeTeam(teamChoice.getSelectionModel().getSelectedIndex()+1));
         }
-
-        // At the very bottom, include a label informing the player that he/she can change the character and cannon by
-        // clicking on them:
-        if(playerData instanceof LocalPlayer || (playerData instanceof BotPlayer && isHost)){
-            Label clickToChange = new Label("Click cannon or character\n to change them.");
-            clickToChange.setTextAlignment(TextAlignment.CENTER);
-            clickToChange.setFont(new Font(36.0));
-            gridPane.add(clickToChange,0,59);
+        else {
+            System.out.println("team choice is being turned off");
+            teamChoice.setVisible(false);
+            teamLabel.setVisible(true);
+            teamLabel.setText("Team " + playerData.getTeam());
         }
     }
 
@@ -178,6 +208,7 @@ public class PlayerSlot extends StackPane{
         if(latency<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",latency/1000L));
         else latencyLabel.setText(String.format("Latency: %d milliseconds",latency/1000000L));
 
+        System.out.println("setting username to " + playerData.getUsername());
         usernameBtn.setText(playerData.getUsername());
 
         if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
@@ -192,15 +223,6 @@ public class PlayerSlot extends StackPane{
         return playerData;
     }
 
-    // Changing players is accomplished by replacing all the children of this PlayerSlot Node with the children of a
-    // new PlayerSlot node.
-    //todo: I'm sure I must have broken this. Fix it.
-    public void changePlayer(PlayerData playerData, boolean isHost){
-        getChildren().clear();
-        this.playerData = playerData; //used to be: playerData = new RemotePlayer(playerData);
-        getChildren().addAll((new PlayerSlot(playerData,isHost).getChildren()));
-    }
-
     private Button createButton(ButtonType buttonEnum){
         Button btn = new Button();
         ImageView unselectedImage = buttonEnum.getUnselectedImageView();
@@ -208,23 +230,9 @@ public class PlayerSlot extends StackPane{
         btn.setGraphic(unselectedImage);
         btn.setBackground(null);
 
-        // choose appropriate action when the button is clicked:
-        btn.setOnAction((event) -> {
-            switch (buttonEnum) {
-                case REMOVE_PLAYER:
-                    System.out.println("Clicked Remove Player.");
-                    playerData.changeResignPlayer();
-                    break;
-            }
-        });
-
         // Change the button graphic when it is hovered over:
-        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> {
-            btn.setGraphic(selectedImage);
-        });
-        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> {
-            btn.setGraphic(unselectedImage);
-        });
+        btn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> btn.setGraphic(selectedImage));
+        btn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> btn.setGraphic(unselectedImage));
 
         return btn;
     }
