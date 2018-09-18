@@ -18,12 +18,13 @@ public class LocalPlayer extends PlayerData {
     // create a (probably) unique player ID
     private static long createID(boolean isHost){
         long playerID;
-        if(isHost) playerID = 0;
+        if(isHost) playerID = HOST_ID;
         else{
             do{
                 playerID = (new Random()).nextLong();
+                if(playerID>0) playerID = -playerID;
                 System.out.println("player ID is: " + playerID);
-            } while (playerID == 0 || playerID == -1); // A non-host local player absolutely cannot have an ID of 0 or -1. These are reserved for the host and unclaimed player slots, respectively.
+            } while (playerID == HOST_ID || playerID == UNCLAIMED_PLAYER_ID || playerID == GAME_ID);
         }
         return playerID;
     }

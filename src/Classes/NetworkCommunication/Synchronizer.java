@@ -20,13 +20,13 @@ public class Synchronizer implements Serializable {
         for(SynchronizedData synchronizedData : other.synchronizedDataMap.values()){
             if(synchronizedData instanceof SynchronizedComparable){
                 SynchronizedComparable synchronizedComparableCopy = new SynchronizedComparable((SynchronizedComparable)synchronizedData, this);
-                synchronizedDataMap.put(synchronizedComparableCopy.getName(), synchronizedComparableCopy);
+                synchronizedDataMap.put(synchronizedComparableCopy.getKey(), synchronizedComparableCopy);
             }
         }
         for(SynchronizedData synchronizedData : other.changedData){
-            SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getName());
+            SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getKey());
             if(officialSynchronizedData==null){
-                System.err.println("Error in Synchronizer copy constructor! The data " + synchronizedData.getName() +
+                System.err.println("Error in Synchronizer copy constructor! The data " + synchronizedData.getKey() +
                         " exists in the changedData list, but not in the synchronizedDataMap. This should not be " +
                         "possible.");
             }
@@ -35,11 +35,11 @@ public class Synchronizer implements Serializable {
     }
 
     public void register(SynchronizedData synchronizedData){
-        synchronizedDataMap.put(synchronizedData.getName(),synchronizedData);
+        synchronizedDataMap.put(synchronizedData.getKey(),synchronizedData);
     }
 
     public void addToChangedData(SynchronizedData synchronizedData){
-        SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getName());
+        SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getKey());
         if(officialSynchronizedData==null){
             System.err.println("Error! Attempted to change a data value that was somehow not registered to the " +
                     "synchronizer! This issue needs to be debugged. Perhaps you have multiple Synchronizers running " +
@@ -58,19 +58,53 @@ public class Synchronizer implements Serializable {
         changedData.clear();
     }
 
+    // todo: check the type of SynchronizedData (is it a SynchronizedComparable? SynchronizedList?)
+    // todo: check the generic type (is it a SynchronizedData<Integer>? SynchronizedData<Boolean>?)
+
+    private boolean sanitizeClientData(SynchronizedData hostData, SynchronizedData clientData){
+        if(hostData == null){
+            System.err.println("Error! A client sent us unrecognized data: " + clientData.getKey());
+            return false;
+        }
+        // todo: oops; this one doesn't actually turn out to be the case. I need to rethink the security of this game.
+        /*if(hostData.getPrecedence()== SynchronizedData.Precedence.HOST){
+            System.err.println("Warning! A client attempted to set data without permission! " + clientData.getKey());
+            return false;
+        }*/
+        return true;
+    }
+    private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData){
+        if(clientData == null){
+            System.err.println("Error! The host sent us unrecognized data: " + hostData.getKey());
+            return false;
+        }
+        return true;
+    }
+
     public void synchronizeWith(Synchronizer other, boolean isHost){
-        System.out.println("hey! we called synchronizeWith! How much data do we have in store? us: " + synchronizedDataMap.values().size() + " other: " + other.synchronizedDataMap.values().size());
+        //System.out.println("hey! we called synchronizeWith! How much data do we have in store? us: " + synchronizedDataMap.values().size() + " other: " + other.synchronizedDataMap.values().size());
         if(isHost){
             // if we're the host, we don't need to call compareTo(), because we're only checking the data in the client's changedData list.
+            if(other.changedData.size()>0) System.out.println("changed data detected!");
             for(SynchronizedData clientData : other.changedData){
-                SynchronizedData hostData = synchronizedDataMap.get(clientData.getName());
+                SynchronizedData hostData = synchronizedDataMap.get(clientData.getKey());
                 if(!sanitizeClientData(hostData, clientData)) continue;
+                System.out.println("new username is " + clientData.getData());
                 hostData.changeTo(clientData.getData());
             }
         }
         else{
+            // The client looks at the host's changedData first, and immediately syncs with anything in there.
+            for(SynchronizedData hostData : other.changedData){
+                SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
+                if(!sanitizeHostData(hostData,clientData)) continue;
+                if(clientData.compareTo(hostData)!=0){
+                    clientData.setTo(hostData.getData());
+                }
+            }
+            // Now the client checks the consistency of the rest of its data with the host.
             for(SynchronizedData hostData : other.synchronizedDataMap.values()){
-                SynchronizedData clientData = synchronizedDataMap.get(hostData.getName());
+                SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
                 if(!sanitizeHostData(hostData,clientData)) continue;
 
                 if(clientData.compareTo(hostData)!=0){
@@ -92,25 +126,11 @@ public class Synchronizer implements Serializable {
         }
     }
 
-    // todo: check the type of SynchronizedData (is it a SynchronizedComparable? SynchronizedList?)
-    // todo: check the generic type (is it a SynchronizedData<Integer>? SynchronizedData<Boolean>?)
-    private boolean sanitizeClientData(SynchronizedData hostData, SynchronizedData clientData){
-        if(hostData == null){
-            System.err.println("Error! A client sent us unrecognized data: " + clientData.getName());
-            return false;
-        }
-        if(hostData.getPrecedence()== SynchronizedData.Precedence.HOST){
-            System.err.println("Warning! A client attempted to set data without permission! " + clientData.getName());
-            return false;
-        }
-        return true;
+    public SynchronizedData get(long parentID, String key){
+        return synchronizedDataMap.get(parentID + key);
     }
 
-    private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData){
-        if(clientData == null){
-            System.err.println("Error! The host sent us unrecognized data: " + hostData.getName());
-            return false;
-        }
-        return true;
+    public HashMap<String, SynchronizedData> getAll(){
+        return synchronizedDataMap;
     }
 }

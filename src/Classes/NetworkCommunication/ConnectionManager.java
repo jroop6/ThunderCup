@@ -3,7 +3,7 @@ package Classes.NetworkCommunication;
 import java.util.*;
 
 /**
- * Created by HydrusBeta on 7/28/2017.
+ * Created by Jonathan Roop on 7/28/2017.
  */
 public abstract class ConnectionManager extends Thread {
     protected boolean isConnected = false;

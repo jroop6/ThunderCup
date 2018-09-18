@@ -52,8 +52,9 @@ public class BotPlayer extends PlayerData {
         long playerID;
         do{
             playerID = (new Random()).nextLong();
+            if(playerID>0) playerID = -playerID;
             System.out.println("player ID is: " + playerID);
-        } while (playerID == 0 || playerID == -1); // A non-host player absolutely cannot have an ID of 0 or -1. These are reserved for the host and unclaimed player slots, respectively.
+        } while (playerID == HOST_ID || playerID == UNCLAIMED_PLAYER_ID || playerID == GAME_ID);
         return playerID;
     }
 

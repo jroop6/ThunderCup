@@ -23,14 +23,18 @@ import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 /**
  * Having separate "changers" and "setters" prevents an undesirable feedback loop in network communications that would undo changes.
  */
-public class PlayerData implements Serializable, SynchronizedParent {
+public class PlayerData implements Serializable {
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which ammunitionOrbs data that is inconsistent with the host is tolerated. After this many frames, the ammunitionOrbs list is overwritten with the host's data.
+    public static final long HOST_ID = -1L;
+    public static final long UNCLAIMED_PLAYER_ID = -2L;
+    public static final long GAME_ID = 0L;
 
     private final long playerID;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
 
-    private String username;
+    //private String username;
+    private SynchronizedComparable<String> username;
     private int team;
     private long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
@@ -41,7 +45,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
     private boolean firing = false;
-    private boolean usernameChanged = false;
+    //private boolean usernameChanged = false;
     private boolean characterChanged = false;
     private boolean cannonChanged = false;
     private boolean teamChanged = false; // Also used to indicate a playerslot that is unclaimed (team 0);
@@ -70,12 +74,13 @@ public class PlayerData implements Serializable, SynchronizedParent {
     // default values for everything else.
     public PlayerData(String username, long playerID, Synchronizer synchronizer){
         //BubbleData = new BubbleData();
-        this.username = username;
+        //this.username = username;
+        this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, playerID, synchronizer);
         this.playerID = playerID;
         this.synchronizer = synchronizer;
         CharacterType characterEnum;
         CannonType cannonType;
-        if(playerID == -1){ // playerID =- 1 indicates that the Player is of type UnclaimedPlayer (corresponds to an open slot in the MultiplayerSelectionScene)
+        if(playerID == UNCLAIMED_PLAYER_ID){ // corresponds to an open slot in the MultiplayerSelectionScene
             characterEnum = CharacterType.UNKNOWN_CHARACTER;
             cannonType = CannonType.UNKNOWN_CANNON;
             team = 0;
@@ -88,12 +93,12 @@ public class PlayerData implements Serializable, SynchronizedParent {
         defeated = false;
 
         this.cannonData = new CannonData(cannonType);
-        this.characterData = new CharacterData(characterEnum, this);
+        this.characterData = new CharacterData(characterEnum, playerID);
     }
 
     // Copy constructor
     public PlayerData(PlayerData other){
-        username = other.getUsername();
+        //username = other.getUsername();
         playerID = other.getPlayerID();
         playerPos = other.getPlayerPos();
         team = other.getTeam();
@@ -106,7 +111,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
 
         bubbleDataChanged = other.isBubbleDataChanged();
         firing = other.isFiring();
-        usernameChanged = other.isUsernameChanged();
+        //usernameChanged = other.isUsernameChanged();
         characterChanged = other.isCharacterChanged();
         cannonChanged = other.isCannonChanged();
         teamChanged = other.isTeamChanged();
@@ -115,7 +120,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
-        characterData = new CharacterData(other.getCharacterData(), this);
+        characterData = new CharacterData(other.getCharacterData(), playerID);
         cannonData = new CannonData(other.getCannonData());
     }
 
@@ -147,11 +152,6 @@ public class PlayerData implements Serializable, SynchronizedParent {
         positionAmmunitionOrbs();
     }
 
-    // SynchronizedParent method:
-    public String getID(){
-        return "PLAYER" + playerID;
-    }
-
     public Synchronizer getSynchronizer(){
         return synchronizer;
     }
@@ -162,10 +162,10 @@ public class PlayerData implements Serializable, SynchronizedParent {
         this.firing = firing;
         bubbleDataChanged = true;
     }*/
-    public void changeUsername(String username){
+    /*public void changeUsername(String username){
         this.username = username;
         usernameChanged = true;
-    }
+    }*/
     public void changeCharacter(CharacterType characterEnum){
         characterData.setCharacterType(characterEnum);
         characterChanged = true;
@@ -244,9 +244,9 @@ public class PlayerData implements Serializable, SynchronizedParent {
 
     /* Setters: These are called when a client simply wants to update locally-stored player information without
      * notifying the host. */
-    public void setUsername(String username){
+    /*public void setUsername(String username){
         this.username = username;
-    }
+    }*/
     public void setTeam(int team){
         this.team = team;
     }
@@ -275,7 +275,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
     public void resetFlags(){
         bubbleDataChanged = false;
         firing = false;
-        usernameChanged = false;
+        //usernameChanged = false;
         characterChanged = false;
         cannonChanged = false;
         teamChanged = false;
@@ -294,9 +294,9 @@ public class PlayerData implements Serializable, SynchronizedParent {
     public boolean isFiring(){
         return firing;
     }
-    public boolean isUsernameChanged(){
+    /*public boolean isUsernameChanged(){
         return usernameChanged;
-    }
+    }*/
     public boolean isCharacterChanged(){
         return characterChanged;
     }
@@ -323,7 +323,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
     public double getCannonAngle(){
         return cannonData.getAngle();
     }
-    public String getUsername(){
+    public SynchronizedComparable<String> getUsername(){
         return username;
     }
     public long getPlayerID(){
@@ -424,7 +424,7 @@ public class PlayerData implements Serializable, SynchronizedParent {
             while(nextType.getBotDifficulty()==null){
                 nextType = nextType.next();
             }
-            changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
+            //changeUsername("fillyBot [" + nextType.getBotDifficulty() +"]");
         }
         changeCharacter(nextType);
         characterData.setCharacterType(nextType);
@@ -530,9 +530,9 @@ public class PlayerData implements Serializable, SynchronizedParent {
         if(newPlayerData.isTeamChanged()){
             changeTeam(newPlayerData.getTeam()); // updates model
         }
-        if(newPlayerData.isUsernameChanged()){
+        /*if(newPlayerData.isUsernameChanged()){
             changeUsername(newPlayerData.getUsername()); // updates model
-        }
+        }*/
 
         changeCannonAngle(newPlayerData.getCannonAngle()); //updates model
 
@@ -564,9 +564,9 @@ public class PlayerData implements Serializable, SynchronizedParent {
         if(newPlayerData.isTeamChanged() && !isTeamChanged()){
             setTeam(newPlayerData.getTeam()); // updates model
         }
-        if(newPlayerData.isUsernameChanged() && !isUsernameChanged()){
+        /*if(newPlayerData.isUsernameChanged() && !isUsernameChanged()){
             setUsername(newPlayerData.getUsername()); // updates model
-        }
+        }*/
 
         // remote players' cannon angles are always updated:
         if(!isLocalPlayer){

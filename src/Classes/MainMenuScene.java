@@ -30,6 +30,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static Classes.GameScene.FRAME_RATE;
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 
 /**
  * Created by HydrusBeta on 7/23/2017.
@@ -88,7 +89,7 @@ public class MainMenuScene extends Scene {
         ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         ImageView characterView = new ImageView();
-        CharacterData characterData = new CharacterData(CharacterType.BLITZ,()->"temp");
+        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID);
         characterData.relocate(550,850);
         scaledRoot.getChildren().addAll(nearCloud, characterView);
 

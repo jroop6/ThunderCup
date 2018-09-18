@@ -34,7 +34,7 @@ import static java.lang.Math.PI;
  * Think of this as the Controller part of a Model-View-Controller scheme. The Model part is the PlayPanelData and the View
  * part is the Canvas (and the Orb class in a sense, because orbs know how to draw themselves).
  */
-public class PlayPanel extends Pane implements SynchronizedParent {
+public class PlayPanel extends Pane {
 
     PlayPanelData playPanelData;
 
@@ -127,11 +127,6 @@ public class PlayPanel extends Pane implements SynchronizedParent {
             player.positionAmmunitionOrbs();
         }
 
-    }
-
-    // SynchronizedParent interface
-    public String getID(){
-        return "TEAM" + team;
     }
 
     // Called from GameScene only

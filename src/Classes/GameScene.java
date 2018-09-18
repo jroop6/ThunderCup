@@ -607,7 +607,7 @@ public class GameScene extends Scene {
         dialogStage.initStyle(StageStyle.UNDECORATED);
 
         // Add an informational label:
-        Label dialogLabel = new Label("Communication with player " + player.getUsername() + " seems to have been lost.\n What would you like to do?");
+        Label dialogLabel = new Label("Communication with player " + player.getUsername().getData() + " seems to have been lost.\n What would you like to do?");
         if(droppedPlayerIsHost){
             dialogLabel.setText("Communication with the host seems to have been lost. What would you like to do?");
         }

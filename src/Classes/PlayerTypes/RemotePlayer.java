@@ -11,10 +11,6 @@ public class RemotePlayer extends PlayerData {
         super(username, playerID, synchronizer);
     }
 
-    public RemotePlayer(PlayerData other, Synchronizer synchronizer){
-        super(other.getUsername(), other.getPlayerID(), synchronizer);
-    }
-
     public double computeInitialDistance(OrbData orbData){
         return (getLatency()/1000000000)* orbData.getOrbColor().getOrbSpeed();
     }

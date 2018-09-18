@@ -2,11 +2,13 @@ package Classes.NetworkCommunication;
 
 import java.io.Serializable;
 
+
 public abstract class SynchronizedData<T> implements Comparable<SynchronizedData>, Serializable {
     // The actual data:
-    protected T data;
+    private T data;
 
-    // A key for identifying this data in a HashMap:
+    // Keys for uniquely identifying this data in a HashMap:
+    private long parentID;
     private String name;
 
     // these functional interfaces provide additional code that is executed whenever this data is set or changed.
@@ -20,10 +22,9 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
     private int syncTolerance;
     private int framesOutOfSync = 0;
 
-
-	public SynchronizedData(String name, SynchronizedParent synchronizedParent, Synchronizer synchronizer, Precedence precedence, int syncTolerance){
-	    if(synchronizedParent!=null) this.name = synchronizedParent.getID() + name;
-	    else this.name = name;
+	public SynchronizedData(String name, long parentID, Synchronizer synchronizer, Precedence precedence, int syncTolerance){
+        this.name = name;
+        this.parentID = parentID;
         this.externalSetter = null;
         this.externalChanger = null;
         this.precedence = precedence;
@@ -49,46 +50,36 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
 	    framesOutOfSync = 0;
     }
 
-    public String getName(){
-        return name;
+    public long getParentID(){
+	    return parentID;
     }
-    public Precedence getPrecedence(){
-	    return precedence;
+    public String getName(){
+	    return name;
+    }
+    public String getKey(){
+        return parentID + name;
     }
 
+    public T getData(){
+        return data;
+    }
     // changeTo is called by whichever machine holds precedence (host or client):
     public void changeTo(T newValue){
         data = newValue;
         if(externalChanger!=null) externalChanger.changeTo(data);
         synchronizer.addToChangedData(this);
     }
-
     // setTo is called by the machine that does NOT have precedence:
     public void setTo(T newValue){
         data = newValue;
         if(externalSetter!=null) externalSetter.setTo(data);
     }
 
-    public T getData(){
-	    return data;
+    public Precedence getPrecedence(){
+        return precedence;
+    }
+    public void setPrecedence(Precedence newPrecedence){
+	    precedence = newPrecedence;
     }
 
-    public static void main(String[] args){
-        System.out.println("hello!");
-        Synchronizer synchronizer = new Synchronizer();
-        SynchronizedParent exampleParent = () -> "123456";
-        Setable<Integer> exampleSettable = (newValue -> System.out.println("setting to " + newValue));
-        Changeable<Integer> exampleChangeable = (newValue -> System.out.println("changing to " + newValue));
-        SynchronizedComparable<Integer> testInt = new SynchronizedComparable<>("testInt", 0, Precedence.HOST, exampleParent, synchronizer);
-
-        System.out.println("value before set is " + testInt.getData());
-        testInt.setTo(21);
-        System.out.println("value after set is " + testInt.getData());
-
-        System.out.println("size of changed data is " + synchronizer.getChangedData().size());
-        testInt.changeTo(13);
-        System.out.println("value after change is " + testInt.getData());
-        System.out.println("size of changed data is " + synchronizer.getChangedData().size());
-
-    }
 }

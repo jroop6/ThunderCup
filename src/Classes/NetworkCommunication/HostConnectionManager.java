@@ -16,7 +16,7 @@ import java.util.Optional;
 
 
 /**
- * Created by HydrusBeta on 8/4/2017.
+ * Created by Jonathan Roop on 8/4/2017.
  */ // Listens for connection requests. Sets up 1 receiver/sender Worker pair per client connected.
 public class HostConnectionManager extends ConnectionManager{
 

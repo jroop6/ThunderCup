@@ -120,13 +120,15 @@ public class PlayerSlot extends StackPane{
     }
 
     // Updates the PlayerSlot to reflect the type of PlayerData, and links up the playerData to various EventHandlers.
-    public void changePlayer(PlayerData playerData, boolean isHost){
+    public void changePlayer(PlayerData newPlayerData, boolean isHost){
+
+        System.out.println("Calling changePlayer!!!!");
         // horrible, awful, obsolete code:
         /*getChildren().clear();
         this.playerData = new RemotePlayer(playerData, synchronizer);
         getChildren().addAll((new PlayerSlot(this.playerData, isHost).getChildren()));*/
 
-        this.playerData = playerData;
+        playerData = newPlayerData;
 
         // make sure the character and cannon are positioned and scaled appropriately:
         playerData.relocateCharacter(CHARACTER_X, CHARACTER_Y);
@@ -160,8 +162,8 @@ public class PlayerSlot extends StackPane{
         if(usernameBtnExitedHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnExitedHandler);
         if(playerData instanceof LocalPlayer){
             usernameBtn.setOnAction((event) -> {
-                String newName = displayChangeUsernameDialog(playerData.getUsername());
-                playerData.changeUsername(newName);
+                String newName = displayChangeUsernameDialog(playerData.getUsername().getData());
+                playerData.getUsername().changeTo(newName);
             });
             usernameBtn.addEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
             usernameBtn.addEventHandler(MouseEvent.MOUSE_EXITED, usernameBtnExitedHandler);
@@ -208,8 +210,11 @@ public class PlayerSlot extends StackPane{
         if(latency<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",latency/1000L));
         else latencyLabel.setText(String.format("Latency: %d milliseconds",latency/1000000L));
 
-        System.out.println("setting username to " + playerData.getUsername());
-        usernameBtn.setText(playerData.getUsername());
+        /*if(usernameBtn==null) System.err.println("usernameBtn is null");
+        else if(playerData==null) System.err.println("playerData is null");
+        else if(playerData.getUsername()==null) System.err.println("synchronizedData is null");
+        else if(playerData.getUsername().getData()==null) System.err.println("the string is null");
+        else*/ usernameBtn.setText(playerData.getUsername().getData());
 
         if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
             teamChoice.getSelectionModel().select(playerData.getTeam());
@@ -250,5 +255,6 @@ public class PlayerSlot extends StackPane{
         }
         return newName;
     }
+
 
 }
