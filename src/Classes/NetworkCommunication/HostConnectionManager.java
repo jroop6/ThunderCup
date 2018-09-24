@@ -132,8 +132,9 @@ public class HostConnectionManager extends ConnectionManager{
             tempOutputStream = new ObjectOutputStream(hostSideSocket.getOutputStream());
 
             // Create said rejection notice:
-            PlayerData tempPlayerData = new PlayerData("Host",0, synchronizer);
-            Packet tempServerPacket = new Packet(tempPlayerData, new GameData(synchronizer), new Synchronizer());
+            Synchronizer tempSynchronizer = new Synchronizer();
+            PlayerData tempPlayerData = new PlayerData("Dummy", PlayerData.PlayerType.REMOTE_HOSTVIEW, false, 0, tempSynchronizer);
+            Packet tempServerPacket = new Packet(tempPlayerData, new GameData(tempSynchronizer), tempSynchronizer);
             tempServerPacket.rejectConnection();
 
             // Send the rejection notice

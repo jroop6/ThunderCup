@@ -3,8 +3,6 @@ package Classes;
 import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.PlayerData;
-import Classes.PlayerTypes.BotPlayer;
-import Classes.PlayerTypes.LocalPlayer;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
@@ -140,7 +138,7 @@ public class PlayerSlot extends StackPane{
         // new PlayerData.
         if(characterClickHandler!=null) characterImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, characterClickHandler);
         if(cannonClickHandler!=null) cannonImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, cannonClickHandler);
-        if(playerData instanceof LocalPlayer || (playerData instanceof BotPlayer && isHost)) {
+        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (playerData.getPlayerType()== PlayerData.PlayerType.BOT && isHost)) {
             characterClickHandler = event -> {
                 System.out.println("clicky click on character");
                 playerData.incrementCharacterEnum();
@@ -160,7 +158,7 @@ public class PlayerSlot extends StackPane{
         usernameBtn.setOnAction(null);
         if(usernameBtnEnteredHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
         if(usernameBtnExitedHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnExitedHandler);
-        if(playerData instanceof LocalPlayer){
+        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL){
             usernameBtn.setOnAction((event) -> {
                 String newName = displayChangeUsernameDialog(playerData.getUsername().getData());
                 playerData.getUsername().changeTo(newName);
@@ -173,7 +171,7 @@ public class PlayerSlot extends StackPane{
         // If this is not the host, hide the remove player button. The host does not get a remove player button for
         // their own character. De-register any existing ActionListener before registering one to the new PlayerData:
         removePlayerBtn.setOnAction(null);
-        if(!isHost || playerData instanceof LocalPlayer){
+        if(!isHost || playerData.getPlayerType()== PlayerData.PlayerType.LOCAL){
             removePlayerBtn.setVisible(false);
             removePlayerBtn.setOnAction((event) -> {
                 System.out.println("Clicked Remove Player.");
@@ -184,10 +182,10 @@ public class PlayerSlot extends StackPane{
 
         // Register the EventHandler for the teamChoice combo box. De-register any existing one, first:
         teamChoice.setOnAction(null);
-        if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
+        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType()== PlayerData.PlayerType.BOT)){
             teamChoice.setVisible(true);
             teamLabel.setVisible(false);
-            teamChoice.setOnAction((event)-> playerData.changeTeam(teamChoice.getSelectionModel().getSelectedIndex()+1));
+            teamChoice.setOnAction((event)-> playerData.getTeam().changeTo(teamChoice.getSelectionModel().getSelectedIndex()+1));
         }
         else {
             System.out.println("team choice is being turned off");
@@ -210,17 +208,13 @@ public class PlayerSlot extends StackPane{
         if(latency<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",latency/1000L));
         else latencyLabel.setText(String.format("Latency: %d milliseconds",latency/1000000L));
 
-        /*if(usernameBtn==null) System.err.println("usernameBtn is null");
-        else if(playerData==null) System.err.println("playerData is null");
-        else if(playerData.getUsername()==null) System.err.println("synchronizedData is null");
-        else if(playerData.getUsername().getData()==null) System.err.println("the string is null");
-        else*/ usernameBtn.setText(playerData.getUsername().getData());
+        usernameBtn.setText(playerData.getUsername().getData());
 
-        if(playerData instanceof LocalPlayer || (isHost && playerData instanceof BotPlayer)){
-            teamChoice.getSelectionModel().select(playerData.getTeam());
+        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType()== PlayerData.PlayerType.BOT)){
+            teamChoice.getSelectionModel().select(playerData.getTeam().getData()-1);
         }
         else{
-            teamLabel.setText("Team " + playerData.getTeam());
+            teamLabel.setText("Team " + playerData.getTeam().getData());
         }
     }
 

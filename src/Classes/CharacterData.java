@@ -1,6 +1,9 @@
 package Classes;
 
 import Classes.Animation.*;
+import Classes.NetworkCommunication.SynchronizedComparable;
+import Classes.NetworkCommunication.SynchronizedData;
+import Classes.NetworkCommunication.Synchronizer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 
@@ -10,23 +13,16 @@ import java.io.Serializable;
  * For managing the state and display of an animated character
  */
 public class CharacterData implements Serializable {
-    private CharacterType characterType; // basically, a collection of all of this character's possible animations.
+    private SynchronizedComparable<CharacterType> characterType; // basically, a collection of all of this character's possible animations.
     private AnimationData currentAnimation; // The currently playing animation from among the collection.
     private CharacterType.CharacterAnimationState characterAnimationState; // i.e. Content, Worried, Defeated, etc.
     private long parentID; // For distinguishing this data from similar data owned by other players.
 
     // Initialize with a content display of the character:
-    public CharacterData(CharacterType characterType, long parentID){
-        this.characterType = characterType;
+    public CharacterData(CharacterType characterType, long parentID, Synchronizer synchronizer){
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
         currentAnimation = new AnimationData(characterType.getAnimation(characterAnimationState));
-        this.parentID = parentID;
-    }
-
-    public CharacterData(CharacterData other, long parentID){
-        characterType = other.getCharacterType();
-        characterAnimationState = other.getCharacterAnimationState();
-        currentAnimation = new AnimationData(other.getAnimationData());
+        this.characterType = new SynchronizedComparable<>("characterType", characterType, (newValue -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), (newValue -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
         this.parentID = parentID;
     }
 
@@ -38,12 +34,8 @@ public class CharacterData implements Serializable {
         currentAnimation.setScale(scaleFactor);
     }
 
-    public CharacterType getCharacterType(){
+    public SynchronizedComparable<CharacterType> getCharacterType(){
         return characterType;
-    }
-    public void setCharacterType(CharacterType characterType){
-        this.characterType = characterType;
-        currentAnimation.setAnimation(characterType.getAnimation(characterAnimationState));
     }
 
     private AnimationData getAnimationData(){
@@ -55,7 +47,7 @@ public class CharacterData implements Serializable {
     }
     public void setCharacterAnimationState(CharacterType.CharacterAnimationState characterAnimationState){
         this.characterAnimationState = characterAnimationState;
-        currentAnimation.setAnimation(characterType.getAnimation(characterAnimationState));
+        currentAnimation.setAnimation(characterType.getData().getAnimation(characterAnimationState));
         switch(characterAnimationState){
             case CONTENT:
             case WORRIED:

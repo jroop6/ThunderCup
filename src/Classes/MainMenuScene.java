@@ -4,6 +4,7 @@ import Classes.Animation.*;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
 import Classes.Images.StaticBgImages;
+import Classes.NetworkCommunication.Synchronizer;
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
@@ -89,7 +90,7 @@ public class MainMenuScene extends Scene {
         ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         ImageView characterView = new ImageView();
-        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID);
+        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID, new Synchronizer());
         characterData.relocate(550,850);
         scaledRoot.getChildren().addAll(nearCloud, characterView);
 

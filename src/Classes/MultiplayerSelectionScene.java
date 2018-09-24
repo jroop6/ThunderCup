@@ -11,7 +11,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -36,7 +35,7 @@ public class MultiplayerSelectionScene extends Scene {
 
     // misc variables accessed by different methods in this class:
     private ConnectionManager connectionManager;
-    private LocalPlayer localPlayer;
+    private PlayerData localPlayer;
     private GameData gameData;
     private ScrollableView<PlayerSlot> playerSlotContainer;
     private Scale scaler = new Scale();
@@ -44,13 +43,13 @@ public class MultiplayerSelectionScene extends Scene {
     private Alert kickAlert;
     private final int FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds).
-    boolean initializing = true;
+    private boolean initializing = true;
 
     // Variables related to network communications:
     private boolean isHost; // Are we the host or a client?
     private long nextSendInstance = 0; // The time at which the next packet will be sent (nanoseconds).
     private final long maxConsecutivePacketsMissed; // If this many packets are missed consecutively from a particular player, alert the user.
-    Map<Long,Integer> missedPacketsCount = new HashMap<>(); // maps playerIDs to the number of misssed packets for that player.
+    private Map<Long,Integer> missedPacketsCount = new HashMap<>(); // maps playerIDs to the number of misssed packets for that player.
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent (nanoseconds).
 
     // for misc debugging:
@@ -66,7 +65,7 @@ public class MultiplayerSelectionScene extends Scene {
         // set up connection framework:
         if(isHost) connectionManager = new HostConnectionManager(port);
         else connectionManager = new ClientConnectionManager(host, port);
-        localPlayer = new LocalPlayer(username,isHost, connectionManager.getSynchronizer());
+        localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL,isHost,20, connectionManager.getSynchronizer());
         connectionManager.setPlayerID(localPlayer.getPlayerID());
 
         maxConsecutivePacketsMissed = FRAME_RATE * 5;
@@ -89,7 +88,8 @@ public class MultiplayerSelectionScene extends Scene {
             PlayerSlot hostPlayerSlot = new PlayerSlot(localPlayer, true);
             playerSlotContainer.addItem(hostPlayerSlot);
             Button addPlayerBtn = new ThunderButton(ButtonType.ADD_PLAYER,(event)->{
-                playerSlotContainer.addItem(new PlayerSlot(new UnclaimedPlayer(connectionManager.getSynchronizer()),isHost));
+                //"Open Slot",UNCLAIMED_PLAYER_ID
+                playerSlotContainer.addItem(new PlayerSlot(new PlayerData("Open Slot", PlayerData.PlayerType.UNCLAIMED, false, UNCLAIMED_PLAYER_ID,connectionManager.getSynchronizer()), isHost));
                 ((HostConnectionManager)connectionManager).addOpenSlot();
             });
             Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->playerSlotContainer.addItem(new PlayerSlot(new BotPlayer(CharacterType.FILLY_BOT_MEDIUM, connectionManager.getSynchronizer()),true)));
@@ -302,8 +302,11 @@ public class MultiplayerSelectionScene extends Scene {
                 PlayerSlot openPlayerSlot = getPlayerSlotByID(UNCLAIMED_PLAYER_ID, playerSlots);
                 if(openPlayerSlot!=null){
 
+                    if((SynchronizedComparable<String>)synchronizer.get(playerData.getPlayerID(),"username")==null)
+                        System.out.println("synchronizedUsername is null. playerData.getPlayerID is " + playerData.getPlayerID());
+
                     SynchronizedComparable<String> synchronizedUsername = (SynchronizedComparable<String>)synchronizer.get(playerData.getPlayerID(),"username");
-                    RemotePlayer newPlayerData = new RemotePlayer(synchronizedUsername.getData(),playerData.getPlayerID(),connectionManager.getSynchronizer());
+                    PlayerData newPlayerData = new PlayerData(synchronizedUsername.getData(), PlayerData.PlayerType.REMOTE_HOSTVIEW, false, playerData.getPlayerID() ,connectionManager.getSynchronizer());
                     openPlayerSlot.changePlayer(newPlayerData,isHost);
                     missedPacketsCount.put(newPlayerData.getPlayerID(),0);
                     System.out.println("new player added to scene!");
@@ -366,7 +369,8 @@ public class MultiplayerSelectionScene extends Scene {
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots) {
             PlayerData playerData = playerSlot.getPlayerData();
-            if(!(playerSlot.getPlayerData() instanceof RemotePlayer)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
+            PlayerData.PlayerType playerType = playerSlot.getPlayerData().getPlayerType();
+            if(!(playerType == PlayerData.PlayerType.REMOTE_CLIENTVIEW || playerType == PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
             if(!isHost && playerData.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
             Integer missedPackets = missedPacketsCount.get(playerData.getPlayerID());
 
@@ -395,14 +399,14 @@ public class MultiplayerSelectionScene extends Scene {
 
         // Add an informational label:
         Label dialogLabel = new Label("Communication with player " + playerdata.getUsername() + " seems to have been lost.\n What would you like to do?");
-        if(playerdata.getPlayerID()==0){
+        if(playerdata.getPlayerID()==HOST_ID){
             dialogLabel.setText("Communication with the host seems to have been lost. What would you like to do?");
         }
         dialogRoot.getChildren().add(dialogLabel);
 
         // Add buttons for the user's decision:
         Button drop = new Button("Drop Player");
-        if(playerdata.getPlayerID()==0){
+        if(playerdata.getPlayerID()==HOST_ID){
             drop.setText("Exit game");
         }
         Button wait = new Button("wait 10 seconds and see if they reconnect.");
@@ -413,7 +417,7 @@ public class MultiplayerSelectionScene extends Scene {
 
         // Add functionality to the buttons:
         drop.setOnAction((event -> {
-            if(playerdata.getPlayerID()==0){ // The player who disconnected was the host, so close the game.
+            if(playerdata.getPlayerID()==HOST_ID){ // The player who disconnected was the host, so close the game.
                 cleanUp();
                 SceneManager.switchToMainMenu();
                 showGameCanceledDialog();
@@ -470,7 +474,6 @@ public class MultiplayerSelectionScene extends Scene {
                     // We have more playerDatas than PlayerSlots, so a new PlayerSlot needs to be added:
                     PlayerSlot newPlayerSlot = makeRemoteOrLocalPlayerSlot(serverPlayerData, receivedSynchronizer);
                     playerSlotContainer.addItem(newPlayerSlot);
-                    System.out.println("ADDED A NEW PLAYERSLOT HERE");
                     if(serverPlayerData.getPlayerID()==HOST_ID) missedPacketsCount.put(serverPlayerData.getPlayerID(),0);
                 }
                 else{
@@ -479,7 +482,7 @@ public class MultiplayerSelectionScene extends Scene {
                     currentPlayerID = currentPlayerSlot.getPlayerData().getPlayerID();
                     if(serverPlayerData.getPlayerID() == currentPlayerID){
                         // It matches, so simply update this player with the new playerData (this is the most common case) :
-                        currentPlayerSlot.getPlayerData().updateWithSetters(serverPlayerData, currentPlayerSlot.getPlayerData() instanceof LocalPlayer);
+                        currentPlayerSlot.getPlayerData().updateWithSetters(serverPlayerData, currentPlayerSlot.getPlayerData().getPlayerType());
                         if(serverPlayerData.getPlayerID()==HOST_ID) missedPacketsCount.replace(serverPlayerData.getPlayerID(),0);
                     }
                     else{
@@ -495,7 +498,7 @@ public class MultiplayerSelectionScene extends Scene {
                             // The player does exist and is in the wrong spot. Relocate him/her here and update:
                             playerSlotContainer.removeItem(oldSlot);
                             playerSlotContainer.addItem(currentPlayerSlotIndex,oldSlot);
-                            currentPlayerSlot.getPlayerData().updateWithSetters(serverPlayerData, currentPlayerSlot.getPlayerData() instanceof LocalPlayer);
+                            currentPlayerSlot.getPlayerData().updateWithSetters(serverPlayerData, currentPlayerSlot.getPlayerData().getPlayerType());
                             if(serverPlayerData.getPlayerID()==0) missedPacketsCount.replace(serverPlayerData.getPlayerID(),0);
                         }
                     }
@@ -594,12 +597,17 @@ public class MultiplayerSelectionScene extends Scene {
     private PlayerSlot makeRemoteOrLocalPlayerSlot(PlayerData serverPlayerData, Synchronizer receivedSynchronizer){
         PlayerSlot newPlayerSlot;
         if(serverPlayerData.getPlayerID()==localPlayer.getPlayerID()){
-            newPlayerSlot = new PlayerSlot(localPlayer,isHost);
+            newPlayerSlot = new PlayerSlot(localPlayer, isHost);
         }
         else{
+            receivedSynchronizer.printData();
             SynchronizedComparable<String> synchronizedUsername = (SynchronizedComparable<String>)receivedSynchronizer.get(serverPlayerData.getPlayerID(),"username");
-            RemotePlayer newRemotePlayer = new RemotePlayer(synchronizedUsername.getData(),serverPlayerData.getPlayerID(),connectionManager.getSynchronizer());
-            newPlayerSlot = new PlayerSlot(newRemotePlayer,isHost);
+            PlayerData newRemotePlayer;
+            if (synchronizedUsername==null) System.out.println("synchronizedUsername is null. serverPlayerData.getPlayerID is " + serverPlayerData.getPlayerID());
+            if(serverPlayerData.getPlayerID()==HOST_ID) newRemotePlayer = new PlayerData(synchronizedUsername.getData(), PlayerData.PlayerType.REMOTE_CLIENTVIEW, true, serverPlayerData.getPlayerID(),connectionManager.getSynchronizer());
+            else if(isHost) newRemotePlayer = new PlayerData(synchronizedUsername.getData(), PlayerData.PlayerType.REMOTE_HOSTVIEW, false, serverPlayerData.getPlayerID(),connectionManager.getSynchronizer());
+            else newRemotePlayer = new PlayerData(synchronizedUsername.getData(), PlayerData.PlayerType.REMOTE_CLIENTVIEW, false, serverPlayerData.getPlayerID(),connectionManager.getSynchronizer());
+            newPlayerSlot = new PlayerSlot(newRemotePlayer, isHost);
         }
         return newPlayerSlot;
     }

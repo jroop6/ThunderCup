@@ -67,10 +67,10 @@ public class Synchronizer implements Serializable {
             return false;
         }
         // todo: oops; this one doesn't actually turn out to be the case. I need to rethink the security of this game.
-        /*if(hostData.getPrecedence()== SynchronizedData.Precedence.HOST){
+        if(hostData.getPrecedence()== SynchronizedData.Precedence.HOST){
             System.err.println("Warning! A client attempted to set data without permission! " + clientData.getKey());
             return false;
-        }*/
+        }
         return true;
     }
     private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData){
@@ -82,15 +82,18 @@ public class Synchronizer implements Serializable {
     }
 
     public void synchronizeWith(Synchronizer other, boolean isHost){
-        //System.out.println("hey! we called synchronizeWith! How much data do we have in store? us: " + synchronizedDataMap.values().size() + " other: " + other.synchronizedDataMap.values().size());
         if(isHost){
-            // if we're the host, we don't need to call compareTo(), because we're only checking the data in the client's changedData list.
-            if(other.changedData.size()>0) System.out.println("changed data detected!");
             for(SynchronizedData clientData : other.changedData){
                 SynchronizedData hostData = synchronizedDataMap.get(clientData.getKey());
                 if(!sanitizeClientData(hostData, clientData)) continue;
-                System.out.println("new username is " + clientData.getData());
-                hostData.changeTo(clientData.getData());
+                switch(hostData.getPrecedence()){
+                    case HOST:
+                        hostData.changeTo(clientData.getData());
+                        break;
+                    case CLIENT:
+                        hostData.changeTo(clientData.getData());
+                        break;
+                }
             }
         }
         else{
@@ -99,7 +102,16 @@ public class Synchronizer implements Serializable {
                 SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
                 if(!sanitizeHostData(hostData,clientData)) continue;
                 if(clientData.compareTo(hostData)!=0){
-                    clientData.setTo(hostData.getData());
+                    switch(clientData.getPrecedence()){
+                        case HOST:
+                            // The host has precedence, so we must accept whatever the host says.
+                            clientData.setTo(hostData.getData());
+                            break;
+                        case CLIENT:
+                            //todo: in this case, should we just ignore what the host says?
+                            clientData.setTo(hostData.getData());
+                            break;
+                    }
                 }
             }
             // Now the client checks the consistency of the rest of its data with the host.
@@ -112,6 +124,7 @@ public class Synchronizer implements Serializable {
                     if(clientData.isOutOfSync()){
                         switch(clientData.getPrecedence()){
                             case HOST:
+                                // The host has precedence and we've been out of sync for too long, so override the locally-held data with what the host says.
                                 clientData.setTo(hostData.getData());
                                 break;
                             case CLIENT:
@@ -132,5 +145,12 @@ public class Synchronizer implements Serializable {
 
     public HashMap<String, SynchronizedData> getAll(){
         return synchronizedDataMap;
+    }
+
+    // For debugging
+    public void printData(){
+        for(SynchronizedData synchronizedData : synchronizedDataMap.values()){
+            System.out.println(synchronizedData.getKey() + ": " + synchronizedData.getData());
+        }
     }
 }
