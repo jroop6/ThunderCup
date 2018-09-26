@@ -9,18 +9,22 @@ import java.util.List;
 /** A container for all the data that must be kept synchronized between host and client */
 public class Synchronizer implements Serializable {
     private HashMap<String, SynchronizedData> synchronizedDataMap = new HashMap<>();
-    private List<SynchronizedData> changedData = new LinkedList<>();
+    private List<SynchronizedData> changedData = new LinkedList<>(); // todo: consider making this a Set instead of a list.
 
     public Synchronizer(){
     }
 
     // copy constructor
-    //todo: I think I need to have copy constructors for all SynchronizedData classes... yuck.
+    //todo: I think I need to have copy constructors for all SynchronizedData classes... yuck. Edit: Actually, I might be able to get away with a clone()-like method in SynchronizedData.
     public Synchronizer(Synchronizer other){
         for(SynchronizedData synchronizedData : other.synchronizedDataMap.values()){
             if(synchronizedData instanceof SynchronizedComparable){
                 SynchronizedComparable synchronizedComparableCopy = new SynchronizedComparable((SynchronizedComparable)synchronizedData, this);
                 synchronizedDataMap.put(synchronizedComparableCopy.getKey(), synchronizedComparableCopy);
+            }
+            if(synchronizedData instanceof SynchronizedList){
+                SynchronizedList synchronizedListCopy = new SynchronizedList((SynchronizedList)synchronizedData, this);
+                synchronizedDataMap.put(synchronizedListCopy.getKey(), synchronizedListCopy);
             }
         }
         for(SynchronizedData synchronizedData : other.changedData){
@@ -43,12 +47,12 @@ public class Synchronizer implements Serializable {
         if(officialSynchronizedData==null){
             System.err.println("Error! Attempted to change a data value that was somehow not registered to the " +
                     "synchronizer! This issue needs to be debugged. Perhaps you have multiple Synchronizers running " +
-                    "around and you're calling addToChangedData directly instead of using changeTo? Registering the " +
-                    "data to this Synchronizer now...");
+                    "around and you're calling addToChangedData() directly instead of using handle()? Registering " +
+                    "the data to this Synchronizer now...");
             register(synchronizedData);
             officialSynchronizedData = synchronizedData;
         }
-        changedData.add(officialSynchronizedData);
+        if(!changedData.contains(officialSynchronizedData)) changedData.add(officialSynchronizedData);
     }
 
     public List<SynchronizedData> getChangedData(){
@@ -88,10 +92,10 @@ public class Synchronizer implements Serializable {
                 if(!sanitizeClientData(hostData, clientData)) continue;
                 switch(hostData.getPrecedence()){
                     case HOST:
-                        hostData.changeTo(clientData.getData());
+                        hostData.changeTo(clientData.data);
                         break;
                     case CLIENT:
-                        hostData.changeTo(clientData.getData());
+                        hostData.changeTo(clientData.data);
                         break;
                 }
             }
@@ -105,11 +109,11 @@ public class Synchronizer implements Serializable {
                     switch(clientData.getPrecedence()){
                         case HOST:
                             // The host has precedence, so we must accept whatever the host says.
-                            clientData.setTo(hostData.getData());
+                            clientData.setTo(hostData.data);
                             break;
                         case CLIENT:
                             //todo: in this case, should we just ignore what the host says?
-                            clientData.setTo(hostData.getData());
+                            clientData.setTo(hostData.data);
                             break;
                     }
                 }
@@ -125,11 +129,11 @@ public class Synchronizer implements Serializable {
                         switch(clientData.getPrecedence()){
                             case HOST:
                                 // The host has precedence and we've been out of sync for too long, so override the locally-held data with what the host says.
-                                clientData.setTo(hostData.getData());
+                                clientData.setTo(hostData.data);
                                 break;
                             case CLIENT:
                                 // todo: should we re-send the command to the host? This makes sense for messages, but not for firing orbs. For now, I'll just synchronize on the host.
-                                clientData.setTo(hostData.getData());
+                                clientData.setTo(hostData.data);
                                 break;
                         }
                         clientData.resetFramesOutOfSync();
@@ -150,7 +154,19 @@ public class Synchronizer implements Serializable {
     // For debugging
     public void printData(){
         for(SynchronizedData synchronizedData : synchronizedDataMap.values()){
-            System.out.println(synchronizedData.getKey() + ": " + synchronizedData.getData());
+            if(synchronizedData instanceof SynchronizedArray){
+                System.out.print("SynchronizedArray " + synchronizedData.getKey() + ": [");
+                for(int i=0; i<((Object[][])synchronizedData.data).length; i++){
+                    Object[] row = ((Object[][])synchronizedData.data)[i];
+                    for(int j=0; j<row.length-1; j++){
+                        System.out.print(row[j] + ", ");
+                    }
+                    System.out.print(row[row.length-1] + "; ");
+                }
+                System.out.print("]");
+                System.out.println();
+            }
+            else System.out.println(synchronizedData.getKey() + ": " + synchronizedData.data);
         }
     }
 }

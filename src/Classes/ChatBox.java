@@ -124,7 +124,7 @@ public class ChatBox extends StackPane {
                     return;
                 }
             }
-            Message newMessage = new Message ("<" + localPlayerData.getUsername() + "> " + textField.getText(), localPlayerData.getPlayerID());
+            Message newMessage = new Message ("<" + localPlayerData.getUsername().getData() + "> " + textField.getText(), localPlayerData.getPlayerID());
             addNewMessageOut(newMessage);
             textField.setPromptText("");
             textField.clear();

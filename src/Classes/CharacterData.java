@@ -22,7 +22,7 @@ public class CharacterData implements Serializable {
     public CharacterData(CharacterType characterType, long parentID, Synchronizer synchronizer){
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
         currentAnimation = new AnimationData(characterType.getAnimation(characterAnimationState));
-        this.characterType = new SynchronizedComparable<>("characterType", characterType, (newValue -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), (newValue -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
+        this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
         this.parentID = parentID;
     }
 

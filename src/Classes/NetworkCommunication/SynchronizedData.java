@@ -3,9 +3,9 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 
 
-public abstract class SynchronizedData<T> implements Comparable<SynchronizedData>, Serializable {
+public abstract class SynchronizedData<T> implements Comparable<SynchronizedData<T>>, Serializable {
     // The actual data:
-    private T data;
+    protected T data;
 
     // Keys for uniquely identifying this data in a HashMap:
     private long parentID;
@@ -13,7 +13,7 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
 
     // these functional interfaces provide additional code that is executed whenever this data is set or changed.
     private Setable<T> externalSetter;
-    private Changeable<T> externalChanger;
+    private Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
     public enum Precedence {HOST, CLIENT}
@@ -33,7 +33,7 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
         this.synchronizer = synchronizer;
     }
 
-    public void registerExternalSetters(Setable<T> externalSetter, Changeable<T> externalChanger){
+    public void registerExternalSetters(Setable<T> externalSetter, Setable<T> externalChanger){
 	    this.externalSetter = externalSetter;
 	    this.externalChanger = externalChanger;
     }
@@ -60,26 +60,27 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
         return parentID + name;
     }
 
-    public T getData(){
-        return data;
-    }
-    // changeTo is called by whichever machine holds precedence (host or client):
-    public void changeTo(T newValue){
-        data = newValue;
-        if(externalChanger!=null) externalChanger.changeTo(data);
-        synchronizer.addToChangedData(this);
-    }
-    // setTo is called by the machine that does NOT have precedence:
-    public void setTo(T newValue){
-        data = newValue;
-        if(externalSetter!=null) externalSetter.setTo(data);
-    }
+    // This should try to return a read-only view of the data:
+    abstract public T getData();
+    // handle is called by whichever machine holds precedence (host or client):
+    abstract public void changeTo(T newValue);
+    // handle is called by the machine that does NOT have precedence:
+    abstract public void setTo(T newValue);
 
     public Precedence getPrecedence(){
         return precedence;
     }
     public void setPrecedence(Precedence newPrecedence){
 	    precedence = newPrecedence;
+    }
+    public Setable<T> getExternalSetter(){
+	    return externalSetter;
+    }
+    public Setable<T> getExternalChanger(){
+	    return externalChanger;
+    }
+    public Synchronizer getSynchronizer(){
+	    return synchronizer;
     }
 
 }

@@ -1,5 +1,5 @@
 package Classes.NetworkCommunication;
 
 public interface Setable<T> {
-    void setTo(T newValue);
+    void handle(T newItem, Mode mode, int iIndex, int jIndex);
 }
