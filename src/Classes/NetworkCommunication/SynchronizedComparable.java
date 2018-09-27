@@ -1,9 +1,11 @@
 package Classes.NetworkCommunication;
 
-public class SynchronizedComparable<T extends Comparable<T>> extends SynchronizedData<T>{
+import java.io.*;
+
+public class SynchronizedComparable<T extends Comparable<T> & Serializable> extends SynchronizedData<T>{
     public SynchronizedComparable(String name, T data, Setable<T> setInterface, Setable<T> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
-        registerExternalSetters(setInterface,changeInterface);
+        registerExternalSetters(setInterface, changeInterface);
         setTo(data);
     }
 
@@ -13,7 +15,8 @@ public class SynchronizedComparable<T extends Comparable<T>> extends Synchronize
     }
 
     public SynchronizedComparable(SynchronizedComparable<T> other, Synchronizer synchronizer){
-        this(other.getName(), other.data, other.getPrecedence(), other.getParentID(), synchronizer);
+        super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
+        setTo(deepCopyDataElement(other.data));
     }
 
     @Override

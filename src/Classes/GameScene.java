@@ -192,6 +192,7 @@ public class GameScene extends Scene {
                     nextReport = now;
 
                     // Initialize resultHolder by computing the first frame:
+                    System.out.println("INITIALIZING RESULTHOLDER");
                     resultHolder = workerThread.submit(updateFrameTasks);
 
                     initializing = false;
@@ -217,7 +218,8 @@ public class GameScene extends Scene {
                         // update visuals corresponding to GameData:
                         updateGameView(previousResult.gameDataCopy);
                     } catch (ExecutionException | InterruptedException e){
-                        e.printStackTrace();
+                        System.err.println("ExecutionException encountered. Stack trace:");
+                        e.getCause().printStackTrace();
                     }
                 }
 

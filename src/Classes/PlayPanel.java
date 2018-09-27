@@ -158,6 +158,9 @@ public class PlayPanel extends Pane {
     void tick(Set<SoundEffect> soundEffectsToPlay){
         // Existing data that will be affected via side-effects:
         OrbData[][] orbArray = playPanelData.getOrbArray();
+        int numNull = 0;
+        /*for(OrbData orbData : orbArray[0]){if(orbData==null)numNull++;}
+        System.out.println("Number of null elements in the first row: " + numNull);*/
         List<OrbData> burstingOrbs = playPanelData.getBurstingOrbs();
         List<OrbData> shootingOrbs = playPanelData.getShootingOrbs();
         List<OrbData> droppingOrbs = playPanelData.getDroppingOrbs();

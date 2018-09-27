@@ -35,7 +35,7 @@ public class PlayerData implements Serializable {
 
     protected SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
-    private long latency;
+    private transient long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
     private Queue<OrbData> firedOrbs = new LinkedList<>();
     private boolean defeated; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
@@ -116,7 +116,10 @@ public class PlayerData implements Serializable {
 
     // Copy constructor
     public PlayerData(PlayerData other){
+        Synchronizer synchronizer = new Synchronizer();
         playerID = other.getPlayerID();
+        username = new SynchronizedComparable<String>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
+        team = new SynchronizedComparable<>("team",other.getTeam().getData(), other.getTeam().getPrecedence(), playerID, synchronizer);
         playerType = other.playerType;
         playerPos = other.getPlayerPos();
         defeated = other.getDefeated();
@@ -135,6 +138,8 @@ public class PlayerData implements Serializable {
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
+        characterData = new CharacterData(other.getCharacterData().getCharacterType().getData(), playerID, other.getSynchronizer());
+        System.out.println("size of synchronizedDataMap: " + other.getSynchronizer().getAll().values().size());
         cannonData = new CannonData(other.getCannonData());
     }
 

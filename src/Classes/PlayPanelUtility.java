@@ -92,6 +92,11 @@ public class PlayPanelUtility {
 
         // A boolean orbArray that has the same size as the orbArray, to mark orbs as "examined"
         Boolean[][] examined = new Boolean[orbArray.length][orbArray[0].length];
+        for(int i=0; i<orbArray.length; i++){
+            for(int j=0; j<orbArray[i].length; j++){
+                examined[i][j] = false;
+            }
+        }
 
         // A stack containing the "active" elements to be examined next
         Deque<OrbData> active = new LinkedList<>();

@@ -1,9 +1,9 @@
 package Classes.NetworkCommunication;
 
-import java.io.Serializable;
+import java.io.*;
 
 
-public abstract class SynchronizedData<T> implements Comparable<SynchronizedData<T>>, Serializable {
+public abstract class SynchronizedData<T extends Serializable> implements Comparable<SynchronizedData<T>>, Serializable {
     // The actual data:
     protected T data;
 
@@ -82,5 +82,24 @@ public abstract class SynchronizedData<T> implements Comparable<SynchronizedData
     public Synchronizer getSynchronizer(){
 	    return synchronizer;
     }
+    public int getSynchTolerance(){
+        return syncTolerance;
+    }
 
+    public <E> E deepCopyDataElement(E dataToCopy){
+        try{
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(dataToCopy);
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
+            try{
+                return (E)ois.readObject();
+            } catch (ClassNotFoundException e){
+                e.printStackTrace();
+            }
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

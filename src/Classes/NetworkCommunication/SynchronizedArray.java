@@ -1,15 +1,25 @@
 package Classes.NetworkCommunication;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class SynchronizedArray<T extends Comparable<T>> extends SynchronizedData<T[][]> {
+public class SynchronizedArray<T extends Comparable<T> & Serializable> extends SynchronizedData<T[][]> {
     public SynchronizedArray(String name, T[][] data, Precedence precedence, long parentID, Synchronizer synchronizer){
         super(name, parentID, synchronizer, precedence, 24);
         setTo(data);
     }
 
     public SynchronizedArray(SynchronizedArray<T> other, Synchronizer synchronizer){
-        this(other.getName(), other.data, other.getPrecedence(), other.getParentID(), synchronizer);
+        super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
+        // Create a new T[][] array with deep copies of each array element:
+        T[][] arrayCopy = Arrays.copyOf(other.data,other.data.length); // creates an array of the right height
+        for(T[] row : other.data){
+            T[] rowCopy = Arrays.copyOf(row,row.length); // creates a row of the right width
+            for(int i=0; i<row.length; i++){
+                rowCopy[i] = deepCopyDataElement(row[i]); // deeply copies an element
+            }
+        }
+        setTo(arrayCopy);
     }
 
     public int compareTo(SynchronizedData<T[][]> other){
