@@ -31,7 +31,7 @@ import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
 
 /**
- * Created by HydrusBeta on 7/22/2017.
+ * Created by Jonathan Roop on 7/22/2017.
  *
  */
 public class GameScene extends Scene {
@@ -192,7 +192,6 @@ public class GameScene extends Scene {
                     nextReport = now;
 
                     // Initialize resultHolder by computing the first frame:
-                    System.out.println("INITIALIZING RESULTHOLDER");
                     resultHolder = workerThread.submit(updateFrameTasks);
 
                     initializing = false;
@@ -802,7 +801,6 @@ public class GameScene extends Scene {
         // Copy messages from the chatBox to the gameData so it can be forwarded to other players:
         Message nextNewMessage;
         while((nextNewMessage = chatBox.getNextNewMessageOut())!=null){
-            System.out.println("adding messages that the player typed into messagesOut");
             gameData.changeAddMessage(nextNewMessage);
             if(isHost){ // The host prints his/her own messages immediately (clients only print incoming messages from the host).
                 chatBox.addNewMessageIn(new Message(nextNewMessage));

@@ -3,6 +3,10 @@ package Classes;
 import Classes.Animation.AnimationData;
 import Classes.Animation.VisibilityOption;
 import Classes.Images.CannonType;
+import Classes.NetworkCommunication.Mode;
+import Classes.NetworkCommunication.SynchronizedComparable;
+import Classes.NetworkCommunication.SynchronizedData;
+import Classes.NetworkCommunication.Synchronizer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.ImageView;
 
@@ -18,24 +22,26 @@ public class CannonData implements Serializable {
     private AnimationData movingPartAnimation;
     private AnimationData foregroundAnimation;
     private CannonType.CannonAnimationState cannonAnimationState;
+    private SynchronizedComparable<Double> cannonAngle;
 
-    //todo: I need an AnimationData-like class for the Background and foreground images. Maybe just use an AnimationData.
-
-    public CannonData(CannonType cannonType){
+    public CannonData(CannonType cannonType, long parentID, Synchronizer synchronizer){
         this.cannonType = cannonType;
         cannonAnimationState = CannonType.CannonAnimationState.AIMING;
         backgroundAnimation = new AnimationData(cannonType.getBackgroundAnimation(cannonAnimationState));
         movingPartAnimation = new AnimationData(cannonType.getMovingPartAnimation(cannonAnimationState));
         foregroundAnimation = new AnimationData(cannonType.getForegroundAnimation(cannonAnimationState));
-        setAngle(-80);
+        cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,0);
+        cannonAngle.setTo(-80.0);
     }
 
-    public CannonData(CannonData other){
+    public CannonData(CannonData other, long parentID, Synchronizer synchronizer){
         this.cannonType = other.getCannonType();
         this.cannonAnimationState = other.getCannonAnimationState();
         backgroundAnimation = new AnimationData(other.getBackgroundAnimationData());
         movingPartAnimation = new AnimationData(other.getMovingPartAnimationData());
         foregroundAnimation = new AnimationData(other.getForegroundAnimationData());
+        cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,0);
+        cannonAngle.setTo(other.getAngle());
     }
 
     public CannonType getCannonType(){
@@ -85,7 +91,8 @@ public class CannonData implements Serializable {
         return movingPartAnimation.getRotation();
     }
     public void setAngle(double angle){
-        movingPartAnimation.setRotation(angle);
+        double cannonAngleBefore = cannonAngle.getData();
+        cannonAngle.setTo(angle);
     }
 
     public void freeze(){

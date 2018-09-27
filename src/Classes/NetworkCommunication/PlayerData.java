@@ -102,7 +102,7 @@ public class PlayerData implements Serializable {
         }
         defeated = false;
 
-        this.cannonData = new CannonData(cannonType);
+        this.cannonData = new CannonData(cannonType,playerID,synchronizer);
         this.characterData = new CharacterData(characterEnum, this.playerID, synchronizer);
 
         switch(playerType){
@@ -118,7 +118,7 @@ public class PlayerData implements Serializable {
     public PlayerData(PlayerData other){
         Synchronizer synchronizer = new Synchronizer();
         playerID = other.getPlayerID();
-        username = new SynchronizedComparable<String>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
+        username = new SynchronizedComparable<>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
         team = new SynchronizedComparable<>("team",other.getTeam().getData(), other.getTeam().getPrecedence(), playerID, synchronizer);
         playerType = other.playerType;
         playerPos = other.getPlayerPos();
@@ -138,9 +138,8 @@ public class PlayerData implements Serializable {
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
-        characterData = new CharacterData(other.getCharacterData().getCharacterType().getData(), playerID, other.getSynchronizer());
-        System.out.println("size of synchronizedDataMap: " + other.getSynchronizer().getAll().values().size());
-        cannonData = new CannonData(other.getCannonData());
+        characterData = new CharacterData(other.getCharacterData().getCharacterType().getData(), playerID, synchronizer);
+        cannonData = new CannonData(other.getCannonData(), other.getPlayerID(), synchronizer);
     }
 
     // For LOCAL and BOT PlayerTypes:
