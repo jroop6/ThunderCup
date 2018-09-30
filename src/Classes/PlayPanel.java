@@ -107,8 +107,8 @@ public class PlayPanel extends Pane {
             // register the new player, add his/her cannon and character to the UI, and add other background image components:
             player.registerToPlayPanel(this);
             player.relocateCannon(CANNON_X_POS + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
-            player.relocateCharacter(player.getCannonType().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
-                    player.getCannonType().getCharacterY());
+            player.relocateCharacter(player.getCannonType().getData().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
+                    player.getCannonType().getData().getCharacterY());
             ImageView foregroundClouds = foregroundCloudsEnum.getImageView();
             foregroundClouds.relocate(PLAYPANEL_WIDTH_PER_PLAYER*i,PLAYPANEL_HEIGHT-foregroundCloudsEnum.getHeight());
             getChildren().add(foregroundClouds);

@@ -194,10 +194,6 @@ public class PlayerData implements Serializable {
         this.firing = firing;
         bubbleDataChanged = true;
     }*/
-    public void changeCannon(CannonType cannonType){
-        cannonData.setCannonType(cannonType);
-        cannonChanged = true;
-    }
     public void changeDefeated(boolean defeated){
         this.defeated = defeated;
         defeatedChanged = true;
@@ -243,7 +239,7 @@ public class PlayerData implements Serializable {
     public void positionAmmunitionOrbs(){
         // update the positions of the next 2 ammunition orbs
         ammunitionOrbs.get(0).relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS);
-        ammunitionOrbs.get(1).relocate(CANNON_X_POS + getCannonType().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS + getCannonType().getAmmunitionRelativeY());
+        ammunitionOrbs.get(1).relocate(CANNON_X_POS + getCannonType().getData().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*playerPos, CANNON_Y_POS + getCannonType().getData().getAmmunitionRelativeY());
     }
 
     public void changeFiringFlag(boolean firing){
@@ -350,7 +346,7 @@ public class PlayerData implements Serializable {
     public CharacterData getCharacterData(){
         return characterData;
     }
-    public CannonType getCannonType(){
+    public SynchronizedComparable<CannonType> getCannonType(){
         return cannonData.getCannonType();
     }
     public SynchronizedComparable<Integer> getTeam(){
@@ -451,12 +447,11 @@ public class PlayerData implements Serializable {
     }
 
     public void incrementCannonEnum(){
-        CannonType nextType = getCannonType().next();
+        CannonType nextType = getCannonType().getData().next();
         while(!nextType.isSelectable()){
             nextType = nextType.next();
         }
-        changeCannon(nextType); // updates model
-        cannonData.setCannonType(nextType); // updates view
+        cannonData.getCannonType().changeTo(nextType);
     }
 
     public void changeResignPlayer(){
@@ -533,9 +528,6 @@ public class PlayerData implements Serializable {
             changeAmmunitionFlag(true); // marks data as updated
             // note: view will be updated in the PlayPanel's repaint() method.
         }
-        if(newPlayerData.isCannonChanged()){
-            changeCannon(newPlayerData.getCannonType()); // updates model
-        }
         if(newPlayerData.isDefeatedChanged()){
             changeDefeated(newPlayerData.getDefeated()); //updates model
             // Note: In the MultiplayerSceneSelection, this player's corresponding PlayerSlot will be removed in either
@@ -561,9 +553,6 @@ public class PlayerData implements Serializable {
             System.out.println("CLIENT: Another player has fired. Incrementing their ammunitionOrbs");
             for (int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon();
             // note: view will be updated in the PlayPanel's repaint() method.
-        }
-        if(newPlayerData.isCannonChanged() && !isCannonChanged()){
-            cannonData.setCannonType(newPlayerData.getCannonType());
         }
         if(newPlayerData.isDefeatedChanged() && !isDefeatedChanged()){
             setDefeated(newPlayerData.getDefeated()); //updates model
