@@ -105,7 +105,7 @@ public class GameScene extends Scene {
             }
 
             // while we're here, check to see if this is the LocalPlayer.
-            if(player.getPlayerType()== PlayerData.PlayerType.LOCAL) localPlayer = player;
+            if(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL) localPlayer = player;
             gameData.getMissedPacketsCount().put(player.getPlayerID(),0);
         }
 
@@ -126,9 +126,9 @@ public class GameScene extends Scene {
         rootNode.getChildren().add(playPanels);
 
         // Add a chat overlay. Put it at the bottom of the screen, with no background:
-        chatBox = new ChatBox(gameData, localPlayer, 125, false);
-        chatBox.addNewMessageIn(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerID()));
-        chatBox.addNewMessageIn(new Message("Press p to pause", localPlayer.getPlayerID()));
+        chatBox = new ChatBox(gameData, localPlayer, 125, false, localPlayer.getPlayerID(), connectionManager.getSynchronizer());
+        chatBox.displayMessage(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerID()));
+        chatBox.displayMessage(new Message("Press p to pause", localPlayer.getPlayerID()));
 
         AnchorPane chatBoxPositioner = new AnchorPane();
         chatBoxPositioner.getChildren().add(chatBox);
@@ -252,10 +252,10 @@ public class GameScene extends Scene {
         else removePauseMenu();
 
         // Display new chat messages in the chat box:
-        chatBox.displayNewMessagesIn();
+        //chatBox.displayNewMessagesIn();
 
         // If the host has canceled the game, return to the main menu:
-        if(gameData.isCancelGameRequested()){
+        if(gameData.getGameCanceled().getData()){
             cleanUp();
             SceneManager.switchToMainMenu();
             showGameCanceledDialog();
@@ -505,7 +505,7 @@ public class GameScene extends Scene {
 
     private void incrementMissedPacketsCounts(){
         for (PlayerData player: players) {
-            if(!(player.getPlayerType()== PlayerData.PlayerType.REMOTE_CLIENTVIEW || player.getPlayerType()== PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
+            if(!(player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_CLIENTVIEW || player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
             if(!isHost && player.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
 
             // increment the missed packets count. The count will be reset whenever the next packet is received:
@@ -560,7 +560,7 @@ public class GameScene extends Scene {
                 List<Message> messages = gameDataIn.getMessages();
                 System.out.println("host received messages. adding them to both messagesIn and messagesOut");
                 gameData.changeAddMessages(new LinkedList<>(messages)); // host re-broadcasts the messages out to all clients
-                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
+                //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
             if(gameDataIn.isPauseRequested()) gameData.changePause(gameDataIn.getPause());
         }
@@ -568,7 +568,7 @@ public class GameScene extends Scene {
             if(gameDataIn.isMessagesChanged()){
                 List<Message> messages = gameDataIn.getMessages();
                 System.out.println("client received messages. Adding them to messagesIn");
-                chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
+                //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
             if(gameDataIn.isPauseRequested()) gameData.setPause(gameDataIn.getPause());
         }
@@ -669,7 +669,7 @@ public class GameScene extends Scene {
     public void cleanUp(){
         // Tell the other players that we're leaving:
         if(isHost){
-            gameData.changeCancelGame(true);
+            gameData.getGameCanceled().changeTo(true);
             prepareAndSendServerPacket();
         }
         else{
@@ -796,15 +796,6 @@ public class GameScene extends Scene {
                 }
             }
             transferOutOrbs.clear();
-        }
-
-        // Copy messages from the chatBox to the gameData so it can be forwarded to other players:
-        Message nextNewMessage;
-        while((nextNewMessage = chatBox.getNextNewMessageOut())!=null){
-            gameData.changeAddMessage(nextNewMessage);
-            if(isHost){ // The host prints his/her own messages immediately (clients only print incoming messages from the host).
-                chatBox.addNewMessageIn(new Message(nextNewMessage));
-            }
         }
     }
 

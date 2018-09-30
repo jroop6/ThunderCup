@@ -3,7 +3,6 @@ package Classes.PlayerTypes;
 import Classes.*;
 import Classes.Animation.OrbColor;
 import Classes.Audio.SoundEffect;
-import Classes.Images.CannonType;
 import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.PlayerData;
 import Classes.NetworkCommunication.Synchronizer;
@@ -40,13 +39,13 @@ public class BotPlayer extends PlayerData{
     private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
 
     public BotPlayer(PlayerData playerData){
-        super(playerData.getUsername().getData(), playerData.getPlayerType(), false, playerData.getPlayerID(), playerData.getSynchronizer());
+        super(playerData.getUsername().getData(), playerData.getPlayerType().getData() , playerData.getPlayerID(), playerData.getSynchronizer());
         difficulty = playerData.getCharacterData().getCharacterType().getData().getBotDifficulty();
         transitionFrame = difficulty.getThinkingFrames();
     }
 
     public BotPlayer(CharacterType characterType, Synchronizer synchronizer){
-        super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, false, 20, synchronizer);
+        super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, synchronizer);
     }
 
     public void tick(){

@@ -25,20 +25,20 @@ import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 public class PlayerData implements Serializable {
     private static final int NUM_FRAMES_ERROR_TOLERANCE = 5; // the number of frames for which ammunitionOrbs data that is inconsistent with the host is tolerated. After this many frames, the ammunitionOrbs list is overwritten with the host's data.
     public static final long HOST_ID = -1L;
-    public static final long UNCLAIMED_PLAYER_ID = -2L;
     public static final long GAME_ID = 0L;
 
     private final long playerID;
-    private final PlayerType playerType;
+    private SynchronizedComparable<PlayerType> playerType;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
 
     protected SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
+    private SynchronizedList<Message> messagesOut;
     private transient long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
     private Queue<OrbData> firedOrbs = new LinkedList<>();
-    private boolean defeated; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
+    private boolean defeated = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
     private boolean cannonDisabled = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
 
     // Flags indicating changes to playerData:
@@ -69,49 +69,51 @@ public class PlayerData implements Serializable {
 
     public enum PlayerType{LOCAL, REMOTE_HOSTVIEW, REMOTE_CLIENTVIEW, BOT, UNCLAIMED}
 
-    public PlayerData(String username, PlayerType playerType, boolean isHost, long playerID, Synchronizer synchronizer){
-        switch(playerType){
-            case LOCAL:
-            case BOT:
-                this.playerID = createID(isHost);
-                break;
-            case UNCLAIMED:
-                this.playerID = UNCLAIMED_PLAYER_ID;
-                break;
-            case REMOTE_HOSTVIEW:
-            case REMOTE_CLIENTVIEW:
-                this.playerID = playerID;
-                break;
-            default:
-                this.playerID = playerID;
-        }
+    public PlayerData(String username, PlayerType playerType, long playerID, Synchronizer synchronizer){
+        this.playerID = playerID;
         this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
-        this.playerType = playerType;
+        this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
+        messagesOut = new SynchronizedList<>("messagesOut", new LinkedList<Message>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
         this.synchronizer = synchronizer;
         CharacterType characterEnum;
         CannonType cannonType;
-        if(this.playerID == UNCLAIMED_PLAYER_ID){ // corresponds to an open slot in the MultiplayerSelectionScene
-            characterEnum = CharacterType.UNKNOWN_CHARACTER;
-            cannonType = CannonType.UNKNOWN_CANNON;
-            team = new SynchronizedComparable<>("team",0, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
-        }
-        else{ // Otherwise, assign the player the default character and cannon:
-            characterEnum = CharacterType.BLITZ;
-            cannonType = CannonType.BASIC_CANNON;
-            team = new SynchronizedComparable<>("team",1, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
-        }
-        defeated = false;
 
-        this.cannonData = new CannonData(cannonType,playerID,synchronizer);
+        switch(playerType){
+            case UNCLAIMED:
+                // corresponds to an open slot in the MultiplayerSelectionScene
+                characterEnum = CharacterType.UNKNOWN_CHARACTER;
+                cannonType = CannonType.UNKNOWN_CANNON;
+                team = new SynchronizedComparable<>("team",0, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                break;
+            case BOT:
+                characterEnum = CharacterType.FILLY_BOT_MEDIUM;
+                cannonType = CannonType.BOT_CANNON;
+                team = new SynchronizedComparable<>("team",1, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                break;
+            default:
+                // Otherwise, assign the player the default character and cannon:
+                characterEnum = CharacterType.BLITZ;
+                cannonType = CannonType.BASIC_CANNON;
+                team = new SynchronizedComparable<>("team",1, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                break;
+        }
+
+        this.cannonData = new CannonData(cannonType, this.playerID, synchronizer);
         this.characterData = new CharacterData(characterEnum, this.playerID, synchronizer);
 
+        // Adjust precedences on the networked data:
         switch(playerType){
             case REMOTE_CLIENTVIEW:
                 this.username.setPrecedence(SynchronizedData.Precedence.HOST);
                 this.team.setPrecedence(SynchronizedData.Precedence.HOST);
                 this.characterData.getCharacterType().setPrecedence(SynchronizedData.Precedence.HOST);
+                this.messagesOut.setPrecedence(SynchronizedData.Precedence.HOST);
                 break;
         }
+    }
+
+    public PlayerData(String username, PlayerType playerType, Synchronizer synchronizer){
+        this(username, playerType, createID(), synchronizer);
     }
 
     // Copy constructor
@@ -120,7 +122,8 @@ public class PlayerData implements Serializable {
         playerID = other.getPlayerID();
         username = new SynchronizedComparable<>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
         team = new SynchronizedComparable<>("team",other.getTeam().getData(), other.getTeam().getPrecedence(), playerID, synchronizer);
-        playerType = other.playerType;
+        playerType = new SynchronizedComparable<>("playerType", other.getPlayerType().getData(), other.getPlayerType().getPrecedence(), playerID, synchronizer);
+        messagesOut = new SynchronizedList<>("messagesOut", new LinkedList<Message>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, Integer.MAX_VALUE);
         playerPos = other.getPlayerPos();
         defeated = other.getDefeated();
         frozen = other.getFrozen();
@@ -138,21 +141,18 @@ public class PlayerData implements Serializable {
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
-        characterData = new CharacterData(other.getCharacterData().getCharacterType().getData(), playerID, synchronizer);
+        characterData = new CharacterData(other.getCharacterData(), other.getPlayerID(), synchronizer);
         cannonData = new CannonData(other.getCannonData(), other.getPlayerID(), synchronizer);
     }
 
     // For LOCAL and BOT PlayerTypes:
     // create a (probably) unique player ID
-    private static long createID(boolean isHost){
-        System.out.println("isHost is " + isHost);
-        if(isHost) return HOST_ID;
-
+    private static long createID(){
         long playerID;
         do{
             playerID = (new Random()).nextLong();
             if(playerID>0) playerID = -playerID;
-        } while (playerID == HOST_ID || playerID == UNCLAIMED_PLAYER_ID || playerID == GAME_ID);
+        } while (playerID == HOST_ID || playerID == GAME_ID);
         return playerID;
     }
 
@@ -341,7 +341,7 @@ public class PlayerData implements Serializable {
     public long getPlayerID(){
         return playerID;
     }
-    public PlayerType getPlayerType(){
+    public SynchronizedComparable<PlayerType> getPlayerType(){
         return playerType;
     }
     public int getPlayerPos() {
@@ -355,6 +355,9 @@ public class PlayerData implements Serializable {
     }
     public SynchronizedComparable<Integer> getTeam(){
         return team;
+    }
+    public SynchronizedList<Message> getMessagesOut(){
+        return messagesOut;
     }
     public boolean getDefeated(){
         return defeated;
@@ -433,7 +436,7 @@ public class PlayerData implements Serializable {
 
     public void incrementCharacterEnum(){
         CharacterType nextType = characterData.getCharacterType().getData().next();
-        if (playerType==PlayerType.LOCAL){
+        if (playerType.getData() == PlayerType.LOCAL){
             while(!nextType.isPlayable()){
                 nextType = nextType.next();
             }

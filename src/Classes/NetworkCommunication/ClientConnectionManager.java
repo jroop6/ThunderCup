@@ -13,8 +13,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 /**
- * Created by HydrusBeta on 8/4/2017.
- */ // Initiates 1 connection with the host computer
+ * Initiates 1 connection with the host computer
+ */
 public class ClientConnectionManager extends ConnectionManager{
 
     public ClientConnectionManager(String host, int port){
@@ -52,6 +52,7 @@ public class ClientConnectionManager extends ConnectionManager{
     // Waits for and examines the first packet received from the Host. If it contains a rejection notice, then inform
     // the client that they were not able to join the game.
     public boolean getConfirmation(String host, int port){
+        System.out.println("checking confirmation");
         Alert connectingDialog = createConnectingDialog(host, port);
         connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.show();

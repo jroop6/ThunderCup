@@ -16,11 +16,15 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     private Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
-    public enum Precedence {HOST, CLIENT}
     private Synchronizer synchronizer;
     private Precedence precedence;
     private int syncTolerance;
     private int framesOutOfSync = 0;
+
+    // HOST = The host controls the value of the data. Client data *must* eventually agree with the host. Example: The final, official outcome of shooting a orb.
+    // CLIENT = The client controls the value of the data. The host should accept new values from the client. Example: The team a player chooses to be on.
+    // INFORMATIONAL = The host and client do not need to agree with each other. They still transmit the data over the network to inform each other of their own particular view. Example: playerType (Remote_HOSTVIEW vs BOT vs REMOTE_CLIENTVIEW, etc)
+    public enum Precedence {HOST, CLIENT, INFORMATIONAL}
 
 	public SynchronizedData(String name, long parentID, Synchronizer synchronizer, Precedence precedence, int syncTolerance){
         this.name = name;

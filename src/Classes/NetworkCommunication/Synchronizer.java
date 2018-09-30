@@ -2,20 +2,17 @@ package Classes.NetworkCommunication;
 
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /** A container for all the data that must be kept synchronized between host and client */
 public class Synchronizer implements Serializable {
     private HashMap<String, SynchronizedData> synchronizedDataMap = new HashMap<>();
-    private List<SynchronizedData> changedData = new LinkedList<>(); // todo: consider making this a Set instead of a list.
+    private LinkedList<SynchronizedData> changedData = new LinkedList<>(); // todo: consider making this a Set instead of a list.
 
     public Synchronizer(){
     }
 
     // copy constructor
-    //todo: I think I need to have copy constructors for all SynchronizedData classes... yuck. Edit: Actually, I might be able to get away with a clone()-like method in SynchronizedData.
     public Synchronizer(Synchronizer other){
         for(SynchronizedData synchronizedData : other.synchronizedDataMap.values()){
             if(synchronizedData instanceof SynchronizedComparable){
@@ -40,6 +37,18 @@ public class Synchronizer implements Serializable {
 
     public void register(SynchronizedData synchronizedData){
         synchronizedDataMap.put(synchronizedData.getKey(),synchronizedData);
+    }
+
+    // todo: Consider grouping data by id somehow instead of putting everything into a single hashmap, to make this operation simpler (as well as the processPacketsAsHost and processPacketsAsClient operations).
+    public void deRegisterAllWithID(long id){
+        System.out.println("de-registering player with id " + id);
+        Iterator<SynchronizedData> it = synchronizedDataMap.values().iterator();
+        while(it.hasNext()){
+            SynchronizedData data = it.next();
+            if(data.getParentID()==id){
+                it.remove();
+            }
+        }
     }
 
     public void addToChangedData(SynchronizedData synchronizedData){
@@ -70,17 +79,22 @@ public class Synchronizer implements Serializable {
             System.err.println("Error! A client sent us unrecognized data: " + clientData.getKey());
             return false;
         }
-        // todo: oops; this one doesn't actually turn out to be the case. I need to rethink the security of this game.
-        if(hostData.getPrecedence()== SynchronizedData.Precedence.HOST){
+        if(hostData.getPrecedence() == SynchronizedData.Precedence.HOST){
             System.err.println("Warning! A client attempted to set data without permission! " + clientData.getKey());
             return false;
         }
         return true;
     }
-    private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData){
+    private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData, boolean checkingChangedData){
         if(clientData == null){
             System.err.println("Error! The host sent us unrecognized data: " + hostData.getKey());
             return false;
+        }
+        if(checkingChangedData){
+            if(clientData.getPrecedence() == SynchronizedData.Precedence.CLIENT){
+                System.err.println("Warning! The host attempted to set data without permission! " + clientData.getKey());
+                return false;
+            }
         }
         return true;
     }
@@ -97,6 +111,8 @@ public class Synchronizer implements Serializable {
                     case CLIENT:
                         hostData.changeTo(clientData.data);
                         break;
+                    case INFORMATIONAL:
+                        break;
                 }
             }
         }
@@ -104,7 +120,7 @@ public class Synchronizer implements Serializable {
             // The client looks at the host's changedData first, and immediately syncs with anything in there.
             for(SynchronizedData hostData : other.changedData){
                 SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
-                if(!sanitizeHostData(hostData,clientData)) continue;
+                if(!sanitizeHostData(hostData,clientData, false)) continue;
                 if(clientData.compareTo(hostData)!=0){
                     switch(clientData.getPrecedence()){
                         case HOST:
@@ -115,14 +131,15 @@ public class Synchronizer implements Serializable {
                             //todo: in this case, should we just ignore what the host says?
                             clientData.setTo(hostData.data);
                             break;
+                        case INFORMATIONAL:
+                            break;
                     }
                 }
             }
             // Now the client checks the consistency of the rest of its data with the host.
             for(SynchronizedData hostData : other.synchronizedDataMap.values()){
                 SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
-                if(!sanitizeHostData(hostData,clientData)) continue;
-
+                if(!sanitizeHostData(hostData, clientData, false)) continue;
                 if(clientData.compareTo(hostData)!=0){
                     clientData.incrementFramesOutOfSync();
                     if(clientData.isOutOfSync()){
@@ -135,10 +152,13 @@ public class Synchronizer implements Serializable {
                                 // todo: should we re-send the command to the host? This makes sense for messages, but not for firing orbs. For now, I'll just synchronize on the host.
                                 clientData.setTo(hostData.data);
                                 break;
+                            case INFORMATIONAL:
+                                break;
                         }
                         clientData.resetFramesOutOfSync();
                     }
                 }
+                else clientData.resetFramesOutOfSync();
             }
         }
     }

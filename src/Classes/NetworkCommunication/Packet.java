@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 /**
- * Created by HydrusBeta on 8/4/2017.
+ * Created by Jonathan Roop on 8/4/2017.
  */
 public class Packet implements Serializable{
     private Queue<PlayerData> playerDataList = new LinkedList<>();
@@ -15,9 +15,7 @@ public class Packet implements Serializable{
     private boolean connectionRejected = false;
 
     // Constructor used in MultiplayerSelectionScene
-    public Packet(PlayerData playerData, GameData gameData, Synchronizer synchronizer){
-        this.gameData = gameData;
-        playerDataList.add(playerData);
+    public Packet(Synchronizer synchronizer){
         this.synchronizer = new Synchronizer(synchronizer);
     }
 
@@ -62,5 +60,14 @@ public class Packet implements Serializable{
 
     public boolean isConnectionRejected(){
         return connectionRejected;
+    }
+
+    public void print(){
+        System.out.println("************************");
+        System.out.println("* There are " + playerDataList.size() + " items in playerDataList");
+        System.out.println("* GameData is " + gameData);
+        System.out.println("* There are " + playPanelDataList.size() + " items in playPanelDataList");
+        System.out.println("* Synchronizer is " + synchronizer);
+        System.out.println("************************");
     }
 }

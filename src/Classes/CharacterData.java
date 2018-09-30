@@ -26,6 +26,14 @@ public class CharacterData implements Serializable {
         this.parentID = parentID;
     }
 
+    // Initialize with a content display of the character:
+    public CharacterData(CharacterData other, long parentID, Synchronizer synchronizer){
+        characterAnimationState = other.getCharacterAnimationState();
+        currentAnimation = new AnimationData(other.getAnimationData());
+        this.characterType = new SynchronizedComparable<>("characterType", other.getCharacterType().getData(), other.getCharacterType().getPrecedence(), parentID, synchronizer);
+        this.parentID = parentID;
+    }
+
     public void relocate(double x, double y){
         currentAnimation.relocate(x,y);
     }

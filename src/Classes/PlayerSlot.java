@@ -121,10 +121,12 @@ public class PlayerSlot extends StackPane{
     public void changePlayer(PlayerData newPlayerData, boolean isHost){
 
         System.out.println("Calling changePlayer!!!!");
-        // horrible, awful, obsolete code:
-        /*getChildren().clear();
-        this.playerData = new RemotePlayer(playerData, synchronizer);
-        getChildren().addAll((new PlayerSlot(this.playerData, isHost).getChildren()));*/
+
+        // if playerData is not null, then de-register the old player's data. This happens when an unclaimed playerslot
+        // is claimed by a new remote player.
+        if(playerData!=null){
+            newPlayerData.getSynchronizer().deRegisterAllWithID(playerData.getPlayerID());
+        }
 
         playerData = newPlayerData;
 
@@ -138,7 +140,7 @@ public class PlayerSlot extends StackPane{
         // new PlayerData.
         if(characterClickHandler!=null) characterImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, characterClickHandler);
         if(cannonClickHandler!=null) cannonImageView.removeEventHandler(MouseEvent.MOUSE_CLICKED, cannonClickHandler);
-        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (playerData.getPlayerType()== PlayerData.PlayerType.BOT && isHost)) {
+        if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL || (playerData.getPlayerType().getData() == PlayerData.PlayerType.BOT && isHost)) {
             characterClickHandler = event -> {
                 System.out.println("clicky click on character");
                 playerData.incrementCharacterEnum();
@@ -158,7 +160,7 @@ public class PlayerSlot extends StackPane{
         usernameBtn.setOnAction(null);
         if(usernameBtnEnteredHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
         if(usernameBtnExitedHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnExitedHandler);
-        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL){
+        if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL){
             usernameBtn.setOnAction((event) -> {
                 String newName = displayChangeUsernameDialog(playerData.getUsername().getData());
                 playerData.getUsername().changeTo(newName);
@@ -171,18 +173,20 @@ public class PlayerSlot extends StackPane{
         // If this is not the host, hide the remove player button. The host does not get a remove player button for
         // their own character. De-register any existing ActionListener before registering one to the new PlayerData:
         removePlayerBtn.setOnAction(null);
-        if(!isHost || playerData.getPlayerType()== PlayerData.PlayerType.LOCAL){
+        if(!isHost || playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL){
             removePlayerBtn.setVisible(false);
+        }
+        else{
+            removePlayerBtn.setVisible(true);
             removePlayerBtn.setOnAction((event) -> {
                 System.out.println("Clicked Remove Player.");
                 playerData.changeResignPlayer();
             });
         }
-        else removePlayerBtn.setVisible(true);
 
         // Register the EventHandler for the teamChoice combo box. De-register any existing one, first:
         teamChoice.setOnAction(null);
-        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType()== PlayerData.PlayerType.BOT)){
+        if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType().getData() == PlayerData.PlayerType.BOT)){
             teamChoice.setVisible(true);
             teamLabel.setVisible(false);
             teamChoice.setOnAction((event)-> playerData.getTeam().changeTo(teamChoice.getSelectionModel().getSelectedIndex()+1));
@@ -191,7 +195,7 @@ public class PlayerSlot extends StackPane{
             System.out.println("team choice is being turned off");
             teamChoice.setVisible(false);
             teamLabel.setVisible(true);
-            teamLabel.setText("Team " + playerData.getTeam());
+            teamLabel.setText("Team " + playerData.getTeam().getData());
         }
     }
 
@@ -210,7 +214,7 @@ public class PlayerSlot extends StackPane{
 
         usernameBtn.setText(playerData.getUsername().getData());
 
-        if(playerData.getPlayerType()== PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType()== PlayerData.PlayerType.BOT)){
+        if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType().getData() == PlayerData.PlayerType.BOT)){
             teamChoice.getSelectionModel().select(playerData.getTeam().getData()-1);
         }
         else{

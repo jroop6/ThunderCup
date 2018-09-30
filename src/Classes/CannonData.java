@@ -40,7 +40,7 @@ public class CannonData implements Serializable {
         backgroundAnimation = new AnimationData(other.getBackgroundAnimationData());
         movingPartAnimation = new AnimationData(other.getMovingPartAnimationData());
         foregroundAnimation = new AnimationData(other.getForegroundAnimationData());
-        cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,0);
+        cannonAngle = new SynchronizedComparable<>("cannonAngle", -80.0, SynchronizedData.Precedence.CLIENT, parentID, synchronizer);
         cannonAngle.setTo(other.getAngle());
     }
 

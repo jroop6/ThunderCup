@@ -145,11 +145,11 @@ public class PlayPanel extends Pane {
             player.updateWithChangers(playerData, null); // Relevant changes to playerData include: cannonAngle, defeated status, whether he/she is firing his/her cannon, and changes in BubbleData
         }
         else{
-            if(playerData.isFiring() && !(player.getPlayerType()== PlayerData.PlayerType.LOCAL)){
+            if(playerData.isFiring() && !(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL)){
                 System.out.println("CLIENT: Another player has fired. Adding their obs to the playpanel");
                 playPanelData.setAddShootingOrbs(playerData.getFiredOrbs()); // updates model
             }
-            player.updateWithSetters(playerData, player.getPlayerType());
+            player.updateWithSetters(playerData, player.getPlayerType().getData());
         }
     }
 

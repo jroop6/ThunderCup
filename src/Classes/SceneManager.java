@@ -119,7 +119,7 @@ public class SceneManager extends Application {
 
         List<PlayerData> playerList = new LinkedList<>();
         NullConnectionManager nullConnectionManager = new NullConnectionManager();
-        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, true, 0, nullConnectionManager.getSynchronizer()));
+        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, PlayerData.HOST_ID, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the PlayPanel to it:
         GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, 1);
@@ -141,6 +141,9 @@ public class SceneManager extends Application {
             setSceneWorkaround(multiplayerSelectionScene);
             SoundManager.silenceMusic();
         }
+        else{
+            System.err.println("Connection failed!");
+        }
     }
 
     static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<PlayerData> players){
@@ -154,8 +157,8 @@ public class SceneManager extends Application {
         // add two players, controlled by the mouse:
         NullConnectionManager nullConnectionManager = new NullConnectionManager();
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL,true,0, nullConnectionManager.getSynchronizer()));
-        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL,true,0, nullConnectionManager.getSynchronizer()));
+        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, PlayerData.HOST_ID, nullConnectionManager.getSynchronizer()));
+        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, PlayerData.HOST_ID, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the playerList to it:
         GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, -5);
@@ -167,7 +170,7 @@ public class SceneManager extends Application {
         // add a player and a bot, each with the same puzzle:
         NullConnectionManager nullConnectionManager = new NullConnectionManager();
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, true,0, nullConnectionManager.getSynchronizer()));
+        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, PlayerData.HOST_ID, nullConnectionManager.getSynchronizer()));
         BotPlayer botPlayer = new BotPlayer(CharacterType.FILLY_BOT_HARD, nullConnectionManager.getSynchronizer());
         botPlayer.getTeam().changeTo(2);
         playerList.add(botPlayer);
@@ -184,7 +187,7 @@ public class SceneManager extends Application {
         NullConnectionManager nullConnectionManager = new NullConnectionManager();
 
         List<PlayerData> playerList = new LinkedList<>();
-        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, true, 0, nullConnectionManager.getSynchronizer()));
+        playerList.add(new PlayerData("YOU", PlayerData.PlayerType.LOCAL, PlayerData.HOST_ID, nullConnectionManager.getSynchronizer()));
 
         // Create the GameScene, passing the PlayPanel to it:
         GameScene gameScene = new GameScene(true, nullConnectionManager, playerList, LocationType.NIGHTTIME, puzzleGroupIndex);

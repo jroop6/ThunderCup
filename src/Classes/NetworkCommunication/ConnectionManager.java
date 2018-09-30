@@ -76,5 +76,9 @@ public abstract class ConnectionManager extends Thread {
     public boolean isConnected(){
         return isConnected;
     }
+
+    public synchronized void removeReceiverWorker(ReceiverWorker rw){
+        receiverWorkers.remove(rw);
+    }
 }
 

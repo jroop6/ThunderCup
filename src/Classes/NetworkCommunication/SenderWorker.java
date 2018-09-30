@@ -65,10 +65,10 @@ public class SenderWorker extends Thread{
             // If an IOException is encountered, that player has probably disconnected. For now, just let the player's connection time out.
             // ToDo: Since the player's connection is known to be severed now, consider booting the player at once rather than waiting for the natural timeout.
             System.err.println("Player disconnect detected. Shutting down SenderWorker");
+            // e.printStackTrace();
             shuttingDown = true;
         }
     }
-
 
     public synchronized void kill(){
         shuttingDown = true;

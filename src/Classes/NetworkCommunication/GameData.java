@@ -2,10 +2,11 @@ package Classes.NetworkCommunication;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static Classes.NetworkCommunication.PlayerData.GAME_ID;
 
 /**
  * There are 3 collections of messages - messages here in GameData, and newMessagesIn and newMessagesOut in the ChatBox
@@ -24,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class GameData implements Serializable{
     private boolean pause;
-    private boolean cancelGame;
+    private SynchronizedComparable<Boolean> gameCanceled;
     private List<Message> messages = new ArrayList<>(); // new messages to send to other players
     private String ammunitionUrl = "";
     private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
@@ -33,7 +34,6 @@ public class GameData implements Serializable{
     // Flags indicating changes to GameData:
     private boolean messagesChanged = false;
     private boolean pauseRequested = false;
-    private boolean cancelGameRequested = false;
     private boolean gameStartedRequested = false;
     private boolean ammunitionUrlRequested = false;
 
@@ -43,18 +43,16 @@ public class GameData implements Serializable{
     private long victoryTime = 0;
     private int victoriousTeam;
 
-    // TEST
-    //SynchronizedComparable<Integer> myTestInteger;
-
     public GameData(Synchronizer synchronizer){
-        //myTestInteger = new SynchronizedComparable<>("myTestInteger", 42, SynchronizedData.Precedence.HOST, this, synchronizer);
+        gameCanceled = new SynchronizedComparable<>("cancelGame", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
     }
 
     // Copy constructor:
     public GameData(GameData other){
+        Synchronizer synchronizer = new Synchronizer();
         messages = new ArrayList<>(other.messages);
         pause = other.getPause();
-        cancelGame = other.getCancelGame();
+        gameCanceled = new SynchronizedComparable<>("cancelGame", other.getGameCanceled().getData(), other.getGameCanceled().getPrecedence(), GAME_ID, synchronizer);
         gameStarted = other.getGameStarted();
         ammunitionUrl = other.getAmmunitionUrl();
         victoryPauseStarted = other.getVictoryPauseStarted();
@@ -65,7 +63,6 @@ public class GameData implements Serializable{
 
         messagesChanged = other.isMessagesChanged();
         pauseRequested = other.isPauseRequested();
-        cancelGameRequested = other.isCancelGameRequested();
         gameStartedRequested = other.isGameStartedRequested();
         ammunitionUrlRequested = other.isAmmunitionUrlRequested();
     }
@@ -84,10 +81,6 @@ public class GameData implements Serializable{
     public void changePause(boolean pause){
         this.pause = pause;
         pauseRequested = true;
-    }
-    public void changeCancelGame(boolean cancelGame){
-        this.cancelGame = cancelGame;
-        cancelGameRequested = true;
     }
     public void changeGameStarted(boolean gameStarted){
         this.gameStarted = gameStarted;
@@ -109,9 +102,6 @@ public class GameData implements Serializable{
     public void setGameStarted(boolean gameStarted){
         this.gameStarted = gameStarted;
     }
-    public void setCancelGame(boolean cancelGame){
-        this.cancelGame = cancelGame;
-    }
     public void setAmmunitionUrl(String ammunitionUrl){
         this.ammunitionUrl = ammunitionUrl;
     }
@@ -131,7 +121,6 @@ public class GameData implements Serializable{
     public void resetFlags(){
         messagesChanged = false;
         pauseRequested = false;
-        cancelGameRequested = false;
         gameStartedRequested = false;
         ammunitionUrlRequested = false;
     }
@@ -147,9 +136,6 @@ public class GameData implements Serializable{
     public boolean isPauseRequested(){
         return pauseRequested;
     }
-    public boolean isCancelGameRequested(){
-        return cancelGameRequested;
-    }
     public boolean isGameStartedRequested(){
         return gameStartedRequested;
     }
@@ -164,11 +150,11 @@ public class GameData implements Serializable{
     public boolean getPause(){
         return pause;
     }
-    public boolean getCancelGame(){
-        return cancelGame;
-    }
     public boolean getGameStarted(){
         return gameStarted;
+    }
+    public SynchronizedComparable<Boolean> getGameCanceled(){
+        return gameCanceled;
     }
     public String getAmmunitionUrl(){
         return ammunitionUrl;

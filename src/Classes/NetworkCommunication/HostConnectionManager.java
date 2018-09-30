@@ -1,7 +1,6 @@
 package Classes.NetworkCommunication;
 
 import Classes.SceneManager;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -14,10 +13,12 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Optional;
 
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+
 
 /**
- * Created by Jonathan Roop on 8/4/2017.
- */ // Listens for connection requests. Sets up 1 receiver/sender Worker pair per client connected.
+ * Listens for connection requests. Sets up 1 receiver/sender Worker pair per client connected.
+ */
 public class HostConnectionManager extends ConnectionManager{
 
     ServerSocket serverSocket;
@@ -27,7 +28,7 @@ public class HostConnectionManager extends ConnectionManager{
     // The Constructor is a lot less complicated than it looks! It simply attempts to open a ServerSocket, and then
     // there's just a bunch of code for error handling and for helping with user troubleshooting.
     public HostConnectionManager(int port) {
-        this.playerID = playerID;
+        this.playerID = HOST_ID;
         try {
             serverSocket = new ServerSocket(DEFAULT_PORT);
         } catch (IOException e) {
@@ -132,9 +133,7 @@ public class HostConnectionManager extends ConnectionManager{
             tempOutputStream = new ObjectOutputStream(hostSideSocket.getOutputStream());
 
             // Create said rejection notice:
-            Synchronizer tempSynchronizer = new Synchronizer();
-            PlayerData tempPlayerData = new PlayerData("Dummy", PlayerData.PlayerType.REMOTE_HOSTVIEW, false, 0, tempSynchronizer);
-            Packet tempServerPacket = new Packet(tempPlayerData, new GameData(tempSynchronizer), tempSynchronizer);
+            Packet tempServerPacket = new Packet(new Synchronizer());
             tempServerPacket.rejectConnection();
 
             // Send the rejection notice
@@ -144,12 +143,11 @@ public class HostConnectionManager extends ConnectionManager{
         } catch (IOException e){
             // If an IOException is encountered, then there's no way to inform the client that he/she has been rejected.
             // Oh well. They'll figure it out eventually...
-            // ToDo: set up some sort of client-side connection timeout that displays an alert to inform him/her that the connection doesn't appear to have gone through.
         }
     }
 
     // Call this after a socket is opened
-    public void addPlayer(Socket hostSideSocket){
+    public synchronized void addPlayer(Socket hostSideSocket){
         SenderWorker newSenderWorker = new SenderWorker(hostSideSocket);
         ReceiverWorker newReceiverWorker = new ReceiverWorker(this, hostSideSocket);
         senderWorkers.add(newSenderWorker);
@@ -162,12 +160,12 @@ public class HostConnectionManager extends ConnectionManager{
 
     public void addOpenSlot(){
         ++openSlots;
-        System.out.println("addOponSlot() called and openSlots incremented. openSlots = " + openSlots);
+        System.out.println("addOpenSlot() called and openSlots incremented. openSlots = " + openSlots);
     }
 
     public void removeOpenSlot(){
         --openSlots;
-        System.out.println("removeOponSlot() called and openSlots decremented. openSlots = " + openSlots);
+        System.out.println("removeOpenSlot() called and openSlots decremented. openSlots = " + openSlots);
     }
 
     public int getPort(){

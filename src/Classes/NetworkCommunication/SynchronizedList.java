@@ -9,6 +9,12 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         setTo(data);
     }
 
+    public SynchronizedList(String name, LinkedList<T> data, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
+        super(name, parentID, synchronizer, precedence, syncTolerance);
+        setTo(data);
+    }
+
+
     public SynchronizedList(SynchronizedList<T> other, Synchronizer synchronizer){
         super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
         // Perform a deep copy of each element in the List of data:
@@ -19,6 +25,8 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         }
         setTo(otherDataListCopy);
     }
+
+
 
     // this kinda sorta returns the "edit distance" between the two lists.
     public int compareTo(SynchronizedData<LinkedList<T>> other){
@@ -59,6 +67,10 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         }
     }
 
+    public void setClear(){
+        setRemoveAll(new LinkedList<>(data));
+    }
+
     public void changeAdd(T newItem){
         data.add(newItem);
         int index = data.indexOf(newItem);
@@ -85,6 +97,10 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         for(T t : itemsToRemove){
             changeRemove(t);
         }
+    }
+
+    public void changeClear(){
+        changeRemoveAll(new LinkedList<>(data));
     }
 
     @Override
