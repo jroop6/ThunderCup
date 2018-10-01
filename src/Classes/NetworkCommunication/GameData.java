@@ -24,12 +24,12 @@ import static Classes.NetworkCommunication.PlayerData.GAME_ID;
  *    the worker thread sends the Packet off and calls resetMessages(), destroying the message that was just added.
  */
 public class GameData implements Serializable{
-    private boolean pause;
+    private SynchronizedComparable<Boolean> pause;
     private SynchronizedComparable<Boolean> gameCanceled;
     private List<Message> messages = new ArrayList<>(); // new messages to send to other players
     private String ammunitionUrl = "";
     private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
-    private boolean gameStarted;
+    private SynchronizedComparable<Boolean> gameStarted;
 
     // Flags indicating changes to GameData:
     private boolean messagesChanged = false;
@@ -45,15 +45,17 @@ public class GameData implements Serializable{
 
     public GameData(Synchronizer synchronizer){
         gameCanceled = new SynchronizedComparable<>("cancelGame", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
+        pause = new SynchronizedComparable<>("pause", new Boolean(false), SynchronizedData.Precedence.CLIENT, GAME_ID, synchronizer);
+        gameStarted = new SynchronizedComparable<>("gameStarted", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
     }
 
     // Copy constructor:
     public GameData(GameData other){
         Synchronizer synchronizer = new Synchronizer();
         messages = new ArrayList<>(other.messages);
-        pause = other.getPause();
+        pause = new SynchronizedComparable<>("pause", other.getPause().getData(), other.getPause().getPrecedence(), GAME_ID, synchronizer);
         gameCanceled = new SynchronizedComparable<>("cancelGame", other.getGameCanceled().getData(), other.getGameCanceled().getPrecedence(), GAME_ID, synchronizer);
-        gameStarted = other.getGameStarted();
+        gameStarted = new SynchronizedComparable<>("gameStarted", other.getGameStarted().getData(), other.getGameStarted().getPrecedence(), GAME_ID, synchronizer);
         ammunitionUrl = other.getAmmunitionUrl();
         victoryPauseStarted = other.getVictoryPauseStarted();
         victoryDisplayStarted = other.getVictoryDisplayStarted();
@@ -74,18 +76,6 @@ public class GameData implements Serializable{
         this.messages.addAll(messages);
         messagesChanged = true;
     }
-    public void changeAddMessage(Message message){
-        this.messages.add(message);
-        messagesChanged = true;
-    }
-    public void changePause(boolean pause){
-        this.pause = pause;
-        pauseRequested = true;
-    }
-    public void changeGameStarted(boolean gameStarted){
-        this.gameStarted = gameStarted;
-        gameStartedRequested = true;
-    }
     public void changeAmmunitionUrl(String ammunitionUrl){
         this.ammunitionUrl = ammunitionUrl;
         ammunitionUrlRequested = true;
@@ -93,9 +83,6 @@ public class GameData implements Serializable{
 
     /* Setters: These are called when a client simply wants to update locally-stored game information without
      * notifying the host. */
-    public void setPause(boolean pause){
-        this.pause = pause;
-    }
     public void setVictoryPauseStarted(boolean newVal){
         victoryPauseStarted = newVal;
     }
@@ -138,10 +125,10 @@ public class GameData implements Serializable{
     public List<Message> getMessages(){
         return messages;
     }
-    public boolean getPause(){
+    public SynchronizedComparable<Boolean> getPause(){
         return pause;
     }
-    public boolean getGameStarted(){
+    public SynchronizedComparable<Boolean> getGameStarted(){
         return gameStarted;
     }
     public SynchronizedComparable<Boolean> getGameCanceled(){

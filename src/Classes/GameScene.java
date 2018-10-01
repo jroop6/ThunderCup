@@ -26,6 +26,7 @@ import javafx.stage.StageStyle;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
@@ -167,10 +168,10 @@ public class GameScene extends Scene {
                     break;
                 case P:
                     System.out.println("Pause pressed!");
-                    gameData.changePause(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
+                    gameData.getPause().changeTo(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
-                    gameData.changePause(false);
+                    gameData.getPause().changeTo(false);
             }
         });
 
@@ -248,11 +249,11 @@ public class GameScene extends Scene {
 
     private void updateGameView(GameData gameData){
         // pause the game if doing so is indicated:
-        if(gameData.getPause()) displayPauseMenu();
+        if(gameData.getPause().getData()) displayPauseMenu();
         else removePauseMenu();
 
-        // Display new chat messages in the chat box:
-        //chatBox.displayNewMessagesIn();
+        // Display new chat messages in the chat box (clients do this in processPacketsAsClient):
+        if(isHost) chatBox.displayMessages(localPlayer.getMessagesOut().getData());
 
         // If the host has canceled the game, return to the main menu:
         if(gameData.getGameCanceled().getData()){
@@ -339,10 +340,10 @@ public class GameScene extends Scene {
             // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
             // suppose I could just make sure they use the same random number generator, but having the host do it
             // is just easier and reduces the overall amount of computation for the clients.
-            if(!gameData.getPause() && isHost) processBots();
+            if(!gameData.getPause().getData() && isHost) processBots();
 
             Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
-            if(!gameData.getPause()){
+            if(!gameData.getPause().getData()){
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
                     long time = System.nanoTime();
@@ -448,23 +449,27 @@ public class GameScene extends Scene {
 
     private void processPacketsAsHost(){
         Packet packet = connectionManager.retrievePacket();
+        Synchronizer localSynchronizer = connectionManager.getSynchronizer();
 
         // Process Packets one at a time:
         while(packet!=null){
-            // Pop the PlayerData from the packet:
-            PlayerData playerData = packet.popPlayerData();
-            if(!gameData.getPause()){
-                // Find the PlayPanel associated with the player:
-                PlayPanel playPanel = playPanelMap.get(playerData.getTeam().getData());
-                // Update the PlayPanelData and the PlayerData:
-                playPanel.updatePlayer(playerData, isHost);
-            }
-            // Reset the missed packets counter
-            gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
+            Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
-            // Then process the GameData:
-            GameData clientGameData = packet.getGameData();
-            updateGameData(clientGameData, isHost);
+            localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
+
+            // gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
+
+            // Perform special processing for messages:
+            // todo: definitely organize the Synchronizer data by parentID.
+            Set<Long> visitedLongs = new HashSet<>();
+            for(SynchronizedData data : receivedSynchronizer.getAll().values()){
+                long id = data.getParentID();
+                if(visitedLongs.contains(id) || id>=0) continue;
+                visitedLongs.add(id);
+                SynchronizedList<Message> clientMessages = (SynchronizedList<Message>)receivedSynchronizer.get(id,"messagesOut");
+                localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
+                clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
+            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
@@ -513,43 +518,25 @@ public class GameScene extends Scene {
         }
     }
 
-    private void processPacketsAsClient(){
-        // Process Packets one at a time:
+    private void processPacketsAsClient() {
+        // Process Packets, one at a time:
         Packet packet = connectionManager.retrievePacket();
-        while(packet!=null){
-            // Within each Packet, process PlayerData one at a time in order:
-            PlayerData playerData = packet.popPlayerData();
-            while(playerData!=null){
-                if(!gameData.getPause()){
-                    // update the Player and his/her PlayPanel with the new playerData:
-                    PlayPanel playPanel = playPanelMap.get(playerData.getTeam().getData());
-                    playPanel.updatePlayer(playerData, isHost);
-                }
-                // Reset the missed packets counter:
-                if(playerData.getPlayerID()==0) gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
+        Synchronizer localSynchronizer = connectionManager.getSynchronizer();
+        while (packet != null) {
+            Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
-                // Prepare for next iteration:
-                playerData = packet.popPlayerData();
-            }
+            // Synchronize our data with the host:
+            localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
 
-            // Now process the PlayPanelData one at a time in order. Note: this is mostly just a check for consistency.
-            // Most of the time, this loop won't actually change anything. If desynchronization is detected between host
-            // and client, however, then the client's playpanel data will be discarded and replaced with the host's.
-            PlayPanelData playPanelData = packet.popPlayPanelData();
-            while(playPanelData !=null){
-                // update the PlayPanel with the new playPanelData:
-                PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
-                playPanel.getPlayPanelData().checkForConsistency(playPanelData);
+            // Since we've received a packet from the host, reset missedPacketsCount
+            gameData.setMissedPacketsCount(HOST_ID,0);
 
-                // Prepare for next iteration:
-                playPanelData = packet.popPlayPanelData();
-            }
+            // perform special processing for messages:
+            SynchronizedList<Message> hostMessages = (SynchronizedList<Message>) connectionManager.getSynchronizer().get(HOST_ID, "messagesOut");
+            chatBox.displayMessages(hostMessages.getData());
+            hostMessages.setClear(); // so we don't display the same messages more than once before we receive a new packet.
 
-            // Now process the GameData:
-            GameData hostGameData = packet.getGameData();
-            updateGameData(hostGameData, isHost);
-
-            // Prepare for next iteration:
+            // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
         }
     }
@@ -562,7 +549,6 @@ public class GameScene extends Scene {
                 gameData.changeAddMessages(new LinkedList<>(messages)); // host re-broadcasts the messages out to all clients
                 //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
-            if(gameDataIn.isPauseRequested()) gameData.changePause(gameDataIn.getPause());
         }
         else{
             if(gameDataIn.isMessagesChanged()){
@@ -570,7 +556,6 @@ public class GameScene extends Scene {
                 System.out.println("client received messages. Adding them to messagesIn");
                 //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
             }
-            if(gameDataIn.isPauseRequested()) gameData.setPause(gameDataIn.getPause());
         }
     }
 
@@ -764,7 +749,7 @@ public class GameScene extends Scene {
                 case UNPAUSE:
                     System.out.println("Unpause Button Pressed!");
                     //removePauseMenu();
-                    gameData.changePause(false);
+                    gameData.getPause().changeTo(false);
                     break;
                 case RETURN_TO_MAIN_MENU_CLIENT:
                     System.out.println("We're done!");

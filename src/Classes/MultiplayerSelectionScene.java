@@ -123,7 +123,7 @@ public class MultiplayerSelectionScene extends Scene {
         ThunderButton start = new ThunderButton(ButtonType.START, (event)->{
             // Todo: check whether there are any unclaimed open spots before starting the game.
             System.out.println("pressed Start!");
-            gameData.changeGameStarted(true);
+            gameData.getGameStarted().changeTo(true);
             prepareAndSendPacket();
             // wait a little bit to make sure the packet gets through:
             try{
@@ -312,7 +312,7 @@ public class MultiplayerSelectionScene extends Scene {
             }
 
             // Synchronize the Data:
-            connectionManager.getSynchronizer().synchronizeWith(packet.getSynchronizer(),isHost);
+            localSynchronizer.synchronizeWith(packet.getSynchronizer(),isHost);
 
             // Perform special processing for messages:
             // todo: definitely organize the Synchronizer data by parentID.
@@ -498,10 +498,10 @@ public class MultiplayerSelectionScene extends Scene {
                 SceneManager.switchToMainMenu();
                 showGameCanceledDialog();
             }
-            /*if(gameData.gameStarted().getData()){
+            if(gameData.getGameStarted().getData()){
                 System.out.println("host has started the game!");
                 startGame();
-            }*/
+            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
