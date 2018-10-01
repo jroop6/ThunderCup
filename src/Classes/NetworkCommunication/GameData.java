@@ -93,17 +93,8 @@ public class GameData implements Serializable{
 
     /* Setters: These are called when a client simply wants to update locally-stored game information without
      * notifying the host. */
-    public void setAddMessages(List<Message> messages){
-        this.messages.addAll(messages);
-    }
     public void setPause(boolean pause){
         this.pause = pause;
-    }
-    public void setGameStarted(boolean gameStarted){
-        this.gameStarted = gameStarted;
-    }
-    public void setAmmunitionUrl(String ammunitionUrl){
-        this.ammunitionUrl = ammunitionUrl;
     }
     public void setVictoryPauseStarted(boolean newVal){
         victoryPauseStarted = newVal;

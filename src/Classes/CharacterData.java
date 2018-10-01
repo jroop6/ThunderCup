@@ -16,14 +16,12 @@ public class CharacterData implements Serializable {
     private SynchronizedComparable<CharacterType> characterType; // basically, a collection of all of this character's possible animations.
     private AnimationData currentAnimation; // The currently playing animation from among the collection.
     private CharacterType.CharacterAnimationState characterAnimationState; // i.e. Content, Worried, Defeated, etc.
-    private long parentID; // For distinguishing this data from similar data owned by other players.
 
     // Initialize with a content display of the character:
     public CharacterData(CharacterType characterType, long parentID, Synchronizer synchronizer){
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
         currentAnimation = new AnimationData(characterType.getAnimation(characterAnimationState));
         this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
-        this.parentID = parentID;
     }
 
     // Initialize with a content display of the character:
@@ -31,7 +29,6 @@ public class CharacterData implements Serializable {
         characterAnimationState = other.getCharacterAnimationState();
         currentAnimation = new AnimationData(other.getAnimationData());
         this.characterType = new SynchronizedComparable<>("characterType", other.getCharacterType().getData(), other.getCharacterType().getPrecedence(), parentID, synchronizer);
-        this.parentID = parentID;
     }
 
     public void relocate(double x, double y){

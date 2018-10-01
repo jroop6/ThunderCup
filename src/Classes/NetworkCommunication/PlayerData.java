@@ -34,6 +34,7 @@ public class PlayerData implements Serializable {
 
     protected SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
+    private SynchronizedComparable<Boolean> resigned;
     private SynchronizedList<Message> messagesOut;
     private transient long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
@@ -45,7 +46,6 @@ public class PlayerData implements Serializable {
     private boolean bubbleDataChanged = false;
     private boolean firing = false;
     private boolean characterChanged = false;
-    private boolean cannonChanged = false;
     private boolean defeatedChanged = false;
     private boolean ammunitionOrbsChanged = false;
     private boolean frozenChanged = false;
@@ -73,7 +73,7 @@ public class PlayerData implements Serializable {
         this.playerID = playerID;
         this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
         this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
-        messagesOut = new SynchronizedList<>("messagesOut", new LinkedList<Message>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
+        messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
         this.synchronizer = synchronizer;
         CharacterType characterEnum;
         CannonType cannonType;
@@ -101,13 +101,26 @@ public class PlayerData implements Serializable {
         this.cannonData = new CannonData(cannonType, this.playerID, synchronizer);
         this.characterData = new CharacterData(characterEnum, this.playerID, synchronizer);
 
+        resigned = new SynchronizedComparable<>("resigned", false,
+                (Boolean newVal, Mode mode, int i, int j)->{
+                    characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
+                    cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
+                },
+                (Boolean newVal, Mode mode, int i, int j)->{
+                    characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
+                    cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
+                },
+                SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
+
         // Adjust precedences on the networked data:
         switch(playerType){
             case REMOTE_CLIENTVIEW:
                 this.username.setPrecedence(SynchronizedData.Precedence.HOST);
                 this.team.setPrecedence(SynchronizedData.Precedence.HOST);
                 this.characterData.getCharacterType().setPrecedence(SynchronizedData.Precedence.HOST);
+                this.cannonData.getCannonType().setPrecedence(SynchronizedData.Precedence.HOST);
                 this.messagesOut.setPrecedence(SynchronizedData.Precedence.HOST);
+                this.resigned.setPrecedence(SynchronizedData.Precedence.HOST);
                 break;
         }
     }
@@ -123,7 +136,8 @@ public class PlayerData implements Serializable {
         username = new SynchronizedComparable<>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
         team = new SynchronizedComparable<>("team",other.getTeam().getData(), other.getTeam().getPrecedence(), playerID, synchronizer);
         playerType = new SynchronizedComparable<>("playerType", other.getPlayerType().getData(), other.getPlayerType().getPrecedence(), playerID, synchronizer);
-        messagesOut = new SynchronizedList<>("messagesOut", new LinkedList<Message>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, Integer.MAX_VALUE);
+        messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, Integer.MAX_VALUE);
+        resigned = new SynchronizedComparable<>("resigned", false, other.getResigned().getPrecedence(), playerID, synchronizer);
         playerPos = other.getPlayerPos();
         defeated = other.getDefeated();
         frozen = other.getFrozen();
@@ -135,7 +149,6 @@ public class PlayerData implements Serializable {
         bubbleDataChanged = other.isBubbleDataChanged();
         firing = other.isFiring();
         characterChanged = other.isCharacterChanged();
-        cannonChanged = other.isCannonChanged();
         defeatedChanged = other.isDefeatedChanged();
         ammunitionOrbsChanged = other.isAmmunitionChanged();
         frozenChanged = other.isFrozenChanged();
@@ -143,6 +156,7 @@ public class PlayerData implements Serializable {
 
         characterData = new CharacterData(other.getCharacterData(), other.getPlayerID(), synchronizer);
         cannonData = new CannonData(other.getCannonData(), other.getPlayerID(), synchronizer);
+
     }
 
     // For LOCAL and BOT PlayerTypes:
@@ -292,7 +306,6 @@ public class PlayerData implements Serializable {
         bubbleDataChanged = false;
         firing = false;
         characterChanged = false;
-        cannonChanged = false;
         defeatedChanged = false;
         firedOrbs.clear();
         frozenChanged = false;
@@ -310,9 +323,6 @@ public class PlayerData implements Serializable {
     }
     public boolean isCharacterChanged(){
         return characterChanged;
-    }
-    public boolean isCannonChanged(){
-        return cannonChanged;
     }
     public boolean isDefeatedChanged(){
         return defeatedChanged;
@@ -354,6 +364,9 @@ public class PlayerData implements Serializable {
     }
     public SynchronizedList<Message> getMessagesOut(){
         return messagesOut;
+    }
+    public SynchronizedComparable<Boolean>  getResigned(){
+        return resigned;
     }
     public boolean getDefeated(){
         return defeated;

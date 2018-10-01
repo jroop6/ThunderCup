@@ -62,6 +62,20 @@ public class CannonData implements Serializable {
     public CannonType.CannonAnimationState getCannonAnimationState(){
         return cannonAnimationState;
     }
+    public void setCannonAnimationState(CannonType.CannonAnimationState cannonAnimationState){
+        this.cannonAnimationState = cannonAnimationState;
+        backgroundAnimation.setAnimation(cannonType.getData().getBackgroundAnimation(cannonAnimationState));
+        movingPartAnimation.setAnimation(cannonType.getData().getMovingPartAnimation(cannonAnimationState));
+        foregroundAnimation.setAnimation(cannonType.getData().getForegroundAnimation(cannonAnimationState));
+        switch(cannonAnimationState){
+            case AIMING:
+                backgroundAnimation.setRandomFrame();
+                movingPartAnimation.setRandomFrame();
+                foregroundAnimation.setRandomFrame();
+            case FIRING:
+            case DISCONNECTED:
+        }
+    }
 
     public AnimationData getBackgroundAnimationData(){
         return backgroundAnimation;
@@ -96,7 +110,6 @@ public class CannonData implements Serializable {
         return movingPartAnimation.getRotation();
     }
     public void setAngle(double angle){
-        double cannonAngleBefore = cannonAngle.getData();
         cannonAngle.setTo(angle);
     }
 

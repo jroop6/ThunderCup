@@ -180,7 +180,7 @@ public class PlayerSlot extends StackPane{
             removePlayerBtn.setVisible(true);
             removePlayerBtn.setOnAction((event) -> {
                 System.out.println("Clicked Remove Player.");
-                playerData.changeResignPlayer();
+                playerData.getResigned().changeTo(true);
             });
         }
 

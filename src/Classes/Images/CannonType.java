@@ -3,9 +3,9 @@ package Classes.Images;
 import Classes.Animation.Animation;
 
 public enum CannonType {
-    BASIC_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.BASIC_CANNON_STATIC, Animation.BASIC_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true),
-    UNKNOWN_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.UNKNOWN_CANNON_STATIC, Animation.UNKNOWN_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true),
-    BOT_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.BOT_CANNON_STATIC, Animation.BOT_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true);
+    BASIC_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.BASIC_CANNON_STATIC, Animation.BASIC_CANNON_STATIC, Animation.BASIC_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true),
+    UNKNOWN_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.UNKNOWN_CANNON_STATIC, Animation.UNKNOWN_CANNON_STATIC, Animation.UNKNOWN_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true),
+    BOT_CANNON(new Animation[]{Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND, Animation.BASIC_CANNON_BACKGROUND}, new Animation[] {Animation.BOT_CANNON_STATIC, Animation.BOT_CANNON_STATIC, Animation.BOT_CANNON_STATIC}, new Animation[]{Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND, Animation.BASIC_CANNON_FOREGROUND}, 123.0, 1050.0, 135.0, 32.0, true);
 
     Animation[] backgroundAnimations;
     Animation[] movingPartAnimations;
@@ -27,7 +27,7 @@ public enum CannonType {
         this.selectable = selectable;
     }
 
-    public enum CannonAnimationState{AIMING, FIRING}
+    public enum CannonAnimationState{AIMING, FIRING, DISCONNECTED}
 
 
     public Animation getBackgroundAnimation(CannonAnimationState cannonAnimationState){

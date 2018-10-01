@@ -36,13 +36,24 @@ public class Synchronizer implements Serializable {
     }
 
     public void register(SynchronizedData synchronizedData){
-        synchronizedDataMap.put(synchronizedData.getKey(),synchronizedData);
+        synchronizedDataMap.put(synchronizedData.getKey(), synchronizedData);
     }
 
     // todo: Consider grouping data by id somehow instead of putting everything into a single hashmap, to make this operation simpler (as well as the processPacketsAsHost and processPacketsAsClient operations).
     public void deRegisterAllWithID(long id){
         System.out.println("de-registering player with id " + id);
-        Iterator<SynchronizedData> it = synchronizedDataMap.values().iterator();
+        Iterator<SynchronizedData> it = changedData.iterator();
+
+        // remove the data from the changedData list:
+        while(it.hasNext()){
+            SynchronizedData data = it.next();
+            if(data.getParentID()==id){
+                it.remove();
+            }
+        }
+
+        // remove the data from the synchronizedDataMap:
+        it = synchronizedDataMap.values().iterator();
         while(it.hasNext()){
             SynchronizedData data = it.next();
             if(data.getParentID()==id){
