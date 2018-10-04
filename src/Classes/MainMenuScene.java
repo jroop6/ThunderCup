@@ -30,7 +30,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
-import static Classes.GameScene.FRAME_RATE;
+import static Classes.GameScene.DATA_FRAME_RATE;
 import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 
 /**
@@ -203,7 +203,7 @@ public class MainMenuScene extends Scene {
                     title.drawSelf(titleView);
                     characterData.tick(0);
                     characterData.drawSelf(characterView);
-                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
+                    nextAnimationFrameInstance += 1000000000L/ DATA_FRAME_RATE;
                 }
             }
         };

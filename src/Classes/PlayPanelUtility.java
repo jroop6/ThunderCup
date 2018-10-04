@@ -6,6 +6,7 @@ import Classes.Animation.PlayOption;
 import Classes.Audio.SoundEffect;
 import Classes.NetworkCommunication.PlayPanelData;
 
+import java.io.Serializable;
 import java.util.*;
 
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
@@ -15,7 +16,7 @@ import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 import static java.lang.Math.PI;
 
-public class PlayPanelUtility {
+public class PlayPanelUtility implements Serializable {
 
     public static final double FOUR_R_SQUARED = 4 * ORB_RADIUS * ORB_RADIUS;
 

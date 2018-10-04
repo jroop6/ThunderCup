@@ -52,8 +52,10 @@ public class GameScene extends Scene {
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
     private boolean initializing = true;
-    public static final int FRAME_RATE = 24;
-    private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds)
+    public static final int DATA_FRAME_RATE = 24;
+    public static final int VISUAL_FRAME_RATE = 60;
+    private long nextDataUpdateInstance = 0; // Time at which The next animation frame will be computed.
+    private long nextAnimationFrameInstance = 0; // Time at which all visuals will be repainted(nanoseconds)
 
     // Variables related to network communications:
     private ConnectionManager connectionManager;
@@ -90,7 +92,7 @@ public class GameScene extends Scene {
         this.connectionManager = connectionManager;
         gameData = new GameData(connectionManager.getSynchronizer());
         this.players = players;
-        maxConsecutivePacketsMissed = FRAME_RATE * 5;
+        maxConsecutivePacketsMissed = DATA_FRAME_RATE * 5;
 
         // Arrange the players into their teams by adding each one to an appropriate List:
         Map<Integer, List<PlayerData>> teams = new HashMap<>();
@@ -127,7 +129,7 @@ public class GameScene extends Scene {
         rootNode.getChildren().add(playPanels);
 
         // Add a chat overlay. Put it at the bottom of the screen, with no background:
-        chatBox = new ChatBox(gameData, localPlayer, 125, false, localPlayer.getPlayerID(), connectionManager.getSynchronizer());
+        chatBox = new ChatBox(localPlayer, 125, false);
         chatBox.displayMessage(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerID()));
         chatBox.displayMessage(new Message("Press p to pause", localPlayer.getPlayerID()));
 
@@ -147,14 +149,14 @@ public class GameScene extends Scene {
 
         // Add mouse listeners for the local player:
         addEventHandler(MouseEvent.MOUSE_MOVED,(event)->{
-            localPlayer.pointCannon(event.getX(), event.getY());
+            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
         });
         addEventHandler(MouseEvent.MOUSE_PRESSED, (event) ->{
-            localPlayer.pointCannon(event.getX(), event.getY());
-            localPlayer.changeFireCannon();
+            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
+            workerThread.submit(()->localPlayer.changeFireCannon());
         });
         addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)->{
-            localPlayer.pointCannon(event.getX(), event.getY());
+            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
         });
 
         // Add keyboard listeners:
@@ -168,10 +170,10 @@ public class GameScene extends Scene {
                     break;
                 case P:
                     System.out.println("Pause pressed!");
-                    gameData.getPause().changeTo(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
+                    workerThread.submit(()->gameData.getPause().changeTo(true)); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
-                    gameData.getPause().changeTo(false);
+                    workerThread.submit(()->gameData.getPause().changeTo(false));
             }
         });
 
@@ -188,6 +190,7 @@ public class GameScene extends Scene {
                 if(initializing){
                     // Initialize some bookkeeping variables:
                     nextAnimationFrameInstance = now;
+                    nextDataUpdateInstance = now;
                     nextLatencyTest = now;
                     nextSendInstance = now;
                     nextReport = now;
@@ -201,15 +204,21 @@ public class GameScene extends Scene {
                 // Incoming packets are processed as often as possible:
                 workerThread.submit(receivePacketsTasks);
 
-                // Visuals are updated 24 times per second.
-                if(now>nextAnimationFrameInstance){
-                    nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
-                    try{
-                        // Retrieve the outcome of the previous frame and have the worker thread start computing the next frame:
-                        FrameResult previousResult = resultHolder.get();
-                        resultHolder = workerThread.submit(updateFrameTasks);
+                // Data is updated 24 times per second
+                if(now>nextDataUpdateInstance){
+                    nextDataUpdateInstance += 1000000000L/ DATA_FRAME_RATE;
 
-                        // update visuals corresponding to the PlayPanelData and PlayerData:
+                    // Have the worker thread start computing the next frame:
+                    resultHolder = workerThread.submit(updateFrameTasks);
+                }
+
+                // Visuals are updated 48 times per second.
+                if(now>nextAnimationFrameInstance){
+                    nextAnimationFrameInstance += 1000000000L/ VISUAL_FRAME_RATE;
+                    try{
+                        // Retrieve the outcome of the previous frame and update visuals corresponding to the PlayPanelData and PlayerData:
+                        //FrameResult previousResult = resultHolder.get();
+                        FrameResult previousResult = resultHolder.get(0, TimeUnit.NANOSECONDS);
                         updatePlayPanelViews(previousResult.playPanelDataListCopy, previousResult.playerDataListCopy);
 
                         // Play sound effects:
@@ -220,6 +229,7 @@ public class GameScene extends Scene {
                     } catch (ExecutionException | InterruptedException e){
                         System.err.println("ExecutionException encountered. Stack trace:");
                         e.getCause().printStackTrace();
+                    } catch (TimeoutException e){
                     }
                 }
 
@@ -251,9 +261,6 @@ public class GameScene extends Scene {
         // pause the game if doing so is indicated:
         if(gameData.getPause().getData()) displayPauseMenu();
         else removePauseMenu();
-
-        // Display new chat messages in the chat box (clients do this in processPacketsAsClient):
-        if(isHost) chatBox.displayMessages(localPlayer.getMessagesOut().getData());
 
         // If the host has canceled the game, return to the main menu:
         if(gameData.getGameCanceled().getData()){
@@ -401,12 +408,24 @@ public class GameScene extends Scene {
                 }
             }*/
 
+            // Display new chat messages in the chat box (clients do this in processPacketsAsClient):
+            if(isHost){
+                if(localPlayer.getMessagesOut().getData().size()>0) System.out.println("   message: " + localPlayer.getMessagesOut().getData().get(0).getString());
+                chatBox.displayMessages(localPlayer.getMessagesOut().getData());
+            }
+
             // Process outgoing Packets
             if(isHost) prepareAndSendServerPacket();
             else prepareAndSendClientPacket();
 
             // Increment the missed packets count (used for detecting dropped players):
             incrementMissedPacketsCounts();
+
+            // clear messagesOut so that messages are only broadcast once:
+            localPlayer.getMessagesOut().changeClear();
+
+            // clear changedData so that changes are only broadcast once:
+            connectionManager.getSynchronizer().resetChangedData();
 
             return null;
         }
@@ -466,9 +485,11 @@ public class GameScene extends Scene {
                 long id = data.getParentID();
                 if(visitedLongs.contains(id) || id>=0) continue;
                 visitedLongs.add(id);
-                SynchronizedList<Message> clientMessages = (SynchronizedList<Message>)receivedSynchronizer.get(id,"messagesOut");
-                localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
-                clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
+                synchronized (localSynchronizer){
+                    SynchronizedList<Message> clientMessages = (SynchronizedList<Message>)receivedSynchronizer.get(id,"messagesOut");
+                    localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
+                    clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
+                }
             }
 
             // Prepare for the next iteration:
@@ -505,7 +526,6 @@ public class GameScene extends Scene {
         localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData().resetFlags();
         gameData.resetFlags();
-        gameData.resetMessages();
     }
 
     private void incrementMissedPacketsCounts(){
@@ -532,30 +552,14 @@ public class GameScene extends Scene {
             gameData.setMissedPacketsCount(HOST_ID,0);
 
             // perform special processing for messages:
-            SynchronizedList<Message> hostMessages = (SynchronizedList<Message>) connectionManager.getSynchronizer().get(HOST_ID, "messagesOut");
-            chatBox.displayMessages(hostMessages.getData());
-            hostMessages.setClear(); // so we don't display the same messages more than once before we receive a new packet.
+            synchronized (localSynchronizer){
+                SynchronizedList<Message> hostMessages = (SynchronizedList<Message>) connectionManager.getSynchronizer().get(HOST_ID, "messagesOut");
+                chatBox.displayMessages(hostMessages.getData());
+                hostMessages.setClear(); // so we don't display the same messages more than once before we receive a new packet.
+            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
-        }
-    }
-
-    private void updateGameData(GameData gameDataIn, boolean isHost){
-        if(isHost){
-            if(gameDataIn.isMessagesChanged()){
-                List<Message> messages = gameDataIn.getMessages();
-                System.out.println("host received messages. adding them to both messagesIn and messagesOut");
-                gameData.changeAddMessages(new LinkedList<>(messages)); // host re-broadcasts the messages out to all clients
-                //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
-            }
-        }
-        else{
-            if(gameDataIn.isMessagesChanged()){
-                List<Message> messages = gameDataIn.getMessages();
-                System.out.println("client received messages. Adding them to messagesIn");
-                //chatBox.addNewMessagesIn(new LinkedList<>(messages)); // the messages in this list will be displayed on the screen later this frame
-            }
         }
     }
 
@@ -574,7 +578,6 @@ public class GameScene extends Scene {
         localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData().resetFlags();
         gameData.resetFlags();
-        gameData.resetMessages();
     }
 
     // Todo: make this dialog automatically disappear if the player reconnects
@@ -624,7 +627,7 @@ public class GameScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            gameData.setMissedPacketsCount(player.getPlayerID(), (int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
+            gameData.setMissedPacketsCount(player.getPlayerID(), (int)(maxConsecutivePacketsMissed - DATA_FRAME_RATE *10));
             dialogStage.close();
         });
 
@@ -665,7 +668,7 @@ public class GameScene extends Scene {
         // wait a little bit to make sure the packet gets through:
         // todo: replace this with a blocking send() method of some sort?
         try{
-            Thread.sleep(2000/FRAME_RATE);
+            Thread.sleep(2000/ DATA_FRAME_RATE);
         } catch (InterruptedException e){
             System.err.println("InterruptedException encountered while trying to leave the game. Other players" +
                     "might not be informed that you've left but... oh well, leaving anyways.");

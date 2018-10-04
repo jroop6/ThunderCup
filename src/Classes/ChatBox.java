@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
-import javafx.beans.value.ChangeListener;
+import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -13,16 +13,40 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
+import java.util.concurrent.ExecutorService;
 
 import static javafx.scene.layout.HBox.setHgrow;
 import static javafx.scene.layout.VBox.setVgrow;
 
 
 /**
+ * How to Network Chat Messages:
+ * what the host does:
+ * 	every frame:
+ * 	 gather everyone's messages by calling hostSynchronizer.synchronizingWith(clientSynchronizer) for each clientSynchronizer
+ * 	 put all of these messages into the host's messagesOut (located in PlayerData) using changeAdd()
  *
+ * 	24 times per second:
+ * 	 display all messages in messagesOut to the chat
+ * 	 send a packet to all the other players
+ * 	 call changeClear() on our own messagesOut
+ *
+ * 	variable timing:
+ * 	 hitting enter in the chat should call changeAdd(newMessage) on messagesOut
+ *
+ *
+ * what the client does:
+ * 	every frame:
+ * 	 retrieve the host's messages by calling synchronizeWith()
+ * 	 display the host's new messages
+ *
+ * 	24 times per second:
+ * 	 send a packet to the host
+ * 	 call changeClear() on our own messagesOut
+ *
+ * 	variable timing:
+ * 	 hitting enter in the chat should call changeAdd(newMessage) on messagesOut
  */
 public class ChatBox extends StackPane {
     private final Font font = new Font(14.0);
@@ -33,7 +57,9 @@ public class ChatBox extends StackPane {
     private TextField textField;
     private HBox messageEntryContainer;
 
-    public ChatBox(GameData gameData, PlayerData localPlayerData, double minHeight, boolean showBackground, long parentID, Synchronizer synchronizer){
+    // dataChanger is the threadPool that should handle changes to the localPlayerData's SynchronizedDatas. If it is
+    // null, then the change will occur on the JavaFX Application Thread.
+    public ChatBox(PlayerData localPlayerData, double minHeight, boolean showBackground){
         this.showBackground = showBackground;
         setMinHeight(minHeight);
         setMaxHeight(minHeight);
@@ -94,14 +120,11 @@ public class ChatBox extends StackPane {
         verticalOrienter.getChildren().add(messageEntryContainer);
 
         // Make the scrollpane automatically scroll to the bottom of the messages when a new message is added:
-        messageContainer.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
-            @Override
-            public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
-                // If the user has manually moved the scroll away from the bottom, he/she is probably trying to read
-                // and old message, so only set the vValue if its scroll pane is already near the bottom:
-                if(messageScrollPane.getVvalue()>0.85 || messageContainer.getChildren().size()<15){
-                    messageScrollPane.setVvalue(messageScrollPane.getVmax());
-                }
+        messageContainer.boundsInLocalProperty().addListener((ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue)-> {
+            // If the user has manually moved the scroll away from the bottom, he/she is probably trying to read
+            // an old message, so only set the vValue if its scroll pane is already near the bottom:
+            if(messageScrollPane.getVvalue()>0.85 || messageContainer.getChildren().size()<15){
+                messageScrollPane.setVvalue(messageScrollPane.getVmax());
             }
         });
 
@@ -145,22 +168,6 @@ public class ChatBox extends StackPane {
         textField.requestFocus();
     }
 
-    // Displays all messages in the newMessagesIn queue and also clears that queue. This method is called by the JavaFX Application Thread.
-    /*public synchronized void displayNewMessagesIn(){
-        Message newMessageIn;
-        while((newMessageIn = newMessagesIn.poll())!=null){
-            Text newText = new Text(newMessageIn.getString());
-            newText.setFont(font);
-            if(!showBackground){
-                newText.setFill(Color.WHITE);
-                newText.setStroke(Color.BLACK);
-                newText.setStrokeWidth(1.0);
-                newText.setStyle("-fx-font-weight: bold");
-            }
-            messageContainer.getChildren().add(newText);
-        }
-    }*/
-
     public synchronized void displayMessage(Message message){
         Text newText = new Text(message.getString());
         newText.setFont(font);
@@ -170,7 +177,7 @@ public class ChatBox extends StackPane {
             newText.setStrokeWidth(1.0);
             newText.setStyle("-fx-font-weight: bold");
         }
-        messageContainer.getChildren().add(newText);
+        Platform.runLater(()->messageContainer.getChildren().add(newText));
     }
 
     public synchronized void displayMessages(List<Message> messages){

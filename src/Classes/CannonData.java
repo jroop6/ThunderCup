@@ -29,20 +29,22 @@ public class CannonData implements Serializable {
         backgroundAnimation = new AnimationData(cannonType.getBackgroundAnimation(cannonAnimationState));
         movingPartAnimation = new AnimationData(cannonType.getMovingPartAnimation(cannonAnimationState));
         foregroundAnimation = new AnimationData(cannonType.getForegroundAnimation(cannonAnimationState));
-        this.cannonType = new SynchronizedComparable<>("cannonType", cannonType,
-                (CannonType newVal, Mode mode, int i, int j)->{
-                    backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
-                    movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
-                    foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
-                },
-                (CannonType newVal, Mode mode, int i, int j)->{
-                    backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
-                    movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
-                    foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
-                },
-        SynchronizedData.Precedence.CLIENT,parentID,synchronizer,24);
-        cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,0);
-        cannonAngle.setTo(-80.0);
+        synchronized (synchronizer){
+            this.cannonType = new SynchronizedComparable<>("cannonType", cannonType,
+                    (CannonType newVal, Mode mode, int i, int j)->{
+                        backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
+                        movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
+                        foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
+                    },
+                    (CannonType newVal, Mode mode, int i, int j)->{
+                        backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
+                        movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
+                        foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
+                    },
+                    SynchronizedData.Precedence.CLIENT,parentID,synchronizer,24);
+            cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,0);
+            cannonAngle.setTo(-80.0);
+        }
     }
 
     public CannonData(CannonData other, long parentID, Synchronizer synchronizer){

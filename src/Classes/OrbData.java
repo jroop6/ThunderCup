@@ -9,7 +9,7 @@ import javafx.scene.shape.ArcType;
 
 import java.io.Serializable;
 
-import static Classes.GameScene.FRAME_RATE;
+import static Classes.GameScene.DATA_FRAME_RATE;
 
 public class OrbData extends PointInt implements Serializable{
     public static final double ORB_RADIUS = 23.0;
@@ -202,14 +202,14 @@ public class OrbData extends PointInt implements Serializable{
                 break;
             case TRANSFERRING:
                 currentFrame++;
-                if(currentFrame >TIME_TO_TRANSFER* FRAME_RATE){
+                if(currentFrame >TIME_TO_TRANSFER* DATA_FRAME_RATE){
                     setOrbAnimationState(OrbAnimationState.STATIC);
                     return true;
                 }
                 break;
             case THUNDERING:
                 currentFrame++;
-                if(currentFrame > TIME_TO_THUNDER* FRAME_RATE){
+                if(currentFrame > TIME_TO_THUNDER* DATA_FRAME_RATE){
                     // Todo: maybe play a more subtle sound effect or show some visual effect???
                     // todo: also, don't invoke the SoundManager here. This isn't the Application thread. Instead, add the sound to the soundEffectsToPlay set.
                     //SoundManager.playSoundEffect(orbThunder);
@@ -247,7 +247,7 @@ public class OrbData extends PointInt implements Serializable{
                 // draw an outline that shows how much time is left before the transfer is complete:
                 orbDrawer.setStroke(Color.rgb(0,255,255));
                 orbDrawer.setLineWidth(2.0);
-                orbDrawer.strokeArc(orbAnimation.getAnchorX()-ORB_RADIUS,orbAnimation.getAnchorY()-ORB_RADIUS + vibrationOffset,ORB_RADIUS*2,ORB_RADIUS*2,90,-360* currentFrame /(TIME_TO_TRANSFER* FRAME_RATE),ArcType.OPEN);
+                orbDrawer.strokeArc(orbAnimation.getAnchorX()-ORB_RADIUS,orbAnimation.getAnchorY()-ORB_RADIUS + vibrationOffset,ORB_RADIUS*2,ORB_RADIUS*2,90,-360* currentFrame /(TIME_TO_TRANSFER* DATA_FRAME_RATE),ArcType.OPEN);
         }
     }
 

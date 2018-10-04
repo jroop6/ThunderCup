@@ -28,29 +28,30 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
     }
 
     public void setModify(T newItem, int iPos, int jPos){
-        data[iPos][jPos] = newItem;
-        if(getExternalSetter()!=null) getExternalSetter().handle(data, Mode.SET, iPos, jPos);
+        synchronized (synchronizer){
+            data[iPos][jPos] = newItem;
+            if(getExternalSetter()!=null) getExternalSetter().handle(data, Mode.SET, iPos, jPos);
+        }
     }
 
     public void changeModify(T newItem, int iPos, int jPos){
-        data[iPos][jPos] = newItem;
-        if(getExternalChanger()!=null) getExternalChanger().handle(data, Mode.SET, iPos, jPos);
-        getSynchronizer().addToChangedData(this);
-    }
-
-    @Override
-    public T[][] getData(){
-        return data;
+        synchronized (synchronizer){
+            data[iPos][jPos] = newItem;
+            if(getExternalChanger()!=null) getExternalChanger().handle(data, Mode.SET, iPos, jPos);
+            getSynchronizer().addToChangedData(this);
+        }
     }
 
     @Override
     // note: newList must have the same dimensions as data.
     public void setTo(T[][] newArray){
-        if(data==null) data = newArray; // To avoid a NullPointerException during instantiation of this class.
-        for(int i=0; i<newArray.length; i++){
-            T[] row = newArray[i];
-            for(int j=0; j<row.length; j++){
-                setModify(newArray[i][j],i,j);
+        synchronized (synchronizer){
+            if(data==null) data = newArray; // To avoid a NullPointerException during instantiation of this class.
+            for(int i=0; i<newArray.length; i++){
+                T[] row = newArray[i];
+                for(int j=0; j<row.length; j++){
+                    setModify(newArray[i][j],i,j);
+                }
             }
         }
     }
@@ -58,13 +59,16 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
     @Override
     // note: newList must have the same dimensions as data.
     public void changeTo(T[][] newArray){
-        if(data==null) data = newArray; // To avoid a NullPointerException.
-        for(int i=0; i<newArray.length; i++){
-            T[] row = newArray[i];
-            for(int j=0; j<row.length; j++){
-                changeModify(newArray[i][j],i,j);
+        synchronized(synchronizer){
+            if(data==null) data = newArray; // To avoid a NullPointerException.
+            for(int i=0; i<newArray.length; i++){
+                T[] row = newArray[i];
+                for(int j=0; j<row.length; j++){
+                    changeModify(newArray[i][j],i,j);
+                }
             }
         }
+        getSynchronizer().addToChangedData(this);
     }
 
 

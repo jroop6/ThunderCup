@@ -42,108 +42,127 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     }
 
     public void setAdd(T newItem){
-        data.add(newItem);
-        int index = data.indexOf(newItem);
-        LinkedList<T> newItemInList = new LinkedList<>(Collections.singleton(newItem));
-        if(getExternalSetter()!=null) getExternalSetter().handle(newItemInList, Mode.ADD, index, index);
+        synchronized (synchronizer){
+            data.add(newItem);
+            int index = data.indexOf(newItem);
+            LinkedList<T> newItemInList = new LinkedList<>(Collections.singleton(newItem));
+            if(getExternalSetter()!=null) getExternalSetter().handle(newItemInList, Mode.ADD, index, index);
+        }
     }
 
     public void setAddAll(Collection<T> newItems){
-        for(T t : newItems){
-            setAdd(t);
+        synchronized (synchronizer){
+            for(T t : newItems){
+                setAdd(t);
+            }
         }
     }
 
     public void setRemove(T itemToRemove){
-        int index = data.indexOf(itemToRemove);
-        LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(itemToRemove));
-        data.remove(itemToRemove);
-        if(getExternalSetter()!=null) getExternalSetter().handle(removedItemInList, Mode.REMOVE, index, index);
+        synchronized (synchronizer){
+            int index = data.indexOf(itemToRemove);
+            LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(itemToRemove));
+            data.remove(itemToRemove);
+            if(getExternalSetter()!=null) getExternalSetter().handle(removedItemInList, Mode.REMOVE, index, index);
+        }
     }
 
     public void setRemoveAll(Collection<T> itemsToRemove){
-        for(T t : itemsToRemove){
-            setRemove(t);
+        synchronized (synchronizer){
+            for(T t : itemsToRemove){
+                setRemove(t);
+            }
         }
     }
 
     public void setClear(){
-        setRemoveAll(new LinkedList<>(data));
+        synchronized (synchronizer){
+            setRemoveAll(new LinkedList<>(data));
+        }
     }
 
     public void changeAdd(T newItem){
-        data.add(newItem);
-        int index = data.indexOf(newItem);
-        LinkedList<T> newItemInList = new LinkedList<>(Collections.singletonList(newItem));
-        if(getExternalChanger()!=null) getExternalChanger().handle(newItemInList, Mode.ADD, index, index);
-        getSynchronizer().addToChangedData(this);
+        synchronized (synchronizer){
+            data.add(newItem);
+            int index = data.indexOf(newItem);
+            LinkedList<T> newItemInList = new LinkedList<>(Collections.singletonList(newItem));
+            if(getExternalChanger()!=null) getExternalChanger().handle(newItemInList, Mode.ADD, index, index);
+            getSynchronizer().addToChangedData(this);
+        }
     }
 
     public void changeAddAll(Collection<T> newItems){
-        for(T t : newItems){
-            changeAdd(t);
+        synchronized (synchronizer){
+            for(T t : newItems){
+                changeAdd(t);
+            }
         }
     }
 
     public void changeRemove(T itemToRemove){
-        int index = data.indexOf(itemToRemove);
-        LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(itemToRemove));
-        data.remove(itemToRemove);
-        if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
-        getSynchronizer().addToChangedData(this);
+        synchronized (synchronizer){
+            int index = data.indexOf(itemToRemove);
+            LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(itemToRemove));
+            data.remove(itemToRemove);
+            if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
+            getSynchronizer().addToChangedData(this);
+        }
     }
 
     public void changeRemoveAll(Collection<T> itemsToRemove){
-        for(T t : itemsToRemove){
-            changeRemove(t);
+        synchronized (synchronizer){
+            for(T t : itemsToRemove){
+                changeRemove(t);
+            }
         }
     }
 
     public void changeClear(){
-        changeRemoveAll(new LinkedList<>(data));
-    }
-
-    @Override
-    public LinkedList<T> getData(){
-        return data;
+        synchronized (synchronizer){
+            changeRemoveAll(new LinkedList<>(data));
+        }
     }
 
     @Override
     public void setTo(LinkedList<T> newList){
-        // call the ExternalSetter on each existing element as it is removed.
-        if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
-        else setRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
+        synchronized (synchronizer){
+            // call the ExternalSetter on each existing element as it is removed.
+            if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
+            else setRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
 
-        // create a temporary copy of the new list.
-        LinkedList<T> newListCopy = new LinkedList<>(newList);
+            // create a temporary copy of the new list.
+            LinkedList<T> newListCopy = new LinkedList<>(newList);
 
-        // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
-        // list. This is done to ensure that the index passed to the ExternalSetter is correct.
-        data = newList;
-        try{
-            data.clear();
-        } catch(UnsupportedOperationException e){
-            System.err.println("Warning! A List passed to the setTo() method in SynchronizedList appears to be " +
-                    "fixed-size (perhaps you used Arrays.asList()?). SynchronizedList requires a List that supports " +
-                    "add, remove, and clear. Defaulting to a LinkedList.");
-            data = new LinkedList<>();
+            // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
+            // list. This is done to ensure that the index passed to the ExternalSetter is correct.
+            data = newList;
+            try{
+                data.clear();
+            } catch(UnsupportedOperationException e){
+                System.err.println("Warning! A List passed to the setTo() method in SynchronizedList appears to be " +
+                        "fixed-size (perhaps you used Arrays.asList()?). SynchronizedList requires a List that supports " +
+                        "add, remove, and clear. Defaulting to a LinkedList.");
+                data = new LinkedList<>();
+            }
+            setAddAll(newListCopy);
         }
-        setAddAll(newListCopy);
     }
 
     @Override
     public void changeTo(LinkedList<T> newList){
-        if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
-        changeRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
+        synchronized (synchronizer){
+            if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
+            changeRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
 
-        // create a temporary copy of the new list.
-        LinkedList<T> newListCopy = new LinkedList<>(newList);
+            // create a temporary copy of the new list.
+            LinkedList<T> newListCopy = new LinkedList<>(newList);
 
-        // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
-        // list. This is done to ensure that the index passed to the ExternalSetter is correct.
-        data = newList;
-        data.clear();
-        changeAddAll(newListCopy);
+            // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
+            // list. This is done to ensure that the index passed to the ExternalSetter is correct.
+            data = newList;
+            data.clear();
+            changeAddAll(newListCopy);
+        }
     }
 
     public static void main(String[] args){

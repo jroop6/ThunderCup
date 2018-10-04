@@ -22,7 +22,7 @@ import javafx.scene.text.TextAlignment;
 import java.util.*;
 import java.util.List;
 
-import static Classes.GameScene.FRAME_RATE;
+import static Classes.GameScene.DATA_FRAME_RATE;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
 import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.NetworkCommunication.PlayPanelData.SHOTS_BETWEEN_DROPS;
@@ -176,7 +176,7 @@ public class PlayPanel extends Pane {
         List<OrbData> arrayOrbsToBurst = new LinkedList<>(); // Orbs in the array that will be burst this frame
 
         // Most of the computation work is done in here. All the lists are updated via side-effects:
-        playPanelUtility.simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double) FRAME_RATE);
+        playPanelUtility.simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double) DATA_FRAME_RATE);
 
         // Advance the animation frame of the existing visual flourishes:
         List<AnimationData> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
@@ -343,8 +343,8 @@ public class PlayPanel extends Pane {
     private List<OrbData> advanceDroppingOrbs(){
         List<OrbData> orbsToTransfer = new LinkedList<>();
         for(OrbData orbData : playPanelData.getDroppingOrbs()){
-            orbData.setSpeed(orbData.getSpeed() + GameScene.GRAVITY/ FRAME_RATE);
-            orbData.relocate(orbData.getXPos(), orbData.getYPos() + orbData.getSpeed()/ FRAME_RATE);
+            orbData.setSpeed(orbData.getSpeed() + GameScene.GRAVITY/ DATA_FRAME_RATE);
+            orbData.relocate(orbData.getXPos(), orbData.getYPos() + orbData.getSpeed()/ DATA_FRAME_RATE);
             if(orbData.getYPos() > PLAYPANEL_HEIGHT){
                 orbsToTransfer.add(orbData);
             }
@@ -374,51 +374,53 @@ public class PlayPanel extends Pane {
         orbDrawer.setLineWidth(2.0);
         orbDrawer.strokeLine(0,deathLineY,liveBoundary.getWidth(),deathLineY);
 
-        // Paint dropping Orbs:
-        for(OrbData orbData : playPanelData.getDroppingOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
+        synchronized (playerList.get(0).getSynchronizer()){
+            // Paint dropping Orbs:
+            for(OrbData orbData : playPanelData.getDroppingOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
 
-        // If we are close to adding 1 more level to the orbArray, apply a vibration effect to the array orbs:
-        if(playPanelData.getShotsUntilNewRow()<=VIBRATION_FREQUENCIES.length && playPanelData.getShotsUntilNewRow()>0){
-            vibrationOffset = VIBRATION_MAGNITUDES[playPanelData.getShotsUntilNewRow()-1]*Math.sin(2*PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000);
-        }
-
-        // paint Array orbs:
-        OrbData[][] orbArray = playPanelData.getOrbArray();
-        for(int i=0; i<ARRAY_HEIGHT; ++i){
-            for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                orbArray[i][j].drawSelf(orbDrawer, vibrationOffset);
+            // If we are close to adding 1 more level to the orbArray, apply a vibration effect to the array orbs:
+            if(playPanelData.getShotsUntilNewRow()<=VIBRATION_FREQUENCIES.length && playPanelData.getShotsUntilNewRow()>0){
+                vibrationOffset = VIBRATION_MAGNITUDES[playPanelData.getShotsUntilNewRow()-1]*Math.sin(2*PI*System.nanoTime()*VIBRATION_FREQUENCIES[playPanelData.getShotsUntilNewRow()-1]/1000000000);
             }
-        }
 
-        // paint Death orbs:
-        for(OrbData orbData : playPanelData.getDeathOrbs()) orbData.drawSelf(orbDrawer,vibrationOffset);
-
-        // paint VisualFlourishes:
-        for(AnimationData visualFlourish : playPanelData.getVisualFlourishes()) visualFlourish.drawSelf(orbDrawer);
-
-        // paint transferring orbs:
-        for(OrbData orbData : playPanelData.getTransferInOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
-
-        // remaining orbs should not vibrate:
-        vibrationOffset = 0.0;
-
-        // Paint bursting orbs:
-        for(OrbData orbData : playPanelData.getBurstingOrbs()){
-            orbData.drawSelf(orbDrawer, vibrationOffset);
-        }
-
-        // Paint each player and his/her ammunition orbs:
-        for(PlayerData playerData : playerDataList){
-            if(playerData.getTeam().getData() == playPanelData.getTeam()){
-                playerData.drawSelf(orbDrawer);
-                List<OrbData> ammunitionOrbs = playerData.getAmmunition();
-                ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
-                ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
+            // paint Array orbs:
+            OrbData[][] orbArray = playPanelData.getOrbArray();
+            for(int i=0; i<ARRAY_HEIGHT; ++i){
+                for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                    orbArray[i][j].drawSelf(orbDrawer, vibrationOffset);
+                }
             }
-        }
 
-        // Paint shooting orbs:
-        for(OrbData orbData : playPanelData.getShootingOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
+            // paint Death orbs:
+            for(OrbData orbData : playPanelData.getDeathOrbs()) orbData.drawSelf(orbDrawer,vibrationOffset);
+
+            // paint VisualFlourishes:
+            for(AnimationData visualFlourish : playPanelData.getVisualFlourishes()) visualFlourish.drawSelf(orbDrawer);
+
+            // paint transferring orbs:
+            for(OrbData orbData : playPanelData.getTransferInOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
+
+            // remaining orbs should not vibrate:
+            vibrationOffset = 0.0;
+
+            // Paint bursting orbs:
+            for(OrbData orbData : playPanelData.getBurstingOrbs()){
+                orbData.drawSelf(orbDrawer, vibrationOffset);
+            }
+
+            // Paint each player and his/her ammunition orbs:
+            for(PlayerData playerData : playerDataList){
+                if(playerData.getTeam().getData() == playPanelData.getTeam()){
+                    playerData.drawSelf(orbDrawer);
+                    List<OrbData> ammunitionOrbs = playerData.getAmmunition();
+                    ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
+                    ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
+                }
+            }
+
+            // Paint shooting orbs:
+            for(OrbData orbData : playPanelData.getShootingOrbs()) orbData.drawSelf(orbDrawer, vibrationOffset);
+        }
     }
 
     public Random getRandomTransferOrbGenerator(){

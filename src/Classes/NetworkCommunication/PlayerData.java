@@ -28,10 +28,10 @@ public class PlayerData implements Serializable {
     public static final long GAME_ID = 0L;
 
     private final long playerID;
-    private SynchronizedComparable<PlayerType> playerType;
     private int playerPos; // The position index of this player in his/her playpanel (0 or greater)
     private boolean frozen = false; // Todo: to be superseded with CharacterAnimationState.DEFEAT/DISCONNECTED
 
+    private SynchronizedComparable<PlayerType> playerType;
     protected SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
     private SynchronizedComparable<Boolean> resigned;
@@ -71,57 +71,64 @@ public class PlayerData implements Serializable {
 
     public PlayerData(String username, PlayerType playerType, long playerID, Synchronizer synchronizer){
         this.playerID = playerID;
-        this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
-        this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
-        messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
         this.synchronizer = synchronizer;
-        CharacterType characterEnum;
-        CannonType cannonType;
 
+        CharacterType myCharacterEnum;
+        CannonType myCannonType;
+        int myTeam;
         switch(playerType){
             case UNCLAIMED:
                 // corresponds to an open slot in the MultiplayerSelectionScene
-                characterEnum = CharacterType.UNKNOWN_CHARACTER;
-                cannonType = CannonType.UNKNOWN_CANNON;
-                team = new SynchronizedComparable<>("team",0, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                myCharacterEnum = CharacterType.UNKNOWN_CHARACTER;
+                myCannonType = CannonType.UNKNOWN_CANNON;
+                myTeam = 0;
                 break;
             case BOT:
-                characterEnum = CharacterType.FILLY_BOT_MEDIUM;
-                cannonType = CannonType.BOT_CANNON;
-                team = new SynchronizedComparable<>("team",1, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                myCharacterEnum = CharacterType.FILLY_BOT_MEDIUM;
+                myCannonType = CannonType.BOT_CANNON;
+                myTeam = 1;
                 break;
             default:
                 // Otherwise, assign the player the default character and cannon:
-                characterEnum = CharacterType.BLITZ;
-                cannonType = CannonType.BASIC_CANNON;
-                team = new SynchronizedComparable<>("team",1, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+                myCharacterEnum = CharacterType.BLITZ;
+                myCannonType = CannonType.BASIC_CANNON;
+                myTeam = 1;
                 break;
         }
 
-        this.cannonData = new CannonData(cannonType, this.playerID, synchronizer);
-        this.characterData = new CharacterData(characterEnum, this.playerID, synchronizer);
+        synchronized (synchronizer){
+            this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
+            this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
+            messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
+            team = new SynchronizedComparable<>("team",myTeam, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
+        }
 
-        resigned = new SynchronizedComparable<>("resigned", false,
-                (Boolean newVal, Mode mode, int i, int j)->{
-                    characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
-                    cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
-                },
-                (Boolean newVal, Mode mode, int i, int j)->{
-                    characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
-                    cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
-                },
-                SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
+        this.cannonData = new CannonData(myCannonType, this.playerID, synchronizer);
+        this.characterData = new CharacterData(myCharacterEnum, this.playerID, synchronizer);
 
-        // Adjust precedences on the networked data:
-        switch(playerType){
-            case REMOTE_CLIENTVIEW:
-                this.username.setPrecedence(SynchronizedData.Precedence.HOST);
-                this.team.setPrecedence(SynchronizedData.Precedence.HOST);
-                this.characterData.getCharacterType().setPrecedence(SynchronizedData.Precedence.HOST);
-                this.cannonData.getCannonType().setPrecedence(SynchronizedData.Precedence.HOST);
-                this.messagesOut.setPrecedence(SynchronizedData.Precedence.HOST);
-                this.resigned.setPrecedence(SynchronizedData.Precedence.HOST);
-                break;
+        synchronized(synchronizer){
+            resigned = new SynchronizedComparable<>("resigned", false,
+                    (Boolean newVal, Mode mode, int i, int j)->{
+                        characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
+                        cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
+                    },
+                    (Boolean newVal, Mode mode, int i, int j)->{
+                        characterData.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
+                        cannonData.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
+                    },
+                    SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
+
+            // Adjust precedences on the networked data:
+            switch(playerType){
+                case REMOTE_CLIENTVIEW:
+                    this.username.setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.team.setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.characterData.getCharacterType().setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.cannonData.getCannonType().setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.messagesOut.setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.resigned.setPrecedence(SynchronizedData.Precedence.HOST);
+                    break;
+            }
         }
     }
 
@@ -212,10 +219,6 @@ public class PlayerData implements Serializable {
         this.defeated = defeated;
         defeatedChanged = true;
     }
-    public void changeCannonAngle(double cannonAngle) {
-        cannonData.setAngle(cannonAngle);
-        // no change flag is needed for cannon angle
-    }
     public void changeLatency(long latency){
         this.latency = latency;
         // no change flag is needed for latency
@@ -283,9 +286,6 @@ public class PlayerData implements Serializable {
     public void setDefeated(boolean defeated){
         this.defeated = defeated;
     }
-    public void setCannonAngle(double cannonAngle){
-        cannonData.setAngle(cannonAngle);
-    }
     public void setLatency(long latency){
         this.latency = latency;
     }
@@ -338,9 +338,6 @@ public class PlayerData implements Serializable {
     }
 
     /* Direct Getters: These are called to get the actual player data*/
-    public double getCannonAngle(){
-        return cannonData.getAngle();
-    }
     public SynchronizedComparable<String> getUsername(){
         return username;
     }
@@ -444,27 +441,35 @@ public class PlayerData implements Serializable {
 
 
     public void incrementCharacterEnum(){
-        CharacterType nextType = characterData.getCharacterType().getData().next();
-        if (playerType.getData() == PlayerType.LOCAL){
-            while(!nextType.isPlayable()){
-                nextType = nextType.next();
+        synchronized (synchronizer){
+            CharacterType nextType = characterData.getCharacterType().getData().next();
+            if (playerType.getData() == PlayerType.LOCAL){
+                while(!nextType.isPlayable()){
+                    nextType = nextType.next();
+                }
             }
-        }
-        else{ // player must be an instance of BotPlayer
-            while(nextType.getBotDifficulty()==null){
-                nextType = nextType.next();
+            else if(playerType.getData() == PlayerType.BOT){
+                while(nextType.getBotDifficulty()==null){
+                    nextType = nextType.next();
+                }
+                username.changeTo("fillyBot [" + nextType.getBotDifficulty() +"]");
             }
-            username.changeTo("fillyBot [" + nextType.getBotDifficulty() +"]");
+            else{ // this should never happen, but just in case...
+                System.err.println("The user has attempted to change a characterType they down not own.");
+                return;
+            }
+            characterData.getCharacterType().changeTo(nextType);
         }
-        characterData.getCharacterType().changeTo(nextType);
     }
 
     public void incrementCannonEnum(){
-        CannonType nextType = getCannonType().getData().next();
-        while(!nextType.isSelectable()){
-            nextType = nextType.next();
+        synchronized (synchronizer){
+            CannonType nextType = getCannonType().getData().next();
+            while(!nextType.isSelectable()){
+                nextType = nextType.next();
+            }
+            cannonData.getCannonType().changeTo(nextType);
         }
-        cannonData.getCannonType().changeTo(nextType);
     }
 
     public void changeResignPlayer(){
@@ -488,7 +493,6 @@ public class PlayerData implements Serializable {
 
     // Points the cannon at a position given in scene coordinates.
     public void pointCannon(double sceneX, double sceneY){
-        if(getDefeated()) return;
         Point2D localLoc = playPanel.sceneToLocal(sceneX, sceneY);
         double mouseRelativeX = localLoc.getX() - cannonData.getPosX();
         double mouseRelativeY = localLoc.getY() - cannonData.getPosY(); // recall that the y-axis points down.
@@ -500,7 +504,7 @@ public class PlayerData implements Serializable {
     // Points the cannon at a given angle, in degrees (0 degrees points to the right)
     public void pointCannon(double angle){
         if(getDefeated()) return;
-        changeCannonAngle(angle); // updates model
+        cannonData.setAngle(angle);
     }
 
     private void setFireCannon(){
@@ -551,8 +555,7 @@ public class PlayerData implements Serializable {
             changeFrozen(newPlayerData.getFrozen()); // updates model
         }
 
-        changeCannonAngle(newPlayerData.getCannonAngle()); //updates model
-
+        cannonData.setAngle(newPlayerData.getCannonData().getAngle());
     }
 
 
@@ -576,7 +579,7 @@ public class PlayerData implements Serializable {
 
         // remote players' cannon angles are always updated:
         if(!isLocalPlayer){
-            setCannonAngle(newPlayerData.getCannonAngle()); //updates model
+            cannonData.setAngle(newPlayerData.getCannonData().getAngle());
         }
 
         // players' latencies are always updated:
@@ -648,15 +651,21 @@ public class PlayerData implements Serializable {
         if(isFrozenChanged()){
             freezePlayer(); // updates view
         }
-        if(characterImageView!=null) characterData.drawSelf(characterImageView);
-        if(cannonImageView!=null) cannonData.drawSelf(cannonImageView);
-
+        synchronized (synchronizer){ // Due to the incrementCharacterEnum and incrementCannonEnum methods, it is possible that the animationDatas in characterData and cannonData could change while we're trying to access them. Hence, we must synchronize here.
+            if(characterImageView!=null) characterData.drawSelf(characterImageView);
+            if(cannonImageView!=null) cannonData.drawSelf(cannonImageView);
+        }
     }
 
     //todo: implement this
     public void drawSelf(GraphicsContext graphicsContext){
+        // Note: I would call synchronize(synchronizer) here, but this method is only ever called within a synchronized
+        // block of PlayPanel.repaint(). Due to PlayerData.incrementCharacterEnum() PlayerData.incrementCannonEnum,
+        // CharacterData().setCharacterAnimationState() and CannonData.setCannonAnimationState(), it is possible that
+        // the animationDatas in characterData and cannonData could change while we're trying to access them. Hence,
+        // we must make sure this method is synchronized.
         if(isFrozenChanged()){
-            freezePlayer(); // updates view
+            freezePlayer();
         }
         characterData.drawSelf(graphicsContext);
         cannonData.drawSelf(graphicsContext);

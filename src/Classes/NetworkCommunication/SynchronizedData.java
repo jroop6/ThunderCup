@@ -8,15 +8,15 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     protected T data;
 
     // Keys for uniquely identifying this data in a HashMap:
-    private long parentID;
-    private String name;
+    private final long parentID;
+    private final String name;
 
     // these functional interfaces provide additional code that is executed whenever this data is set or changed.
     private Setable<T> externalSetter;
     private Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
-    private Synchronizer synchronizer;
+    protected Synchronizer synchronizer;
     private Precedence precedence;
     private int syncTolerance;
     private int framesOutOfSync = 0;
@@ -64,11 +64,13 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
         return parentID + name;
     }
 
-    // This should try to return a read-only view of the data:
-    abstract public T getData();
-    // handle is called by whichever machine holds precedence (host or client):
+    public T getData(){
+        return data;
+    }
+
+    // changeTo is called by whichever machine holds precedence (host or client):
     abstract public void changeTo(T newValue);
-    // handle is called by the machine that does NOT have precedence:
+    // setTo is called by the machine that does NOT have precedence:
     abstract public void setTo(T newValue);
 
     public Precedence getPrecedence(){

@@ -20,6 +20,7 @@ import java.util.Optional;
 /**
  * Displays a player in the MultiplayerSelectionScene.
  */
+//todo: there are a couple of places where I use synchronized(). The current implementation of MultiplayerSelectionScene is single-threaded, however. Consider removing these in the final version of the game if it stays single-threaded.
 public class PlayerSlot extends StackPane{
 
     // Character and Cannon positioning on the PlayerSlot:
@@ -43,8 +44,6 @@ public class PlayerSlot extends StackPane{
     // EventHandlers whose references are needed so they can be de-registered:
     private EventHandler<MouseEvent> characterClickHandler;
     private EventHandler<MouseEvent> cannonClickHandler;
-    private EventHandler<MouseEvent> usernameBtnEnteredHandler;
-    private EventHandler<MouseEvent> usernameBtnExitedHandler;
 
     PlayerSlot(PlayerData playerData, boolean isHost){
         setAlignment(Pos.TOP_LEFT);
@@ -80,8 +79,8 @@ public class PlayerSlot extends StackPane{
         usernameBtn.setFont(new Font(48.0));
         ImageView unselectedImage = ButtonType.USERNAME.getUnselectedImageView();
         ImageView selectedImage = ButtonType.USERNAME.getSelectedImageView();
-        usernameBtnEnteredHandler = (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(selectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
-        usernameBtnExitedHandler = (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
+        usernameBtn.addEventHandler(MouseEvent.MOUSE_ENTERED, (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(selectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT))));
+        usernameBtn.addEventHandler(MouseEvent.MOUSE_EXITED, (event) -> usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT))));
         usernameBtn.setBackground(new Background(new BackgroundImage(unselectedImage.getImage(),BackgroundRepeat.NO_REPEAT,BackgroundRepeat.NO_REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT)));
         usernameBtn.setMaxWidth(background.getImage().getWidth());
         gridPane.add(usernameBtn,0,7);
@@ -156,17 +155,13 @@ public class PlayerSlot extends StackPane{
         else clickToChange.setVisible(false);
 
         // If the player is the localPlayer, then allow the user to click on his/her username to modify it. Any old
-        // EventHandlers are de-registered before the new ones are registered with the new PlayerData.
+        // EventHandler is de-registered before the new one is registered with the new PlayerData.
         usernameBtn.setOnAction(null);
-        if(usernameBtnEnteredHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
-        if(usernameBtnExitedHandler != null) usernameBtn.removeEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnExitedHandler);
         if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL){
             usernameBtn.setOnAction((event) -> {
-                String newName = displayChangeUsernameDialog(playerData.getUsername().getData());
+                String newName = displayChangeUsernameDialog(playerData);
                 playerData.getUsername().changeTo(newName);
             });
-            usernameBtn.addEventHandler(MouseEvent.MOUSE_ENTERED, usernameBtnEnteredHandler);
-            usernameBtn.addEventHandler(MouseEvent.MOUSE_EXITED, usernameBtnExitedHandler);
         }
         else usernameBtn.setBackground(null);
 
@@ -195,7 +190,11 @@ public class PlayerSlot extends StackPane{
             System.out.println("team choice is being turned off");
             teamChoice.setVisible(false);
             teamLabel.setVisible(true);
-            teamLabel.setText("Team " + playerData.getTeam().getData());
+            int team;
+            synchronized (playerData.getSynchronizer()){ // make sure no one else is modifying the data as we try to access it.
+                team = playerData.getTeam().getData();
+            }
+            teamLabel.setText("Team " + team);
         }
     }
 
@@ -212,9 +211,15 @@ public class PlayerSlot extends StackPane{
         if(latency<1000000) latencyLabel.setText(String.format("Latency: %d microseconds",latency/1000L));
         else latencyLabel.setText(String.format("Latency: %d milliseconds",latency/1000000L));
 
-        usernameBtn.setText(playerData.getUsername().getData());
+        String username;
+        PlayerData.PlayerType playerType;
+        synchronized (playerData.getSynchronizer()){ // make sure no one is changing the data while we try to access it
+            username = playerData.getUsername().getData();
+            playerType = playerData.getPlayerType().getData();
+        }
+        usernameBtn.setText(username);
 
-        if(playerData.getPlayerType().getData() == PlayerData.PlayerType.LOCAL || (isHost && playerData.getPlayerType().getData() == PlayerData.PlayerType.BOT)){
+        if(playerType == PlayerData.PlayerType.LOCAL || (isHost && playerType == PlayerData.PlayerType.BOT)){
             teamChoice.getSelectionModel().select(playerData.getTeam().getData()-1);
         }
         else{
@@ -240,7 +245,11 @@ public class PlayerSlot extends StackPane{
         return btn;
     }
 
-    private String displayChangeUsernameDialog(String oldName){
+    private String displayChangeUsernameDialog(PlayerData playerData){
+        String oldName;
+        synchronized (playerData.getSynchronizer()){ // make sure no one else is changing the data while we try to access it.
+            oldName = playerData.getUsername().getData();
+        }
         String newName = oldName;
         TextInputDialog newNameAsker = new TextInputDialog(oldName);
         newNameAsker.setTitle("Change username");
@@ -253,6 +262,4 @@ public class PlayerSlot extends StackPane{
         }
         return newName;
     }
-
-
 }

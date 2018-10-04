@@ -20,25 +20,24 @@ public class SynchronizedComparable<T extends Comparable<T> & Serializable> exte
     }
 
     @Override
-    public T getData(){
-        return data;
-    }
-
-    @Override
     public int compareTo(SynchronizedData<T> other){
         return data.compareTo(other.data);
     }
 
     @Override
     public void changeTo(T newValue){
-        if(getExternalChanger()!=null) getExternalChanger().handle(newValue, Mode.SET, 0, 0);
-        data = newValue;
-        getSynchronizer().addToChangedData(this);
+        synchronized(synchronizer){
+            if(getExternalChanger()!=null) getExternalChanger().handle(newValue, Mode.SET, 0, 0);
+            data = newValue;
+            getSynchronizer().addToChangedData(this);
+        }
     }
 
     @Override
     public void setTo(T newValue){
-        if(getExternalSetter()!=null) getExternalSetter().handle(newValue, Mode.SET, 0, 0);
-        data = newValue;
+        synchronized(synchronizer){
+            if(getExternalSetter()!=null) getExternalSetter().handle(newValue, Mode.SET, 0, 0);
+            data = newValue;
+        }
     }
 }

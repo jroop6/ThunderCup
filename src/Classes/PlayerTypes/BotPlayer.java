@@ -46,6 +46,8 @@ public class BotPlayer extends PlayerData{
 
     public BotPlayer(CharacterType characterType, Synchronizer synchronizer){
         super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, synchronizer);
+        difficulty = characterData.getCharacterType().getData().getBotDifficulty();
+        transitionFrame = difficulty.getThinkingFrames();
     }
 
     public void tick(){
@@ -430,12 +432,12 @@ public class BotPlayer extends PlayerData{
         private Random rand = new Random();
 
         Difficulty(double thinkingTime, double preMovementTime, double broadMovementTime, double intercessionTime, double fineMovementTime, double firingTime, double broadMovementOffset, double fineMovementOffset, double stupidity){
-            thinkingFrames = (int)Math.round(thinkingTime*GameScene.FRAME_RATE);
-            preMovementFrames = (int)Math.round(preMovementTime*GameScene.FRAME_RATE);
-            broadMovementFrames = (int)Math.round(broadMovementTime*GameScene.FRAME_RATE);
-            intercessionFrames = (int)Math.round(intercessionTime*GameScene.FRAME_RATE);
-            fineMovementFrames = (int)Math.round(fineMovementTime*GameScene.FRAME_RATE);
-            firingFrames = (int)Math.round(firingTime*GameScene.FRAME_RATE);
+            thinkingFrames = (int)Math.round(thinkingTime*GameScene.DATA_FRAME_RATE);
+            preMovementFrames = (int)Math.round(preMovementTime*GameScene.DATA_FRAME_RATE);
+            broadMovementFrames = (int)Math.round(broadMovementTime*GameScene.DATA_FRAME_RATE);
+            intercessionFrames = (int)Math.round(intercessionTime*GameScene.DATA_FRAME_RATE);
+            fineMovementFrames = (int)Math.round(fineMovementTime*GameScene.DATA_FRAME_RATE);
+            firingFrames = (int)Math.round(firingTime*GameScene.DATA_FRAME_RATE);
             this.broadMovementOffset = broadMovementOffset;
             this.fineMovementOffset = fineMovementOffset;
             this.stupidity = stupidity;

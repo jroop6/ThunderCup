@@ -1,38 +1,19 @@
 package Classes.NetworkCommunication;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static Classes.NetworkCommunication.PlayerData.GAME_ID;
 
-/**
- * There are 3 collections of messages - messages here in GameData, and newMessagesIn and newMessagesOut in the ChatBox
- * class. When a player types a message into the TextBox and hits ENTER, the message is added to newMessagesOut by the
- * JavaFX Application Thread. Later, in the updateGameData method of GameScene, a worker thread moves this message into
- * the messages list so that it can be broadcast to other players in a packet. The receiving player's worker thread
- * copies this message over to newMessagesIn. Finally, the JavaFX thread reads newMessagesIn and displays the messages
- * in the ChatBox. Separating messages and messagesOut prevents duplicate messages from appearing in the ChatBox. Otherwise,
- * a client wouldn't be able to distinguish messages that were just typed by the user from messages that were echoed
- * back by the host computer. The synchronized newMessagesIn queue in ChatBox is necessary to prevent a race condition.
- * If we were to put newly-typed messages directly into messages, then it would be possible for the following sequence
- * of events to happen in this order:
- *    In prepareAndSendXXXXPacket(), the worker thread creates a copy of gameData and puts it into a Packet.
- *    the JavaFX application thread adds a new message to gameData (bad timing!)
- *    the worker thread sends the Packet off and calls resetMessages(), destroying the message that was just added.
- */
 public class GameData implements Serializable{
-    private SynchronizedComparable<Boolean> pause;
     private SynchronizedComparable<Boolean> gameCanceled;
-    private List<Message> messages = new ArrayList<>(); // new messages to send to other players
+    private SynchronizedComparable<Boolean> pause;
+    private SynchronizedComparable<Boolean> gameStarted;
     private String ammunitionUrl = "";
     private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
-    private SynchronizedComparable<Boolean> gameStarted;
 
     // Flags indicating changes to GameData:
-    private boolean messagesChanged = false;
     private boolean pauseRequested = false;
     private boolean gameStartedRequested = false;
     private boolean ammunitionUrlRequested = false;
@@ -44,15 +25,16 @@ public class GameData implements Serializable{
     private int victoriousTeam;
 
     public GameData(Synchronizer synchronizer){
-        gameCanceled = new SynchronizedComparable<>("cancelGame", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
-        pause = new SynchronizedComparable<>("pause", new Boolean(false), SynchronizedData.Precedence.CLIENT, GAME_ID, synchronizer);
-        gameStarted = new SynchronizedComparable<>("gameStarted", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
+        synchronized (synchronizer){
+            gameCanceled = new SynchronizedComparable<>("cancelGame", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
+            pause = new SynchronizedComparable<>("pause", new Boolean(false), SynchronizedData.Precedence.CLIENT, GAME_ID, synchronizer);
+            gameStarted = new SynchronizedComparable<>("gameStarted", new Boolean(false), SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
+        }
     }
 
     // Copy constructor:
     public GameData(GameData other){
         Synchronizer synchronizer = new Synchronizer();
-        messages = new ArrayList<>(other.messages);
         pause = new SynchronizedComparable<>("pause", other.getPause().getData(), other.getPause().getPrecedence(), GAME_ID, synchronizer);
         gameCanceled = new SynchronizedComparable<>("cancelGame", other.getGameCanceled().getData(), other.getGameCanceled().getPrecedence(), GAME_ID, synchronizer);
         gameStarted = new SynchronizedComparable<>("gameStarted", other.getGameStarted().getData(), other.getGameStarted().getPrecedence(), GAME_ID, synchronizer);
@@ -63,19 +45,11 @@ public class GameData implements Serializable{
         victoriousTeam = other.getVictoriousTeam();
         missedPacketsCount = new ConcurrentHashMap<>(other.getMissedPacketsCount());
 
-        messagesChanged = other.isMessagesChanged();
         pauseRequested = other.isPauseRequested();
         gameStartedRequested = other.isGameStartedRequested();
         ammunitionUrlRequested = other.isAmmunitionUrlRequested();
     }
 
-    /* Changers: These are called when a client wants to notify the host that he/she is actively changing something
-     * (e.g. sending a message, pausing the game, etc). The host will then notify all clients of the change. These
-     * are also called when the host wants to notify clients that the game is starting or is cancelled.*/
-    public void changeAddMessages(List<Message> messages){
-        this.messages.addAll(messages);
-        messagesChanged = true;
-    }
     public void changeAmmunitionUrl(String ammunitionUrl){
         this.ammunitionUrl = ammunitionUrl;
         ammunitionUrlRequested = true;
@@ -97,20 +71,13 @@ public class GameData implements Serializable{
     }
 
     public void resetFlags(){
-        messagesChanged = false;
         pauseRequested = false;
         gameStartedRequested = false;
         ammunitionUrlRequested = false;
     }
-    public void resetMessages(){
-        messages.clear();
-    }
 
     /* Change Getters: These are called to see whether the sending party has changed the data. They are always
      * called before retrieving the actual game data. */
-    public boolean isMessagesChanged(){
-        return messagesChanged;
-    }
     public boolean isPauseRequested(){
         return pauseRequested;
     }
@@ -122,9 +89,6 @@ public class GameData implements Serializable{
     }
 
     /* Direct Getters: These are called to get the actual game data*/
-    public List<Message> getMessages(){
-        return messages;
-    }
     public SynchronizedComparable<Boolean> getPause(){
         return pause;
     }
