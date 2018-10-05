@@ -63,8 +63,8 @@ public class CharacterData implements Serializable {
                 case CONTENT:
                 case WORRIED:
                     currentAnimation.setRandomFrame();
-                case VICTORY:
-                case DEFEAT:
+                case VICTORIOUS:
+                case DEFEATED:
                 case DISCONNECTED:
             }
         }

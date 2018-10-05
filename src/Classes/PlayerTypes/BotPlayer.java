@@ -51,7 +51,8 @@ public class BotPlayer extends PlayerData{
     }
 
     public void tick(){
-        if(getCannonDisabled()) return;
+        State currentState = getState().getData();
+        if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
 
         // Handle the current frame of the current phase:
         switch(currentPhase){
@@ -71,14 +72,14 @@ public class BotPlayer extends PlayerData{
             case PRE_MOVEMENT:
                 break;
             case BROAD_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannonData.getAngle();
+                if(currentFrame == 0) startingAngle = cannonData.getCannonAngle().getData();
                 if(currentFrame==transitionFrame-1) pointCannon(target+broadMovementOffset);
                 else pointCannon(getSmoothedAngle(broadMovementOffset));
                 break;
             case INTERCESSION:
                 break;
             case FINE_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannonData.getAngle();
+                if(currentFrame == 0) startingAngle = cannonData.getCannonAngle().getData();
                 if(currentFrame==transitionFrame-1) pointCannon(target + fineMovementOffset);
                 else pointCannon(getSmoothedAngle(fineMovementOffset));
                 break;
@@ -350,7 +351,7 @@ public class BotPlayer extends PlayerData{
         if (hypotheticalOrb.getI()==0) score-=5;
 
         // It looks nicer if the computer doesn't keep shooting in the same direction:
-        if((cannonData.getAngle()<-90 && angle<-90) || (cannonData.getAngle()>-90 && angle>-90)) --score;
+        if((cannonData.getCannonAngle().getData()<-90 && angle<-90) || (cannonData.getCannonAngle().getData()>-90 && angle>-90)) --score;
 
         // If the orb brings us closer to the death line, it is unfavorable
         if(hypotheticalOrb.getI() > lowestRow) score-=2;

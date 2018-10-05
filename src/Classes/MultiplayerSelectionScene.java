@@ -393,7 +393,7 @@ public class MultiplayerSelectionScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                playerdata.getResigned().changeTo(true);
+                playerdata.getState().changeTo(PlayerData.State.DISCONNECTED);
             }
             dialogStage.close();
         }));
@@ -410,7 +410,7 @@ public class MultiplayerSelectionScene extends Scene {
     private void deleteRemovedPlayers(){
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots){
-            if(playerSlot.getPlayerData().getResigned().getData()){
+            if(playerSlot.getPlayerData().getState().getData()== PlayerData.State.DISCONNECTED){
                 if (playerSlot.getPlayerData().getPlayerType().getData()== PlayerData.PlayerType.UNCLAIMED){
                     // An open slot is being removed, so decrement the open slot counter:
                     System.out.println("just decrementing openSlots");
@@ -564,7 +564,7 @@ public class MultiplayerSelectionScene extends Scene {
             gameData.getGameCanceled().changeTo(true);
         }
         else{
-            localPlayer.getResigned().changeTo(true);
+            localPlayer.getState().changeTo(PlayerData.State.DISCONNECTED);
         }
         prepareAndSendPacket();
         // wait a little bit to make sure the packet gets through:

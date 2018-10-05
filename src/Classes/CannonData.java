@@ -54,7 +54,7 @@ public class CannonData implements Serializable {
         foregroundAnimation = new AnimationData(other.getForegroundAnimationData());
         this.cannonType = new SynchronizedComparable<>("cannonType", other.getCannonType().getData(), other.getCannonType().getPrecedence(), parentID, synchronizer);
         cannonAngle = new SynchronizedComparable<>("cannonAngle", -80.0, SynchronizedData.Precedence.CLIENT, parentID, synchronizer);
-        cannonAngle.setTo(other.getAngle());
+        cannonAngle.setTo(other.getCannonAngle().getData());
     }
 
     public SynchronizedComparable<CannonType> getCannonType(){
@@ -108,11 +108,8 @@ public class CannonData implements Serializable {
         return movingPartAnimation.getAnchorY();
     }
 
-    public double getAngle(){
-        return movingPartAnimation.getRotation();
-    }
-    public void setAngle(double angle){
-        cannonAngle.setTo(angle);
+    public SynchronizedComparable<Double> getCannonAngle(){
+        return cannonAngle;
     }
 
     public void freeze(){

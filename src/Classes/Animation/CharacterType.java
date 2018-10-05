@@ -20,7 +20,8 @@ public enum CharacterType {
     private boolean playable; // Can a human player use this character?
     private BotPlayer.Difficulty botDifficulty;
 
-    public enum CharacterAnimationState{VICTORY(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEAT(20,Integer.MAX_VALUE), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
+    public enum CharacterAnimationState{
+        VICTORIOUS(-1,-1), CONTENT(0,12), WORRIED(13,19), DEFEATED(20,Integer.MAX_VALUE), DISCONNECTED(Integer.MAX_VALUE,Integer.MAX_VALUE);
         private int upperTriggerHeight;
         private int lowerTriggerHeight;
         CharacterAnimationState(int upperTriggerHeight, int lowerTriggerHeight){

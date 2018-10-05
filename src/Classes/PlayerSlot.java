@@ -175,7 +175,7 @@ public class PlayerSlot extends StackPane{
             removePlayerBtn.setVisible(true);
             removePlayerBtn.setOnAction((event) -> {
                 System.out.println("Clicked Remove Player.");
-                playerData.getResigned().changeTo(true);
+                playerData.getState().changeTo(PlayerData.State.DISCONNECTED);
             });
         }
 

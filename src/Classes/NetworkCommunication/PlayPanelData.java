@@ -119,9 +119,10 @@ public class PlayPanelData implements Serializable {
 
     /* Specialized Changers */
     public void changeAddShootingOrbs(Queue<OrbData> newShootingOrbs){
+        //todo: this needs to be synchronized on the synchronizer object
         shootingOrbs.addAll(newShootingOrbs);
-        cumulativeShotsFired +=newShootingOrbs.size();
         shootingOrbsChanged = true;
+        cumulativeShotsFired +=newShootingOrbs.size();
         shotsFiredChanged = true;
     }
     public void changeAddTransferOutOrbs(List<OrbData> newTransferOrbs){

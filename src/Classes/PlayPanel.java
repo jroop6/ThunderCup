@@ -257,7 +257,7 @@ public class PlayPanel extends Pane {
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!getPlayPanelData().isDeathOrbsEmpty()){
             for(PlayerData defeatedPlayer : getPlayerList()){
-                defeatedPlayer.changeResignPlayer();
+                defeatedPlayer.getState().changeTo(PlayerData.State.DEFEATED);
             }
         }
 
@@ -363,7 +363,7 @@ public class PlayPanel extends Pane {
     }
 
     // repaints all orbs and Character animations on the PlayPanel.
-    public void repaint(PlayPanelData playPanelData, List<PlayerData> playerDataList){
+    public void repaint(){
         // Clear the canvas
         orbDrawer.clearRect(0,0,orbCanvas.getWidth(),orbCanvas.getHeight());
         double vibrationOffset = 0.0;
@@ -409,7 +409,7 @@ public class PlayPanel extends Pane {
             }
 
             // Paint each player and his/her ammunition orbs:
-            for(PlayerData playerData : playerDataList){
+            for(PlayerData playerData : playerList){
                 if(playerData.getTeam().getData() == playPanelData.getTeam()){
                     playerData.drawSelf(orbDrawer);
                     List<OrbData> ammunitionOrbs = playerData.getAmmunition();
@@ -439,15 +439,17 @@ public class PlayPanel extends Pane {
     public OrbColor getNextShooterOrbEnum(double randomNumber){
         // Count the number of each type of orb in the orbArray.
         LinkedHashMap<OrbColor,Double> counts = new LinkedHashMap<>();
-        OrbData[][] orbArray = playPanelData.getOrbArray();
-        for(int i=0; i<ARRAY_HEIGHT; i++){
-            for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
-                if(orbArray[i][j]==NULL) continue;
-                else if(counts.containsKey(orbArray[i][j].getOrbColor())){
-                    counts.replace(orbArray[i][j].getOrbColor(),counts.get(orbArray[i][j].getOrbColor())+1);
-                }
-                else{
-                    counts.put(orbArray[i][j].getOrbColor(),1.0);
+        synchronized (playerList.get(0).getSynchronizer()){
+            OrbData[][] orbArray = playPanelData.getOrbArray();
+            for(int i=0; i<ARRAY_HEIGHT; i++){
+                for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*numPlayers; j++){
+                    if(orbArray[i][j]==NULL) continue;
+                    else if(counts.containsKey(orbArray[i][j].getOrbColor())){
+                        counts.replace(orbArray[i][j].getOrbColor(),counts.get(orbArray[i][j].getOrbColor())+1);
+                    }
+                    else{
+                        counts.put(orbArray[i][j].getOrbColor(),1.0);
+                    }
                 }
             }
         }

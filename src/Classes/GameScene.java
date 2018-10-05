@@ -4,6 +4,7 @@ import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
+import Classes.Images.CannonType;
 import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
@@ -26,6 +27,8 @@ import javafx.stage.StageStyle;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
+import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
 import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
@@ -108,7 +111,10 @@ public class GameScene extends Scene {
             }
 
             // while we're here, check to see if this is the LocalPlayer.
-            if(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL) localPlayer = player;
+            if(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL){
+                if(localPlayer!=null) System.err.println("Warning! There's more than one localplayer!");
+                localPlayer = player;
+            }
             gameData.getMissedPacketsCount().put(player.getPlayerID(),0);
         }
 
@@ -148,16 +154,12 @@ public class GameScene extends Scene {
         pauseMenu = createPauseMenu();
 
         // Add mouse listeners for the local player:
-        addEventHandler(MouseEvent.MOUSE_MOVED,(event)->{
-            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
-        });
+        addEventHandler(MouseEvent.MOUSE_MOVED,(event)-> localPlayer.pointCannon(event.getX(), event.getY()));
         addEventHandler(MouseEvent.MOUSE_PRESSED, (event) ->{
-            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
-            workerThread.submit(()->localPlayer.changeFireCannon());
+            localPlayer.pointCannon(event.getX(), event.getY());
+            localPlayer.changeFireCannon();
         });
-        addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)->{
-            workerThread.submit(()->localPlayer.pointCannon(event.getX(), event.getY()));
-        });
+        addEventHandler(MouseEvent.MOUSE_DRAGGED,(event)-> localPlayer.pointCannon(event.getX(), event.getY()));
 
         // Add keyboard listeners:
         setOnKeyPressed(event -> {
@@ -170,10 +172,10 @@ public class GameScene extends Scene {
                     break;
                 case P:
                     System.out.println("Pause pressed!");
-                    workerThread.submit(()->gameData.getPause().changeTo(true)); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
+                    gameData.getPause().changeTo(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
-                    workerThread.submit(()->gameData.getPause().changeTo(false));
+                    gameData.getPause().changeTo(false);
             }
         });
 
@@ -208,29 +210,30 @@ public class GameScene extends Scene {
                 if(now>nextDataUpdateInstance){
                     nextDataUpdateInstance += 1000000000L/ DATA_FRAME_RATE;
 
-                    // Have the worker thread start computing the next frame:
-                    resultHolder = workerThread.submit(updateFrameTasks);
+                    try{
+                        // Retrieve the previous results:
+                        FrameResult previousResult = resultHolder.get(0,TimeUnit.MILLISECONDS);
+
+                        // Have the worker thread start computing the next frame:
+                        resultHolder = workerThread.submit(updateFrameTasks);
+
+                        // Play sound effects:
+                        for(SoundEffect soundEffect : previousResult.soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
+
+                    }catch (ExecutionException | InterruptedException e){
+                        System.err.println("ExecutionException encountered. Stack trace:");
+                        e.getCause().printStackTrace();
+                    }catch (TimeoutException e){
+                        //todo: consider reducing DATA_FRAME_RATE
+                        System.err.println("Warning! Future.get() timed out. Skipping the next submit() operation.");
+                    }
                 }
 
                 // Visuals are updated 48 times per second.
                 if(now>nextAnimationFrameInstance){
                     nextAnimationFrameInstance += 1000000000L/ VISUAL_FRAME_RATE;
-                    try{
-                        // Retrieve the outcome of the previous frame and update visuals corresponding to the PlayPanelData and PlayerData:
-                        //FrameResult previousResult = resultHolder.get();
-                        FrameResult previousResult = resultHolder.get(0, TimeUnit.NANOSECONDS);
-                        updatePlayPanelViews(previousResult.playPanelDataListCopy, previousResult.playerDataListCopy);
-
-                        // Play sound effects:
-                        for(SoundEffect soundEffect : previousResult.soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
-
-                        // update visuals corresponding to GameData:
-                        updateGameView(previousResult.gameDataCopy);
-                    } catch (ExecutionException | InterruptedException e){
-                        System.err.println("ExecutionException encountered. Stack trace:");
-                        e.getCause().printStackTrace();
-                    } catch (TimeoutException e){
-                    }
+                    updatePlayPanelViews();
+                    updateGameView();
                 }
 
                 // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this time:
@@ -257,7 +260,7 @@ public class GameScene extends Scene {
         animationTimer.start();
     }
 
-    private void updateGameView(GameData gameData){
+    private void updateGameView(){
         // pause the game if doing so is indicated:
         if(gameData.getPause().getData()) displayPauseMenu();
         else removePauseMenu();
@@ -275,20 +278,18 @@ public class GameScene extends Scene {
         else if(gameData.getVictoryDisplayStarted()) startVictoryDisplay_View(gameData.getVictoriousTeam());
     }
 
-    private void updatePlayPanelViews(List<PlayPanelData> playPanelDataList, List<PlayerData> playerDataList){
-        for(PlayPanelData playPanelData : playPanelDataList){
-            // Repaint every PlayPanel:
-            PlayPanel playPanel = playPanelMap.get(playPanelData.getTeam());
-            playPanel.repaint(playPanelData, playerDataList);
+    private void updatePlayPanelViews(){
+        for(PlayPanel playPanel : playPanelMap.values()){
+            // Repaint the PlayPanel:
+            playPanel.repaint();
 
             // If a player has been gone for too long (and they have not resigned), ask the host what to do:
             for(PlayerData player : playPanel.getPlayerList()){
                 Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
-                if(missedPackets==maxConsecutivePacketsMissed && !player.getDefeated()){
+                if(missedPackets==maxConsecutivePacketsMissed && player.getCharacterData().getCharacterAnimationState()!=DEFEATED){
                     showConnectionLostDialog(player);
                 }
             }
-
         }
     }
 
@@ -307,7 +308,7 @@ public class GameScene extends Scene {
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
             for(PlayerData player : players){
-                if(!player.getDefeated()) liveTeams.add(player.getTeam().getData());
+                if(player.getCharacterData().getCharacterAnimationState()!=DEFEATED) liveTeams.add(player.getTeam().getData());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -322,7 +323,7 @@ public class GameScene extends Scene {
 
         // In puzzle games, check to see whether the only existing team has lost:
         else{
-            if(players.get(0).getDefeated()) startVictoryPause_Model(-1);
+            if(players.get(0).getCharacterData().getCharacterAnimationState()==DEFEATED) startVictoryPause_Model(-1);
         }
 
         // If someone has won, handle the delay before the victory graphics are actually displayed:
@@ -476,8 +477,6 @@ public class GameScene extends Scene {
 
             localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
 
-            // gameData.setMissedPacketsCount(playerData.getPlayerID(),0);
-
             // Perform special processing for messages:
             // todo: definitely organize the Synchronizer data by parentID.
             Set<Long> visitedLongs = new HashSet<>();
@@ -490,6 +489,8 @@ public class GameScene extends Scene {
                     localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
                     clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
                 }
+                // replace the missedPacketsCount while we're here:
+                gameData.getMissedPacketsCount().replace(id,0);
             }
 
             // Prepare for the next iteration:
@@ -621,7 +622,7 @@ public class GameScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                player.changeResignPlayer();
+                player.getState().changeTo(PlayerData.State.DEFEATED);
             }
             dialogStage.close();
         }));
@@ -661,7 +662,7 @@ public class GameScene extends Scene {
             prepareAndSendServerPacket();
         }
         else{
-            localPlayer.changeResignPlayer();
+            localPlayer.getState().changeTo(PlayerData.State.DISCONNECTED);
             prepareAndSendClientPacket();
         }
 
@@ -796,9 +797,13 @@ public class GameScene extends Scene {
 
         // Disable all cannons and freeze all defeated players:
         for(PlayerData player : players){
-            //if(player.getPlayerData().getTeam() == victoriousTeam){
-            player.changeDisableCannon();
-            //}
+            if(player.getTeam().getData() == victoriousTeam){
+                player.getCharacterData().setCharacterAnimationState(VICTORIOUS);
+            }
+            else{
+                player.getCharacterData().setCharacterAnimationState(DEFEATED);
+                player.getCannonData().setCannonAnimationState(CannonType.CannonAnimationState.DEFEATED);
+            }
         }
 
         // clear any outstanding shooting orbs:
