@@ -1,6 +1,7 @@
 package Classes;
 
 import Classes.Animation.AnimationData;
+import Classes.Animation.StatusOption;
 import Classes.Animation.VisibilityOption;
 import Classes.Images.CannonType;
 import Classes.NetworkCommunication.Mode;
@@ -23,13 +24,15 @@ public class CannonData implements Serializable {
     private AnimationData foregroundAnimation;
     private CannonType.CannonAnimationState cannonAnimationState;
     private SynchronizedComparable<Double> cannonAngle;
+    private final Synchronizer synchronizer;
 
     public CannonData(CannonType cannonType, long parentID, Synchronizer synchronizer){
+        this.synchronizer = synchronizer;
         cannonAnimationState = CannonType.CannonAnimationState.AIMING;
         backgroundAnimation = new AnimationData(cannonType.getBackgroundAnimation(cannonAnimationState));
         movingPartAnimation = new AnimationData(cannonType.getMovingPartAnimation(cannonAnimationState));
         foregroundAnimation = new AnimationData(cannonType.getForegroundAnimation(cannonAnimationState));
-        synchronized (synchronizer){
+        synchronized (this.synchronizer){
             this.cannonType = new SynchronizedComparable<>("cannonType", cannonType,
                     (CannonType newVal, Mode mode, int i, int j)->{
                         backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
@@ -48,11 +51,12 @@ public class CannonData implements Serializable {
     }
 
     public CannonData(CannonData other, long parentID, Synchronizer synchronizer){
-        this.cannonAnimationState = other.getCannonAnimationState();
-        backgroundAnimation = new AnimationData(other.getBackgroundAnimationData());
-        movingPartAnimation = new AnimationData(other.getMovingPartAnimationData());
-        foregroundAnimation = new AnimationData(other.getForegroundAnimationData());
-        this.cannonType = new SynchronizedComparable<>("cannonType", other.getCannonType().getData(), other.getCannonType().getPrecedence(), parentID, synchronizer);
+        this.synchronizer = synchronizer;
+        this.cannonAnimationState = other.cannonAnimationState;
+        backgroundAnimation = new AnimationData(other.backgroundAnimation);
+        movingPartAnimation = new AnimationData(other.movingPartAnimation);
+        foregroundAnimation = new AnimationData(other.foregroundAnimation);
+        this.cannonType = new SynchronizedComparable<>("cannonType", other.cannonType.getData(), other.cannonType.getPrecedence(), parentID, synchronizer);
         cannonAngle = new SynchronizedComparable<>("cannonAngle", -80.0, SynchronizedData.Precedence.CLIENT, parentID, synchronizer);
         cannonAngle.setTo(other.getCannonAngle().getData());
     }
@@ -61,9 +65,6 @@ public class CannonData implements Serializable {
         return cannonType;
     }
 
-    public CannonType.CannonAnimationState getCannonAnimationState(){
-        return cannonAnimationState;
-    }
     public void setCannonAnimationState(CannonType.CannonAnimationState cannonAnimationState){
         this.cannonAnimationState = cannonAnimationState;
         backgroundAnimation.setAnimation(cannonType.getData().getBackgroundAnimation(cannonAnimationState));
@@ -75,18 +76,24 @@ public class CannonData implements Serializable {
                 movingPartAnimation.setRandomFrame();
                 foregroundAnimation.setRandomFrame();
             case FIRING:
+            case VICTORIOUS:
+            case DEFEATED:
+                backgroundAnimation.setVisibility(VisibilityOption.NORMAL);
+                movingPartAnimation.setVisibility(VisibilityOption.NORMAL);
+                foregroundAnimation.setVisibility(VisibilityOption.NORMAL);
+                backgroundAnimation.setStatus(StatusOption.PLAYING);
+                movingPartAnimation.setStatus(StatusOption.PLAYING);
+                foregroundAnimation.setStatus(StatusOption.PLAYING);
+                break;
             case DISCONNECTED:
+                backgroundAnimation.setVisibility(VisibilityOption.GREYSCALE);
+                movingPartAnimation.setVisibility(VisibilityOption.GREYSCALE_TRANSPARENT);
+                foregroundAnimation.setVisibility(VisibilityOption.GREYSCALE);
+                backgroundAnimation.setStatus(StatusOption.PAUSED);
+                movingPartAnimation.setStatus(StatusOption.PAUSED);
+                foregroundAnimation.setStatus(StatusOption.PAUSED);
+                break;
         }
-    }
-
-    public AnimationData getBackgroundAnimationData(){
-        return backgroundAnimation;
-    }
-    public AnimationData getMovingPartAnimationData(){
-        return movingPartAnimation;
-    }
-    public AnimationData getForegroundAnimationData(){
-        return foregroundAnimation;
     }
 
     public void relocate(double x, double y){
@@ -110,12 +117,6 @@ public class CannonData implements Serializable {
 
     public SynchronizedComparable<Double> getCannonAngle(){
         return cannonAngle;
-    }
-
-    public void freeze(){
-        backgroundAnimation.setVisibility(VisibilityOption.GREYSCALE);
-        movingPartAnimation.setVisibility(VisibilityOption.GREYSCALE_TRANSPARENT);
-        foregroundAnimation.setVisibility(VisibilityOption.GREYSCALE);
     }
 
     // todo: consider having separate drawBackgroundImage, drawCannon, and drawForegroundImage methods.

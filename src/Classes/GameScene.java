@@ -125,7 +125,7 @@ public class GameScene extends Scene {
             if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
             else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01", playerList.size(), puzzleGroupIndex);
             System.out.println("puzzle url: " + puzzleURL);
-            PlayPanel newPlayPanel = new PlayPanel(team, playerList, LocationType.NIGHTTIME,SEED, puzzleURL);
+            PlayPanel newPlayPanel = new PlayPanel(team, playerList, SEED, puzzleURL, connectionManager.getSynchronizer(), LocationType.NIGHTTIME);
             playPanelMap.put(team,newPlayPanel);
         }
 
@@ -286,7 +286,7 @@ public class GameScene extends Scene {
             // If a player has been gone for too long (and they have not resigned), ask the host what to do:
             for(PlayerData player : playPanel.getPlayerList()){
                 Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
-                if(missedPackets==maxConsecutivePacketsMissed && player.getCharacterData().getCharacterAnimationState()!=DEFEATED){
+                if(missedPackets==maxConsecutivePacketsMissed && player.getState().getData()!= PlayerData.State.DEFEATED){
                     showConnectionLostDialog(player);
                 }
             }
@@ -297,9 +297,9 @@ public class GameScene extends Scene {
         // Todo: what if 2 players declare victory at the exact same time?
         // check to see whether anybody's won a quick victory by clearing their PlayPanel:
         for(PlayPanel playPanel : playPanelMap.values()){
-            if(playPanel.getPlayPanelData().isVictoriousChanged()){
+            if(playPanel.getTeamState().getData()==PlayPanel.TeamState.VICTORIOUS){
                 // Todo: host should check whether it's actually true.
-                startVictoryPause_Model(playPanel.getPlayPanelData().getTeam());
+                startVictoryPause_Model(playPanel.getTeam());
                 System.out.println("Hey, somebody won a quick victory!");
             }
         }
@@ -308,7 +308,7 @@ public class GameScene extends Scene {
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
             for(PlayerData player : players){
-                if(player.getCharacterData().getCharacterAnimationState()!=DEFEATED) liveTeams.add(player.getTeam().getData());
+                if(player.getState().getData()!= PlayerData.State.DEFEATED) liveTeams.add(player.getTeam().getData());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -323,7 +323,7 @@ public class GameScene extends Scene {
 
         // In puzzle games, check to see whether the only existing team has lost:
         else{
-            if(players.get(0).getCharacterData().getCharacterAnimationState()==DEFEATED) startVictoryPause_Model(-1);
+            if(players.get(0).getState().getData()== PlayerData.State.DEFEATED) startVictoryPause_Model(-1);
         }
 
         // If someone has won, handle the delay before the victory graphics are actually displayed:
@@ -369,10 +369,10 @@ public class GameScene extends Scene {
             // Check for victory conditions:
             checkForVictory_Model();
 
-            // Copy the playPanelData
-            List<PlayPanelData> playPanelDataList = new LinkedList<>();
+            // Copy the playPanel
+            List<PlayPanel> playPanelList = new LinkedList<>();
             for(PlayPanel playPanel : playPanelMap.values()){
-                playPanelDataList.add(new PlayPanelData(playPanel.getPlayPanelData()));
+                playPanelList.add(new PlayPanel(playPanel));
             }
 
             // Copy the playerData
@@ -381,19 +381,19 @@ public class GameScene extends Scene {
                 playerDataList.add(new PlayerData(player));
             }
 
-            return new FrameResult(soundEffectsToPlay, new GameData(gameData) , playPanelDataList, playerDataList);
+            return new FrameResult(soundEffectsToPlay, new GameData(gameData) , playPanelList, playerDataList);
         }
     }
 
     private class FrameResult{
         Set<SoundEffect> soundEffectsToPlay;
         GameData gameDataCopy;
-        List<PlayPanelData> playPanelDataListCopy;
+        List<PlayPanel> playPanelListCopy;
         List<PlayerData> playerDataListCopy;
-        FrameResult(Set<SoundEffect> soundEffectsToPlay, GameData gameData, List<PlayPanelData> playPanelDataList, List<PlayerData> playerDataList){
+        FrameResult(Set<SoundEffect> soundEffectsToPlay, GameData gameData, List<PlayPanel> playPanelList, List<PlayerData> playerDataList){
             this.soundEffectsToPlay = soundEffectsToPlay;
             gameDataCopy = gameData;
-            playPanelDataListCopy = playPanelDataList;
+            playPanelListCopy = playPanelList;
             playerDataListCopy = playerDataList;
         }
     }
@@ -499,13 +499,13 @@ public class GameScene extends Scene {
     }
 
     private void prepareAndSendServerPacket(){
-        // We must create a copy of the local PlayerData, GameData, and PlayPanelData and add those copies to the packet. This
+        // We must create a copy of the local PlayerData, GameData, and PlayPanel and add those copies to the packet. This
         // is to prevent the change flags within the local PlayerData and GameData from being reset before the packet is
         // sent (note the last 4 lines of this method).
         PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
-        PlayPanelData localPlayPanelData = new PlayPanelData(playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData());
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanelData);
+        PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayer.getTeam().getData()));
+        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel);
 
         for (PlayerData player: players) {
             if(player.getPlayerID()==0) continue; // we've already added the localPlayer's PlayerData to the packet.
@@ -515,17 +515,17 @@ public class GameScene extends Scene {
         }
 
         for (PlayPanel playPanel: playPanelMap.values()){
-            if(playPanel.getPlayPanelData().getTeam()==localPlayerData.getTeam().getData()) continue; // we've already added the localPlayer's PlayPanelData to the packet.
-            PlayPanelData playPanelData = new PlayPanelData(playPanel.getPlayPanelData());
-            outPacket.addOrbData(playPanelData);
-            playPanel.getPlayPanelData().resetFlags(); // reset the local change flags so that they are only broadcast once
+            if(playPanel.getTeam()==localPlayerData.getTeam().getData()) continue; // we've already added the localPlayer's PlayPanel to the packet.
+            PlayPanel playPanelCopy = new PlayPanel(playPanel);
+            outPacket.addPlayPanel(playPanelCopy);
+            playPanel.resetFlags(); // reset the local change flags so that they are only broadcast once
         }
 
         connectionManager.send(outPacket);
 
         // reset the local change flags so that they are only broadcast once:
         localPlayer.resetFlags();
-        playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData().resetFlags();
+        playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
         gameData.resetFlags();
     }
 
@@ -570,14 +570,14 @@ public class GameScene extends Scene {
         // packet is sent.
         PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
-        PlayPanelData localPlayPanelData = new PlayPanelData(playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData());
+        PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayerData.getTeam().getData()));
 
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanelData);
+        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel);
         connectionManager.send(outPacket);
 
         // reset local change flags so that they are sent only once:
         localPlayer.resetFlags();
-        playPanelMap.get(localPlayerData.getTeam().getData()).getPlayPanelData().resetFlags();
+        playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
         gameData.resetFlags();
     }
 
@@ -773,14 +773,14 @@ public class GameScene extends Scene {
     private void tick(){
         // transfer the transferOutOrbs.
         for(PlayPanel fromPlayPanel : playPanelMap.values()){
-            List<OrbData> transferOutOrbs = fromPlayPanel.getPlayPanelData().getTransferOutOrbs();
+            List<OrbData> transferOutOrbs = fromPlayPanel.getTransferOutOrbs();
             if(!transferOutOrbs.isEmpty()){
                 for(PlayPanel toPlayPanel : playPanelMap.values()){
                     if(fromPlayPanel!=toPlayPanel){
-                        Set<OrbData> transferInOrbs = toPlayPanel.getPlayPanelData().getTransferInOrbs();
+                        Set<OrbData> transferInOrbs = toPlayPanel.getTransferInOrbs();
                         Random randomTransferOrbGenerator = toPlayPanel.getRandomTransferOrbGenerator();
-                        OrbData[][] orbArray = toPlayPanel.getPlayPanelData().getOrbArray();
-                        toPlayPanel.getPlayPanelUtility().transferOrbs(transferOutOrbs,transferInOrbs,randomTransferOrbGenerator,orbArray);
+                        OrbData[][] orbArray = toPlayPanel.getOrbArray();
+                        toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs,randomTransferOrbGenerator,orbArray);
                     }
                 }
             }
@@ -808,7 +808,7 @@ public class GameScene extends Scene {
 
         // clear any outstanding shooting orbs:
         for(PlayPanel playPanel: playPanelMap.values()){
-            playPanel.getPlayPanelData().getShootingOrbs().clear();
+            playPanel.getShootingOrbs().clear();
         }
 
         gameData.setVictoryPauseStarted(true);
@@ -832,7 +832,7 @@ public class GameScene extends Scene {
     private void startVictoryDisplay_View(int victoriousTeam){
         if(victoryDisplayStarted2) return;
         for(PlayPanel playPanel: playPanelMap.values()){
-            if(playPanel.getPlayPanelData().getTeam() == victoriousTeam){
+            if(playPanel.getTeam() == victoriousTeam){
                 if(playPanelMap.values().size()==1) playPanel.displayVictoryResults(PlayPanel.VictoryType.PUZZLE_CLEARED);
                 else playPanel.displayVictoryResults(PlayPanel.VictoryType.VS_WIN);
             }

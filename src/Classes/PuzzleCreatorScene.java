@@ -22,13 +22,8 @@ import javafx.scene.transform.Scale;
 import java.util.Optional;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
-import static Classes.NetworkCommunication.PlayPanelData.ARRAY_HEIGHT;
-import static Classes.NetworkCommunication.PlayPanelData.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.OrbData.NULL;
-import static Classes.OrbData.ORB_RADIUS;
-import static Classes.PlayPanel.PLAYPANEL_HEIGHT;
-import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
-import static Classes.PlayPanel.ROW_HEIGHT;
+import static Classes.PlayPanel.*;
 
 public class PuzzleCreatorScene extends Scene {
 

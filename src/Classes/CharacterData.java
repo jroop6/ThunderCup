@@ -31,9 +31,9 @@ public class CharacterData implements Serializable {
     // Initialize with a content display of the character:
     public CharacterData(CharacterData other, long parentID, Synchronizer synchronizer){
         this.synchronizer = synchronizer;
-        characterAnimationState = other.getCharacterAnimationState();
-        currentAnimation = new AnimationData(other.getAnimationData());
-        characterType = new SynchronizedComparable<>("characterType", other.getCharacterType().getData(), other.getCharacterType().getPrecedence(), parentID, synchronizer);
+        characterAnimationState = other.characterAnimationState;
+        currentAnimation = new AnimationData(other.currentAnimation);
+        characterType = new SynchronizedComparable<>("characterType", other.characterType.getData(), other.characterType.getPrecedence(), parentID, synchronizer);
     }
 
     public void relocate(double x, double y){
@@ -48,13 +48,6 @@ public class CharacterData implements Serializable {
         return characterType;
     }
 
-    private AnimationData getAnimationData(){
-        return currentAnimation;
-    }
-
-    public CharacterType.CharacterAnimationState getCharacterAnimationState(){
-        return characterAnimationState;
-    }
     public void setCharacterAnimationState(CharacterType.CharacterAnimationState characterAnimationState){
         this.characterAnimationState = characterAnimationState;
         synchronized (synchronizer){ // make sure no one modifies the data while we're working with it
@@ -65,14 +58,15 @@ public class CharacterData implements Serializable {
                     currentAnimation.setRandomFrame();
                 case VICTORIOUS:
                 case DEFEATED:
+                    currentAnimation.setVisibility(VisibilityOption.NORMAL);
+                    currentAnimation.setStatus(StatusOption.PLAYING);
+                    break;
                 case DISCONNECTED:
+                    currentAnimation.setVisibility(VisibilityOption.GREYSCALE);
+                    currentAnimation.setStatus(StatusOption.PAUSED);
+                    break;
             }
         }
-    }
-
-    public void freeze(){
-        currentAnimation.setVisibility(VisibilityOption.GREYSCALE);
-        currentAnimation.setStatus(StatusOption.PAUSED);
     }
 
     public void drawSelf(GraphicsContext graphicsContext){

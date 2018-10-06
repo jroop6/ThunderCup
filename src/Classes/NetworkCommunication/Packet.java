@@ -1,5 +1,7 @@
 package Classes.NetworkCommunication;
 
+import Classes.PlayPanel;
+
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -10,7 +12,7 @@ import java.util.Queue;
 public class Packet implements Serializable{
     private Queue<PlayerData> playerDataList = new LinkedList<>();
     private GameData gameData;
-    private Queue<PlayPanelData> playPanelDataList = new LinkedList<>();
+    private Queue<PlayPanel> playPanelList = new LinkedList<>();
     private Synchronizer synchronizer;
     private boolean connectionRejected = false;
 
@@ -20,18 +22,18 @@ public class Packet implements Serializable{
     }
 
     // Constructor used in GameScene, where playPanelData is also relevant.
-    public Packet(PlayerData playerData, GameData gameData, PlayPanelData playPanelData){
+    public Packet(PlayerData playerData, GameData gameData, PlayPanel playPanel){
         this.gameData = gameData;
         playerDataList.add(playerData);
-        playPanelDataList.add(playPanelData);
+        playPanelList.add(playPanel);
     }
 
     public void addPlayerData(PlayerData playerData){
         playerDataList.add(playerData);
     }
 
-    public void addOrbData(PlayPanelData playPanelData){
-        playPanelDataList.add(playPanelData);
+    public void addPlayPanel(PlayPanel playPanel){
+        playPanelList.add(playPanel);
     }
 
     public void rejectConnection(){
@@ -42,20 +44,20 @@ public class Packet implements Serializable{
         return gameData;
     }
 
-    public Queue<PlayPanelData> getPlayPanelDataList(){
-        return playPanelDataList;
+    public Queue<PlayPanel> getPlayPanelList(){
+        return playPanelList;
     }
 
     public Synchronizer getSynchronizer(){
         return synchronizer;
     }
 
-    public PlayerData popPlayerData(){
+    public PlayerData popPlayer(){
         return playerDataList.poll();
     }
 
-    public PlayPanelData popPlayPanelData(){
-        return playPanelDataList.poll();
+    public PlayPanel popPlayPanel(){
+        return playPanelList.poll();
     }
 
     public boolean isConnectionRejected(){
@@ -66,7 +68,7 @@ public class Packet implements Serializable{
         System.out.println("************************");
         System.out.println("* There are " + playerDataList.size() + " items in playerDataList");
         System.out.println("* GameData is " + gameData);
-        System.out.println("* There are " + playPanelDataList.size() + " items in playPanelDataList");
+        System.out.println("* There are " + playPanelList.size() + " items in playPanelDataList");
         System.out.println("* Synchronizer is " + synchronizer);
         System.out.println("************************");
     }

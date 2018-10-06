@@ -10,9 +10,9 @@ import javafx.scene.shape.ArcType;
 import java.io.Serializable;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
+import static Classes.PlayPanel.ORB_RADIUS;
 
 public class OrbData extends PointInt implements Serializable{
-    public static final double ORB_RADIUS = 23.0;
     private static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
     private static final double TIME_TO_THUNDER = 1; // how much time it takes for a dropped orb to thunder.
 

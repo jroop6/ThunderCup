@@ -11,8 +11,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static Classes.OrbData.NULL;
-import static Classes.OrbData.ORB_RADIUS;
 import static Classes.PlayPanel.CANNON_Y_POS;
+import static Classes.PlayPanel.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
 public class BotPlayer extends PlayerData{
@@ -136,8 +136,8 @@ public class BotPlayer extends PlayerData{
      */
     private void retarget(){
         // Create copies of the existing data:
-        OrbData[][] orbArrayCopy = playPanel.getPlayPanelUtility().deepCopyOrbArray(playPanel.getPlayPanelData().getOrbArray());
-        OrbData[] deathOrbsCopy = playPanel.getPlayPanelUtility().deepCopyOrbArray(playPanel.getPlayPanelData().getDeathOrbs());
+        OrbData[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray());
+        OrbData[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
 
         // New collections that will be affected by side-effects:
         List<OrbData> burstingOrbsCopy = new LinkedList<>();
@@ -155,7 +155,7 @@ public class BotPlayer extends PlayerData{
         // won't be simulated, and the 2nd shooting orb will get blocked in its simulation. This still isn't perfect
         // (for example, a more recently-fired shot might actually reach its target before a previous shot) but should
         // be pretty good.
-        for(OrbData shootingOrb : playPanel.getPlayPanelData().getShootingOrbs()){
+        for(OrbData shootingOrb : playPanel.getShootingOrbs()){
             // Create a temporary shootingOrbs list that contains a copy of only one of the current shooting orbs:
             List<OrbData> shootingOrbCopy = new LinkedList<>();
             shootingOrbCopy.add(new OrbData(shootingOrb));
@@ -174,7 +174,7 @@ public class BotPlayer extends PlayerData{
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbColor().getOrbSpeed();
 
-            playPanel.getPlayPanelUtility().simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
+            playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
         }
 
         // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
@@ -191,7 +191,7 @@ public class BotPlayer extends PlayerData{
         }
 
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
-        int lowestRow = playPanel.getPlayPanelData().getLowestOccupiedRow(orbArrayCopy, deathOrbsCopy);
+        int lowestRow = playPanel.getLowestOccupiedRow(orbArrayCopy, deathOrbsCopy);
 
         // ** Let's determine the outcome for a variety of shooting angles ** //
 
@@ -278,8 +278,8 @@ public class BotPlayer extends PlayerData{
                 shootingOrbCopy.add(hypotheticalOrb);
 
                 // Create copies of the simulated orbArray and deathOrbs:
-                OrbData[][] orbArrayCopyTemp = playPanel.getPlayPanelUtility().deepCopyOrbArray(orbArrayCopy);
-                OrbData[] deathOrbsCopyTemp = playPanel.getPlayPanelUtility().deepCopyOrbArray(deathOrbsCopy);
+                OrbData[][] orbArrayCopyTemp = playPanel.deepCopyOrbArray(orbArrayCopy);
+                OrbData[] deathOrbsCopyTemp = playPanel.deepCopyOrbArray(deathOrbsCopy);
 
                 // clear the other lists
                 arrayOrbsToBurst.clear();
@@ -297,7 +297,7 @@ public class BotPlayer extends PlayerData{
                 double maxDistance = Math.sqrt(maxDistanceSquared);
                 double maxTime = maxDistance/hypotheticalOrb.getOrbColor().getOrbSpeed();
 
-                playPanel.getPlayPanelUtility().simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
+                playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
 
                 // Assign a score to the outcome:
                 int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
@@ -340,7 +340,7 @@ public class BotPlayer extends PlayerData{
         score += 2*arrayOrbsToBurst.size();
 
         // Otherwise, it is good if the orb is placed next to another Orb of the same color:
-        List<PointInt> neighbors = playPanel.getPlayPanelUtility().getNeighbors(new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
+        List<PointInt> neighbors = playPanel.getNeighbors(new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
         int matchesFound = 0;
         for(PointInt point : neighbors){
             if(orbArray[point.getI()][point.getJ()].getOrbColor()==hypotheticalOrb.getOrbColor()) ++matchesFound;
