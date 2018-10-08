@@ -73,6 +73,9 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     // setTo is called by the machine that does NOT have precedence:
     abstract public void setTo(T newValue);
 
+    // returns a deep copy of this SynchronizedData, minus any non-serializable data such as lambda expressions.
+    abstract public SynchronizedData<T> copyForNetworking(Synchronizer synchronizer);
+
     public Precedence getPrecedence(){
         return precedence;
     }

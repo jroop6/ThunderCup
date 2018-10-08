@@ -4,9 +4,19 @@ import java.io.Serializable;
 import java.util.*;
 
 public class SynchronizedList<T extends Comparable<T> & Serializable> extends SynchronizedData<LinkedList<T>> {
-    public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Setable<LinkedList<T>> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
+
+    // SEND_ONCE: Use this option for data you only want to send once over the network. Local data is cleared after the
+    // packet is sent. Example: chat messages.
+    // KEEP_SYNCHRONIZED: Use this option for data you want to keep sending back and forth between host and client to
+    // ensure consistency. Example: A player's ammunitionOrbs list.
+    enum SynchronizationType {SEND_ONCE, KEEP_SYNCHRONIZED}
+
+    private SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;
+
+    public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Setable<LinkedList<T>> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, SynchronizationType synchronizationType, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
         registerExternalSetters(setInterface, changeInterface);
+        this.synchronizationType = synchronizationType;
         this.data = new LinkedList<>();
         setTo(data);
     }
@@ -17,12 +27,12 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         setTo(data);
     }
 
-    public SynchronizedList(String name, LinkedList<T> data, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
-        super(name, parentID, synchronizer, precedence, syncTolerance);
+    public SynchronizedList(String name, LinkedList<T> data, Precedence precedence, long parentID, Synchronizer synchronizer, SynchronizationType synchronizationType){
+        super(name, parentID, synchronizer, precedence, 24);
+        this.synchronizationType = synchronizationType;
         this.data = new LinkedList<>();
         setTo(data);
     }
-
 
     public SynchronizedList(SynchronizedList<T> other, Synchronizer synchronizer){
         super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
@@ -32,11 +42,16 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             T elementCopy = deepCopyDataElement(element);
             otherDataListCopy.add(elementCopy);
         }
+        this.synchronizationType = other.synchronizationType;
         this.data = new LinkedList<>();
         setTo(otherDataListCopy);
     }
 
-
+    public SynchronizedList<T> copyForNetworking(Synchronizer synchronizer){
+        SynchronizedList<T> copy = new SynchronizedList<>(this, synchronizer);
+        if(synchronizationType==SynchronizationType.SEND_ONCE) setClear();
+        return copy;
+    }
 
     // this kinda sorta returns the "edit distance" between the two lists.
     public int compareTo(SynchronizedData<LinkedList<T>> other){
@@ -144,14 +159,20 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         }
     }
 
+    // Note: changeTo() is called by synchronizeWith() in the Synchronizer class. If the SynchronizationType is
+    // SEND_ONCE, we don't want to clear the data until we've called copyForNetworking().
     @Override
     public void changeTo(LinkedList<T> newList){
         synchronized (synchronizer){
-            // call the ExternalChanger on each existing element as it is removed.
-            changeClear();
-
-            // replace data with the new list, calling the ExternalChanger on each element as it is added
-            changeAddAll(newList);
+            switch(synchronizationType){
+                case KEEP_SYNCHRONIZED:
+                    // call the ExternalChanger on each existing element as it is removed.
+                    changeClear();
+                case SEND_ONCE:
+                    // add new data to the list, calling the ExternalChanger on each element as it is added
+                    changeAddAll(newList);
+                    break;
+            }
         }
     }
 

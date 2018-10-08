@@ -15,22 +15,14 @@ public class Synchronizer implements Serializable {
     // copy constructor
     public Synchronizer(Synchronizer other){
         synchronized (other){ // we don't want the other data to be modified while we're trying to copy it.
-            //todo: consider using serialization to copy the SynchronizedDatas, so we don't have to know the type.
+            // Copy the synchronizedDataMap
             for(SynchronizedData synchronizedData : other.synchronizedDataMap.values()){
-                if(synchronizedData instanceof SynchronizedComparable){
-                    SynchronizedComparable synchronizedComparableCopy = new SynchronizedComparable((SynchronizedComparable)synchronizedData, this);
-                    synchronizedDataMap.put(synchronizedComparableCopy.getKey(), synchronizedComparableCopy);
-                }
-                else if(synchronizedData instanceof SynchronizedList){
-                    SynchronizedList synchronizedListCopy = new SynchronizedList((SynchronizedList)synchronizedData, this);
-                    synchronizedDataMap.put(synchronizedListCopy.getKey(), synchronizedListCopy);
-                }
-                else if(synchronizedData instanceof  SynchronizedArray){
-                    SynchronizedArray synchronizedArrayCopy = new SynchronizedArray((SynchronizedArray)synchronizedData, this);
-                    synchronizedDataMap.put(synchronizedArrayCopy.getKey(), synchronizedArrayCopy);
-                }
+                SynchronizedData synchronizedDataCopy = synchronizedData.copyForNetworking(this);
+                synchronizedDataMap.put(synchronizedDataCopy.getKey(), synchronizedDataCopy);
             }
+            // Copy the changedData List
             for(SynchronizedData synchronizedData : other.changedData){
+                // A quick sanity check to help detect problems in the future:
                 SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getKey());
                 if(officialSynchronizedData==null){
                     System.err.println("Error in Synchronizer copy constructor! The data " + synchronizedData.getKey() +
@@ -128,8 +120,7 @@ public class Synchronizer implements Serializable {
                             break;
                         case CLIENT:
                             // Accept data changes that this client has authority over:
-                            if(hostData instanceof SynchronizedComparable) hostData.changeTo(clientData.data);
-                            else if (hostData instanceof SynchronizedList) ((SynchronizedList)hostData).changeAddAll(((LinkedList)clientData.data));
+                            hostData.changeTo(clientData.data);
                             break;
                         case INFORMATIONAL:
                             // The data is for informational purposes only, and doesn't need to be kept in sync.

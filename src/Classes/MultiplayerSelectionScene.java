@@ -219,20 +219,15 @@ public class MultiplayerSelectionScene extends Scene {
                 if(now>nextAnimationFrameInstance){
                     nextAnimationFrameInstance += 1000000000L/ FRAME_RATE;
 
-                    // Display newly-received messages in the chat box (host only):
-                    if(isHost) chatBox.displayMessages(localPlayer.getMessagesOut().getData());
-
-                    // update character animations:
+                    // update character animations and display messages:
                     for (PlayerSlot playerSlot : playerSlotContainer.getContents()){
                         playerSlot.tick(0);
                         playerSlot.repaint(isHost);
+                        chatBox.displayMessages(playerSlot.getPlayerData().getMessagesOut().getData());
                     }
 
                     if(isHost)deleteRemovedPlayers();
                     prepareAndSendPacket();
-
-                    // clear messagesOut so that messages are only broadcast once:
-                    localPlayer.getMessagesOut().changeClear();
 
                     connectionManager.getSynchronizer().resetChangedData();
                     checkForDisconnectedPlayers();
@@ -308,20 +303,6 @@ public class MultiplayerSelectionScene extends Scene {
 
             // Synchronize the Data:
             localSynchronizer.synchronizeWith(packet.getSynchronizer(),isHost);
-
-            // Perform special processing for messages:
-            // todo: definitely organize the Synchronizer data by parentID.
-            Set<Long> visitedLongs = new HashSet<>();
-            for(SynchronizedData data : receivedSynchronizer.getAll().values()){
-                long id = data.getParentID();
-                if(visitedLongs.contains(id) || id>=0) continue;
-                visitedLongs.add(id);
-                synchronized (localSynchronizer){
-                    SynchronizedList<Message> clientMessages = (SynchronizedList<Message>)receivedSynchronizer.get(id,"messagesOut");
-                    localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
-                    clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
-                }
-            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
@@ -486,13 +467,6 @@ public class MultiplayerSelectionScene extends Scene {
 
             // Since we've received a packet from the host, reset missedPacketsCount
             missedPacketsCount.replace(HOST_ID, 0);
-
-            // perform special processing for messages:
-            synchronized (localSynchronizer){
-                SynchronizedList<Message> hostMessages = (SynchronizedList<Message>)connectionManager.getSynchronizer().get(HOST_ID,"messagesOut");
-                chatBox.displayMessages(hostMessages.getData());
-                hostMessages.setClear(); // so we don't display the same messages more than once before we receive a new packet.
-            }
 
             // Perform special processing for game data:
             if(((SynchronizedComparable<Boolean>)(localSynchronizer.get(GAME_ID,"cancelGame"))).getData()){

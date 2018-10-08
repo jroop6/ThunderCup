@@ -99,7 +99,7 @@ public class PlayerData implements Serializable {
         synchronized (this.synchronizer){
             this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
             this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
-            messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, Integer.MAX_VALUE);
+            messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE);
             team = new SynchronizedComparable<>("team",myTeam, SynchronizedData.Precedence.CLIENT,this.playerID,synchronizer);
         }
 
@@ -149,14 +149,14 @@ public class PlayerData implements Serializable {
                         }
                     },
                     SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
-            firedOrbs = new SynchronizedList<>("firedOrbs",new LinkedList<OrbData>(),
+            firedOrbs = new SynchronizedList<>("firedOrbs",new LinkedList<>(),
                     (LinkedList<OrbData> newVal, Mode mode, int i, int j)->{
 
                     },
                     (LinkedList<OrbData> newVal, Mode mode, int i, int j)->{
 
                     },
-                    SynchronizedData.Precedence.CLIENT,this.playerID,this.synchronizer, 24);
+                    SynchronizedData.Precedence.CLIENT,this.playerID,this.synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE, 24);
 
             // Adjust precedences on the networked data:
             switch(playerType){
@@ -185,7 +185,7 @@ public class PlayerData implements Serializable {
         username = new SynchronizedComparable<>("username", other.username.getData(), other.username.getPrecedence(), playerID, synchronizer);
         team = new SynchronizedComparable<>("team",other.team.getData(), other.team.getPrecedence(), playerID, synchronizer);
         playerType = new SynchronizedComparable<>("playerType", other.playerType.getData(), other.playerType.getPrecedence(), playerID, synchronizer);
-        messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, Integer.MAX_VALUE);
+        messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE);
         state = new SynchronizedComparable<>("resigned", other.state.getData(), other.state.getPrecedence(), playerID, synchronizer);
         firedOrbs = new SynchronizedList<>("firedOrbs", new LinkedList<OrbData>(), other.firedOrbs.getPrecedence(), playerID, synchronizer);
         playerPos = other.playerPos;

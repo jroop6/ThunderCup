@@ -399,9 +399,9 @@ public class GameScene extends Scene {
                 }
             }*/
 
-            // Display new chat messages in the chat box (clients do this in processPacketsAsClient):
-            if(isHost){
-                chatBox.displayMessages(localPlayer.getMessagesOut().getData());
+            // Display new chat messages in the chat box
+            for(PlayerData player : players){
+                chatBox.displayMessages(player.getMessagesOut().getData());
             }
 
             // Process outgoing Packets
@@ -409,9 +409,6 @@ public class GameScene extends Scene {
             else prepareAndSendClientPacket();
 
             checkForDisconnectedPlayers();
-
-            // clear messagesOut so that messages are only broadcast once:
-            localPlayer.getMessagesOut().changeClear();
 
             // clear changedData so that changes are only broadcast once:
             connectionManager.getSynchronizer().resetChangedData();
@@ -474,24 +471,6 @@ public class GameScene extends Scene {
                     break;
                 }
             }
-
-            // Perform special processing for messages:
-            // todo: definitely organize the Synchronizer data by parentID.
-            Set<Long> visitedLongs = new HashSet<>();
-            for(SynchronizedData data : receivedSynchronizer.getAll().values()){
-                long id = data.getParentID();
-                if(visitedLongs.contains(id) || id>=0) continue;
-                visitedLongs.add(id);
-                synchronized (localSynchronizer){
-                    SynchronizedList<Message> clientMessages = (SynchronizedList<Message>)receivedSynchronizer.get(id,"messagesOut");
-                    localPlayer.getMessagesOut().changeAddAll(clientMessages.getData());
-                    clientMessages.setClear(); // so we don't changeAddAll more than once on this data.
-                }
-                // replace the missedPacketsCount while we're here:
-                gameData.getMissedPacketsCount().replace(id,0);
-            }
-
-            // Perform special processing for firedOrbs:
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
@@ -557,13 +536,6 @@ public class GameScene extends Scene {
 
             // Since we've received a packet from the host, reset missedPacketsCount
             gameData.setMissedPacketsCount(HOST_ID,0);
-
-            // perform special processing for messages:
-            synchronized (localSynchronizer){
-                SynchronizedList<Message> hostMessages = (SynchronizedList<Message>) connectionManager.getSynchronizer().get(HOST_ID, "messagesOut");
-                chatBox.displayMessages(hostMessages.getData());
-                hostMessages.setClear(); // so we don't display the same messages more than once before we receive a new packet.
-            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
