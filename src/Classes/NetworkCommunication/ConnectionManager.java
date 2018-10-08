@@ -11,7 +11,6 @@ public abstract class ConnectionManager extends Thread {
     List<SenderWorker> senderWorkers = new LinkedList<>();
     List<ReceiverWorker> receiverWorkers = new LinkedList<>();
     protected static final int DEFAULT_PORT = 5000;
-    private long packetsSentPerSecond = 10;  // The game will process incoming packets as fast as possible, but only export this many packets per second, reducing the possibility of overloading the AnimationTimer with too many inPackets from other computer(s).
     public long latencyTestsPerSecond = 3; // How frequently the host probes the latency of its connected clients.
     Map<Long,Long> latencies = new HashMap<>(); // A continuously-updated record of the latencies between the server and various players.
     protected long playerID; // the ID of the LocalPlayer.
@@ -26,10 +25,6 @@ public abstract class ConnectionManager extends Thread {
 
     public Map<Long,Long> getLatencies(){
         return latencies;
-    }
-
-    public long getPacketsSentPerSecond(){
-        return packetsSentPerSecond;
     }
 
     public Synchronizer getSynchronizer(){

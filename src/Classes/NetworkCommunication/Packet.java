@@ -22,10 +22,11 @@ public class Packet implements Serializable{
     }
 
     // Constructor used in GameScene, where playPanelData is also relevant.
-    public Packet(PlayerData playerData, GameData gameData, PlayPanel playPanel){
+    public Packet(PlayerData playerData, GameData gameData, PlayPanel playPanel, Synchronizer synchronizer){
         this.gameData = gameData;
         playerDataList.add(playerData);
         playPanelList.add(playPanel);
+        this.synchronizer = new Synchronizer(synchronizer);
     }
 
     public void addPlayerData(PlayerData playerData){

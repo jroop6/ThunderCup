@@ -12,7 +12,7 @@ import java.io.Serializable;
 import static Classes.GameScene.DATA_FRAME_RATE;
 import static Classes.PlayPanel.ORB_RADIUS;
 
-public class OrbData extends PointInt implements Serializable{
+public class OrbData extends PointInt implements Serializable, Comparable<OrbData>{
     private static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
     private static final double TIME_TO_THUNDER = 1; // how much time it takes for a dropped orb to thunder.
 
@@ -57,21 +57,21 @@ public class OrbData extends PointInt implements Serializable{
 
     /* Copy Constructor */
     public OrbData(OrbData other){
-        super(other.getI(), other.getJ());
-        orbColor = other.getOrbColor();
-        orbAnimation = new AnimationData(other.getOrbAnimation());
-        if(other.getOrbElectrification()!=null) orbElectrification = new AnimationData(other.getOrbElectrification());
-        if(other.getOrbExplosion()!=null) orbExplosion = new AnimationData(other.getOrbExplosion());
-        orbThunder = other.getOrbThunder();
-        orbAnimationState = other.getOrbAnimationState();
+        super(other.i, other.j);
+        orbColor = other.orbColor;
+        orbAnimation = new AnimationData(other.orbAnimation);
+        if(other.orbElectrification!=null) orbElectrification = new AnimationData(other.orbElectrification);
+        if(other.orbExplosion!=null) orbExplosion = new AnimationData(other.orbExplosion);
+        orbThunder = other.orbThunder;
+        setOrbAnimationState(other.orbAnimationState);
 
-        angle = other.getAngle();
-        speed = other.getSpeed();
+        angle = other.angle;
+        speed = other.speed;
 
-        currentFrame = other.getCurrentFrame();
+        currentFrame = other.currentFrame;
 
-        rawTimestamp = other.getRawTimestamp();
-        timeStamp = other.getTimestamp();
+        rawTimestamp = other.rawTimestamp;
+        timeStamp = other.timeStamp;
     }
 
     public void relocate(double xPos, double yPos){
@@ -125,9 +125,6 @@ public class OrbData extends PointInt implements Serializable{
         double yPos = ORB_RADIUS + i*PlayPanel.ROW_HEIGHT;
         orbAnimation.relocate(xPos, yPos);
     }
-    public void setCurrentFrame(int newIndex){
-        currentFrame = newIndex;
-    }
     public void computeTimeStamp(long timeLastPacketSent){
         timeStamp = rawTimestamp - timeLastPacketSent;
     }
@@ -148,32 +145,11 @@ public class OrbData extends PointInt implements Serializable{
     double getSpeed(){
         return speed;
     }
-    long getRawTimestamp(){
-        return rawTimestamp;
-    }
-    long getTimestamp(){
-        return timeStamp;
-    }
     public OrbAnimationState getOrbAnimationState(){
         return orbAnimationState;
     }
     public OrbColor getOrbColor(){
         return orbColor;
-    }
-    public AnimationData getOrbAnimation(){
-        return orbAnimation;
-    }
-    public AnimationData getOrbElectrification(){
-        return orbElectrification;
-    }
-    public AnimationData getOrbExplosion(){
-        return orbExplosion;
-    }
-    public SoundEffect getOrbThunder(){
-        return orbThunder;
-    }
-    public int getCurrentFrame(){
-        return currentFrame;
     }
 
     // called 24 times per second.
@@ -260,10 +236,19 @@ public class OrbData extends PointInt implements Serializable{
             double tolerance = 1;
             if(Math.abs(otherOrbData.getXPos()-getXPos())<tolerance
                     && Math.abs(otherOrbData.getYPos()-getYPos())<tolerance
-                    && otherOrbData.getOrbColor() == orbColor
-                    && Math.abs(otherOrbData.getAngle()-angle)<tolerance/180) return true;
+                    && otherOrbData.orbColor == orbColor
+                    && Math.abs(otherOrbData.angle-angle)<tolerance/180) return true;
             else return false;
         }
+    }
+
+    @Override
+    public int compareTo(OrbData other){
+        double tolerance = 1;
+        if(Math.abs(other.getXPos()-getXPos())<tolerance
+                && other.orbColor == orbColor
+                && Math.abs(other.angle-angle)<tolerance/180) return 0;
+        else return -1;
     }
 
     // The hashCode is the sum of two cantor pairings.

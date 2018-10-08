@@ -22,8 +22,12 @@ public class PlayerData implements Serializable {
     private final long playerID;
 
     private int playerPos;
-    private Point2D ammunitionOrb1Position;
-    private Point2D ammunitionOrb2Position;
+    private double ammunitionOrb1X;
+    private double ammunitionOrb1Y;
+    private double ammunitionOrb2X;
+    private double ammunitionOrb2Y;
+    //private Point2D ammunitionOrb1Position; // temporarily replaced with ammunitionOrb1X and ammunitionOrb1Y because Point2D is not Serializable
+    //private Point2D ammunitionOrb2Position; // temporarily replaced with ammunitionOrb2X and ammunitionOrb2Y because Point2D is not Serializable
 
     private SynchronizedComparable<PlayerType> playerType;
     protected SynchronizedComparable<String> username;
@@ -32,7 +36,8 @@ public class PlayerData implements Serializable {
     private SynchronizedList<Message> messagesOut;
     private transient long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
-    private Queue<OrbData> firedOrbs = new LinkedList<>();
+    //private Queue<OrbData> firedOrbs = new LinkedList<>();
+    private SynchronizedList<OrbData> firedOrbs;
 
     // An enum indicating a special state of player:
     public enum State {NORMAL, DEFEATED, DISCONNECTED, VICTORIOUS}
@@ -42,7 +47,6 @@ public class PlayerData implements Serializable {
 
     // Flags indicating changes to playerData:
     private boolean bubbleDataChanged = false;
-    private boolean firing = false;
     private boolean characterChanged = false;
     private boolean defeatedChanged = false;
     private boolean ammunitionOrbsChanged = false;
@@ -145,6 +149,14 @@ public class PlayerData implements Serializable {
                         }
                     },
                     SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
+            firedOrbs = new SynchronizedList<>("firedOrbs",new LinkedList<OrbData>(),
+                    (LinkedList<OrbData> newVal, Mode mode, int i, int j)->{
+
+                    },
+                    (LinkedList<OrbData> newVal, Mode mode, int i, int j)->{
+
+                    },
+                    SynchronizedData.Precedence.CLIENT,this.playerID,this.synchronizer, 24);
 
             // Adjust precedences on the networked data:
             switch(playerType){
@@ -153,8 +165,10 @@ public class PlayerData implements Serializable {
                     this.team.setPrecedence(SynchronizedData.Precedence.HOST);
                     this.characterData.getCharacterType().setPrecedence(SynchronizedData.Precedence.HOST);
                     this.cannonData.getCannonType().setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.cannonData.getCannonAngle().setPrecedence(SynchronizedData.Precedence.HOST);
                     this.messagesOut.setPrecedence(SynchronizedData.Precedence.HOST);
                     this.state.setPrecedence(SynchronizedData.Precedence.HOST);
+                    this.firedOrbs.setPrecedence(SynchronizedData.Precedence.HOST);
                     break;
             }
         }
@@ -167,29 +181,32 @@ public class PlayerData implements Serializable {
     // Copy constructor
     public PlayerData(PlayerData other){
         synchronizer = new Synchronizer();
-        playerID = other.getPlayerID();
-        username = new SynchronizedComparable<>("username", other.getUsername().getData(), other.getUsername().getPrecedence(), playerID, synchronizer);
-        team = new SynchronizedComparable<>("team",other.getTeam().getData(), other.getTeam().getPrecedence(), playerID, synchronizer);
-        playerType = new SynchronizedComparable<>("playerType", other.getPlayerType().getData(), other.getPlayerType().getPrecedence(), playerID, synchronizer);
+        playerID = other.playerID;
+        username = new SynchronizedComparable<>("username", other.username.getData(), other.username.getPrecedence(), playerID, synchronizer);
+        team = new SynchronizedComparable<>("team",other.team.getData(), other.team.getPrecedence(), playerID, synchronizer);
+        playerType = new SynchronizedComparable<>("playerType", other.playerType.getData(), other.playerType.getPrecedence(), playerID, synchronizer);
         messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), other.getMessagesOut().getPrecedence(), playerID, synchronizer, Integer.MAX_VALUE);
-        state = new SynchronizedComparable<>("resigned", other.getState().getData(), other.getState().getPrecedence(), playerID, synchronizer);
+        state = new SynchronizedComparable<>("resigned", other.state.getData(), other.state.getPrecedence(), playerID, synchronizer);
+        firedOrbs = new SynchronizedList<>("firedOrbs", new LinkedList<OrbData>(), other.firedOrbs.getPrecedence(), playerID, synchronizer);
         playerPos = other.playerPos;
-        ammunitionOrb1Position = other.ammunitionOrb1Position;
-        ammunitionOrb2Position = other.ammunitionOrb2Position;
+        ammunitionOrb1X = other.ammunitionOrb1X;
+        ammunitionOrb1Y = other.ammunitionOrb1Y;
+        ammunitionOrb2X = other.ammunitionOrb2X;
+        ammunitionOrb2Y = other.ammunitionOrb2Y;
+        //ammunitionOrb1Position = other.ammunitionOrb1Position;
+        //ammunitionOrb2Position = other.ammunitionOrb2Position;
 
         ammunitionOrbs = deepCopyOrbList(other.getAmmunition());
-        firedOrbs = deepCopyOrbQueue(other.getFiredOrbs());
 
         bubbleDataChanged = other.isBubbleDataChanged();
-        firing = other.isFiring();
         characterChanged = other.isCharacterChanged();
         defeatedChanged = other.isDefeatedChanged();
         ammunitionOrbsChanged = other.isAmmunitionChanged();
         frozenChanged = other.isFrozenChanged();
         cannonDisabledChanged = other.isCannonDisabledChanged();
 
-        characterData = new CharacterData(other.getCharacterData(), other.getPlayerID(), synchronizer);
-        cannonData = new CannonData(other.getCannonData(), other.getPlayerID(), synchronizer);
+        characterData = new CharacterData(other.characterData, other.playerID, synchronizer);
+        cannonData = new CannonData(other.getCannonData(), other.playerID, synchronizer);
 
     }
 
@@ -227,8 +244,12 @@ public class PlayerData implements Serializable {
     }
 
     public void setAmmunitionOrbPositions(Point2D ammunitionOrb1Position, Point2D ammunitionOrb2Position){
-        this.ammunitionOrb1Position = ammunitionOrb1Position;
-        this.ammunitionOrb2Position = ammunitionOrb2Position;
+        this.ammunitionOrb1X = ammunitionOrb1Position.getX();
+        this.ammunitionOrb1Y = ammunitionOrb1Position.getY();
+        this.ammunitionOrb2X = ammunitionOrb2Position.getX();
+        this.ammunitionOrb2Y = ammunitionOrb2Position.getY();
+        //this.ammunitionOrb1Position = ammunitionOrb1Position;
+        //this.ammunitionOrb2Position = ammunitionOrb2Position;
     }
 
     public Synchronizer getSynchronizer(){
@@ -253,11 +274,12 @@ public class PlayerData implements Serializable {
             firedOrb.setRawTimestamp(System.nanoTime());
             firedOrb.setAngle(angle);
             firedOrb.setSpeed(firedOrb.getOrbColor().getOrbSpeed());
-            firedOrbs.add(firedOrb);
-            firing = true;
+            firedOrbs.changeAdd(firedOrb);
 
             // Add a new ammunition orb to the end of the list
             if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new OrbData(newEnum,0,0, OrbData.OrbAnimationState.STATIC)); // Updates model
+
+            changeAmmunitionFlag(true);
 
             positionAmmunitionOrbs();
             return firedOrb;
@@ -271,13 +293,12 @@ public class PlayerData implements Serializable {
     // set the positions of the 1st and second shooting orbs for this player
     public void positionAmmunitionOrbs(){
         // update the positions of the next 2 ammunition orbs
-        ammunitionOrbs.get(0).relocate(ammunitionOrb1Position.getX(), ammunitionOrb1Position.getY());
-        ammunitionOrbs.get(1).relocate(ammunitionOrb2Position.getX(), ammunitionOrb2Position.getY());
+        ammunitionOrbs.get(0).relocate(ammunitionOrb1X, ammunitionOrb1Y);
+        ammunitionOrbs.get(1).relocate(ammunitionOrb2X, ammunitionOrb2Y);
+        //ammunitionOrbs.get(0).relocate(ammunitionOrb1Position.getX(), ammunitionOrb1Position.getY());
+        //ammunitionOrbs.get(1).relocate(ammunitionOrb2Position.getX(), ammunitionOrb2Position.getY());
     }
 
-    public void changeFiringFlag(boolean firing){
-        this.firing = firing;
-    }
     public void changeAmmunitionFlag(boolean ammunitionOrbsChanged){
         this.ammunitionOrbsChanged = ammunitionOrbsChanged;
     }
@@ -311,10 +332,8 @@ public class PlayerData implements Serializable {
 
     public void resetFlags(){
         bubbleDataChanged = false;
-        firing = false;
         characterChanged = false;
         defeatedChanged = false;
-        firedOrbs.clear();
         frozenChanged = false;
         cannonDisabledChanged = false;
     }
@@ -324,9 +343,6 @@ public class PlayerData implements Serializable {
      * the actual player data). */
     public boolean isBubbleDataChanged(){
         return bubbleDataChanged;
-    }
-    public boolean isFiring(){
-        return firing;
     }
     public boolean isCharacterChanged(){
         return characterChanged;
@@ -375,7 +391,7 @@ public class PlayerData implements Serializable {
     public List<OrbData> getAmmunition(){
         return ammunitionOrbs;
     }
-    public Queue<OrbData> getFiredOrbs(){
+    public SynchronizedList<OrbData> getFiredOrbs(){
         return firedOrbs;
     }
     public CannonData getCannonData(){
@@ -469,13 +485,13 @@ public class PlayerData implements Serializable {
 
     // Points the cannon at a given angle, in degrees (0 degrees points to the right)
     public void pointCannon(double angle){
-        if(getState().getData() == State.DEFEATED) return;
+        if(state.getData() == State.DEFEATED) return;
         cannonData.getCannonAngle().changeTo(angle);
     }
 
     private void setFireCannon(){
         // Check whether this player is allowed to fire:
-        State currentState = getState().getData();
+        State currentState = state.getData();
         if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
         OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
         setFire(newShooterOrbEnum);
@@ -485,7 +501,7 @@ public class PlayerData implements Serializable {
 
     public void changeFireCannon(){
         // Check whether this player is allowed to fire:
-        State currentState = getState().getData();
+        State currentState = state.getData();
         if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
 
         // Remove an orb from ammunitionOrbs and add it to this player's firedOrbs. Also add a new orb to ammunitionOrbs
@@ -511,15 +527,6 @@ public class PlayerData implements Serializable {
 
     // Called every frame by the host to update a player's data according to a packet received over the network
     public void updateWithChangers(PlayerData newPlayerData, Map<Long, Long> latencies){
-        if(newPlayerData.isFiring()){
-            getFiredOrbs().addAll(newPlayerData.getFiredOrbs()); // updates model
-            changeFiringFlag(true); // marks data as updated
-            for(int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon(); // updates model
-            changeAmmunitionFlag(true); // marks data as updated
-            // note: view will be updated in the PlayPanel's repaint() method.
-        }
-
-        //cannonData.setAngle(newPlayerData.getCannonData().getCannonAngle());
     }
 
 
@@ -529,11 +536,6 @@ public class PlayerData implements Serializable {
     // old data.
     public void updateWithSetters(PlayerData newPlayerData, PlayerType playerType){
         boolean isLocalPlayer = playerType==PlayerType.LOCAL;
-        if(newPlayerData.isFiring() && !isLocalPlayer){
-            System.out.println("CLIENT: Another player has fired. Incrementing their ammunitionOrbs");
-            for (int i=0; i<newPlayerData.getFiredOrbs().size(); i++) setFireCannon();
-            // note: view will be updated in the PlayPanel's repaint() method.
-        }
 
         // remote players' cannon angles are always updated:
         /*if(!isLocalPlayer){

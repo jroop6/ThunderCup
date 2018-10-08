@@ -4,13 +4,22 @@ import java.io.Serializable;
 import java.util.*;
 
 public class SynchronizedList<T extends Comparable<T> & Serializable> extends SynchronizedData<LinkedList<T>> {
+    public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Setable<LinkedList<T>> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
+        super(name, parentID, synchronizer, precedence, syncTolerance);
+        registerExternalSetters(setInterface, changeInterface);
+        this.data = new LinkedList<>();
+        setTo(data);
+    }
+
     public SynchronizedList(String name, LinkedList<T> data, Precedence precedence, long parentID, Synchronizer synchronizer){
         super(name, parentID, synchronizer, precedence, 24);
+        this.data = new LinkedList<>();
         setTo(data);
     }
 
     public SynchronizedList(String name, LinkedList<T> data, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
+        this.data = new LinkedList<>();
         setTo(data);
     }
 
@@ -23,6 +32,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             T elementCopy = deepCopyDataElement(element);
             otherDataListCopy.add(elementCopy);
         }
+        this.data = new LinkedList<>();
         setTo(otherDataListCopy);
     }
 
@@ -77,7 +87,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
 
     public void setClear(){
         synchronized (synchronizer){
-            setRemoveAll(new LinkedList<>(data));
+            setRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
         }
     }
 
@@ -119,7 +129,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
 
     public void changeClear(){
         synchronized (synchronizer){
-            changeRemoveAll(new LinkedList<>(data));
+            changeRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
         }
     }
 
@@ -127,47 +137,27 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     public void setTo(LinkedList<T> newList){
         synchronized (synchronizer){
             // call the ExternalSetter on each existing element as it is removed.
-            if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
-            else setRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
+            setClear();
 
-            // create a temporary copy of the new list.
-            LinkedList<T> newListCopy = new LinkedList<>(newList);
-
-            // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
-            // list. This is done to ensure that the index passed to the ExternalSetter is correct.
-            data = newList;
-            try{
-                data.clear();
-            } catch(UnsupportedOperationException e){
-                System.err.println("Warning! A List passed to the setTo() method in SynchronizedList appears to be " +
-                        "fixed-size (perhaps you used Arrays.asList()?). SynchronizedList requires a List that supports " +
-                        "add, remove, and clear. Defaulting to a LinkedList.");
-                data = new LinkedList<>();
-            }
-            setAddAll(newListCopy);
+            // replace data with the new list, calling the ExternalSetter on each element as it is added
+            setAddAll(newList);
         }
     }
 
     @Override
     public void changeTo(LinkedList<T> newList){
         synchronized (synchronizer){
-            if(data == null) data = new LinkedList<>(); // to avoid a nullPointerException
-            changeRemoveAll(new LinkedList<>(data)); // a new LinkedList is used to avoid a ConcurrentModificationException.
+            // call the ExternalChanger on each existing element as it is removed.
+            changeClear();
 
-            // create a temporary copy of the new list.
-            LinkedList<T> newListCopy = new LinkedList<>(newList);
-
-            // replace data with the new list, then call the ExternalSetter on each new element as it is re-added to the
-            // list. This is done to ensure that the index passed to the ExternalSetter is correct.
-            data = newList;
-            data.clear();
-            changeAddAll(newListCopy);
+            // replace data with the new list, calling the ExternalChanger on each element as it is added
+            changeAddAll(newList);
         }
     }
 
     public static void main(String[] args){
         Synchronizer synchronizer = new Synchronizer();
-        SynchronizedList<String> myList = new SynchronizedList<String>("test", new LinkedList<String>(), Precedence.CLIENT, 21, synchronizer);
+        SynchronizedList<String> myList = new SynchronizedList<String>("test", new LinkedList<>(), Precedence.CLIENT, 21, synchronizer);
         myList.setAdd("hello");
         myList.setAdd("yellow");
         myList.setAdd("hi");
@@ -187,8 +177,10 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         System.out.println("number of changed datas: " + synchronizer.getChangedData().size());
 
         System.out.println("comparing the two lists: " + myList.compareTo(myList2));
-        myList.setRemoveAll(Arrays.asList("hello","hi","howdy"));
-        myList.setAddAll(myList2.data);
+        myList2.setTo(myList.getData());
         System.out.println("comparing again: " + myList.compareTo(myList2));
+
+        SynchronizedList<String> myList3 = new SynchronizedList<>("test",new LinkedList<>(Arrays.asList("test1", "test2", "test3")), Precedence.CLIENT, 21, synchronizer);
+
     }
 }

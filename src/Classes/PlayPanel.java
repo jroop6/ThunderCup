@@ -28,8 +28,7 @@ import static Classes.OrbData.*;
 import static java.lang.Math.PI;
 
 /**
- * A JavaFX pane whose purpose is to display the data contained in its corresponding PlayPanelData. All constants have
- * units of pixels.
+ *
  */
 public class PlayPanel extends Pane implements Serializable {
     // Constants determining PlayPanel layout:
@@ -210,46 +209,11 @@ public class PlayPanel extends Pane implements Serializable {
     PlayPanel(PlayPanel other){
         this.synchronizer = new Synchronizer();
         team = other.team;
-        players = other.players;
+        players = new LinkedList<>();
         shotsUntilNewRow = other.shotsUntilNewRow;
         this.arrayWidth = other.players.size()*ARRAY_WIDTH_PER_CHARACTER;
         this.seed = other.seed;
-        this.teamState = new SynchronizedComparable<>("teamState", TeamState.NORMAL,
-                (TeamState newVal, Mode mode, int i, int j) ->{
-                    PlayerData.State newState;
-                    switch(newVal){
-                        case VICTORIOUS:
-                            newState = PlayerData.State.VICTORIOUS;
-                            break;
-                        case DEFEATED:
-                            newState = PlayerData.State.DEFEATED;
-                            break;
-                        default:
-                            newState = PlayerData.State.NORMAL;
-                            break;
-                    }
-                    for(PlayerData playerData : players){
-                        playerData.getState().setTo(newState);
-                    }
-                },
-                (TeamState newVal, Mode mode, int i, int j) ->{
-                    PlayerData.State newState;
-                    switch(newVal){
-                        case VICTORIOUS:
-                            newState = PlayerData.State.VICTORIOUS;
-                            break;
-                        case DEFEATED:
-                            newState = PlayerData.State.DEFEATED;
-                            break;
-                        default:
-                            newState = PlayerData.State.NORMAL;
-                            break;
-                    }
-                    for(PlayerData playerData : players){
-                        playerData.getState().setTo(newState);
-                    }
-                },
-                other.teamState.getPrecedence(),other.team,synchronizer,0);
+        this.teamState = new SynchronizedComparable<>("teamState", TeamState.NORMAL, other.teamState.getPrecedence(),other.team,synchronizer);
 
         orbArray = deepCopyOrbArray(other.orbArray);
 
@@ -882,16 +846,16 @@ public class PlayPanel extends Pane implements Serializable {
         }
 
         if(isHost){
-            if(playerData.isFiring()) {
+            /*if(playerData.isFiring()) {
                 changeAddShootingOrbs(playerData.getFiredOrbs()); //updates model
-            }
+            }*/
             player.updateWithChangers(playerData, null); // Relevant changes to playerData include: cannonAngle, defeated status, whether he/she is firing his/her cannon, and changes in BubbleData
         }
         else{
-            if(playerData.isFiring() && !(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL)){
+            /*if(playerData.isFiring() && !(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL)){
                 System.out.println("CLIENT: Another player has fired. Adding their obs to the playpanel");
                 setAddShootingOrbs(playerData.getFiredOrbs()); // updates model
-            }
+            }*/
             player.updateWithSetters(playerData, player.getPlayerType().getData());
         }
     }

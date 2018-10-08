@@ -128,7 +128,8 @@ public class Synchronizer implements Serializable {
                             break;
                         case CLIENT:
                             // Accept data changes that this client has authority over:
-                            hostData.changeTo(clientData.data);
+                            if(hostData instanceof SynchronizedComparable) hostData.changeTo(clientData.data);
+                            else if (hostData instanceof SynchronizedList) ((SynchronizedList)hostData).changeAddAll(((LinkedList)clientData.data));
                             break;
                         case INFORMATIONAL:
                             // The data is for informational purposes only, and doesn't need to be kept in sync.

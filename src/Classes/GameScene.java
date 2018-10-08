@@ -9,6 +9,7 @@ import Classes.Images.StaticBgImages;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -206,7 +207,7 @@ public class GameScene extends Scene {
                 // Incoming packets are processed as often as possible:
                 workerThread.submit(receivePacketsTasks);
 
-                // Data is updated 24 times per second
+                // Data is updated and packets are sent 24 times per second
                 if(now>nextDataUpdateInstance){
                     nextDataUpdateInstance += 1000000000L/ DATA_FRAME_RATE;
 
@@ -227,6 +228,8 @@ public class GameScene extends Scene {
                         //todo: consider reducing DATA_FRAME_RATE
                         System.err.println("Warning! Future.get() timed out. Skipping the next submit() operation.");
                     }
+
+                    workerThread.submit(sendPacketsTasks);
                 }
 
                 // Visuals are updated 48 times per second.
@@ -234,12 +237,6 @@ public class GameScene extends Scene {
                     nextAnimationFrameInstance += 1000000000L/ VISUAL_FRAME_RATE;
                     updatePlayPanelViews();
                     updateGameView();
-                }
-
-                // Outgoing Packets are transmitted 10 times per second. The game also deals with dropped players at this time:
-                if(now>nextSendInstance){
-                    nextSendInstance += 1000000000L/connectionManager.getPacketsSentPerSecond();
-                    workerThread.submit(sendPacketsTasks);
                 }
 
                 // Latency probes are sent by the host 3 times per second:
@@ -282,14 +279,6 @@ public class GameScene extends Scene {
         for(PlayPanel playPanel : playPanelMap.values()){
             // Repaint the PlayPanel:
             playPanel.repaint();
-
-            // If a player has been gone for too long (and they have not resigned), ask the host what to do:
-            for(PlayerData player : playPanel.getPlayerList()){
-                Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
-                if(missedPackets==maxConsecutivePacketsMissed && player.getState().getData()!= PlayerData.State.DEFEATED){
-                    showConnectionLostDialog(player);
-                }
-            }
         }
     }
 
@@ -308,7 +297,8 @@ public class GameScene extends Scene {
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
             for(PlayerData player : players){
-                if(player.getState().getData()!= PlayerData.State.DEFEATED) liveTeams.add(player.getTeam().getData());
+                PlayerData.State playerState = player.getState().getData();
+                if(playerState!=PlayerData.State.DEFEATED && playerState!=PlayerData.State.DISCONNECTED) liveTeams.add(player.getTeam().getData());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -411,7 +401,6 @@ public class GameScene extends Scene {
 
             // Display new chat messages in the chat box (clients do this in processPacketsAsClient):
             if(isHost){
-                if(localPlayer.getMessagesOut().getData().size()>0) System.out.println("   message: " + localPlayer.getMessagesOut().getData().get(0).getString());
                 chatBox.displayMessages(localPlayer.getMessagesOut().getData());
             }
 
@@ -419,8 +408,7 @@ public class GameScene extends Scene {
             if(isHost) prepareAndSendServerPacket();
             else prepareAndSendClientPacket();
 
-            // Increment the missed packets count (used for detecting dropped players):
-            incrementMissedPacketsCounts();
+            checkForDisconnectedPlayers();
 
             // clear messagesOut so that messages are only broadcast once:
             localPlayer.getMessagesOut().changeClear();
@@ -477,6 +465,16 @@ public class GameScene extends Scene {
 
             localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
 
+            // Since we've received a packet from this player, reset missedPacketsCount:
+            // todo: this is horribly inefficient. Organize synchronizedData by ID in the synchronizer.
+            for(SynchronizedData synchronizedData : receivedSynchronizer.getAll().values()){
+                long id = synchronizedData.getParentID();
+                if(receivedSynchronizer.get(id,"playerType").getData()==PlayerData.PlayerType.LOCAL){
+                    gameData.setMissedPacketsCount(id,0);
+                    break;
+                }
+            }
+
             // Perform special processing for messages:
             // todo: definitely organize the Synchronizer data by parentID.
             Set<Long> visitedLongs = new HashSet<>();
@@ -493,6 +491,8 @@ public class GameScene extends Scene {
                 gameData.getMissedPacketsCount().replace(id,0);
             }
 
+            // Perform special processing for firedOrbs:
+
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
         }
@@ -505,12 +505,12 @@ public class GameScene extends Scene {
         PlayerData localPlayerData = new PlayerData(localPlayer);
         GameData localGameData = new GameData(gameData);
         PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayer.getTeam().getData()));
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel);
+        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel, connectionManager.getSynchronizer());
 
         for (PlayerData player: players) {
             if(player.getPlayerID()==0) continue; // we've already added the localPlayer's PlayerData to the packet.
-            PlayerData playerData = new PlayerData(player); // Yes, these need to be *new* PlayerData instances because there may be locally-stored bot data. see note regarding local player data, above.
-            outPacket.addPlayerData(playerData);
+            PlayerData playerCopy = new PlayerData(player); // Yes, these need to be *new* PlayerData instances because there may be locally-stored bot data. see note regarding local player data, above.
+            outPacket.addPlayerData(playerCopy);
             player.resetFlags(); // reset the local change flags so that they are only broadcast once
         }
 
@@ -529,13 +529,19 @@ public class GameScene extends Scene {
         gameData.resetFlags();
     }
 
-    private void incrementMissedPacketsCounts(){
+    private void checkForDisconnectedPlayers(){
         for (PlayerData player: players) {
             if(!(player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_CLIENTVIEW || player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
             if(!isHost && player.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
 
             // increment the missed packets count. The count will be reset whenever the next packet is received:
             gameData.incrementMissedPacketsCount(player.getPlayerID());
+
+            // If we haven't received a packet from this player for a while, ask the user what to do:
+            Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
+            if (missedPackets == maxConsecutivePacketsMissed && player.getState().getData() != PlayerData.State.DEFEATED) {
+                Platform.runLater(()->showConnectionLostDialog(player));
+            }
         }
     }
 
@@ -572,7 +578,7 @@ public class GameScene extends Scene {
         GameData localGameData = new GameData(gameData);
         PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayerData.getTeam().getData()));
 
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel);
+        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel, connectionManager.getSynchronizer());
         connectionManager.send(outPacket);
 
         // reset local change flags so that they are sent only once:
