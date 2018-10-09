@@ -2,7 +2,12 @@ package Classes.NetworkCommunication;
 
 import java.io.*;
 
-
+/**
+ * Data is uniquely identified by 2 variables: parentID (a long) and name (a String). parentID might, for example,
+ * uniquely identify a player and then name could be something like "username." For data associated with teams, you can
+ * use a parentID that is unique to that team. For global game data, you can use a constant field like GAME_ID for the
+ * parentID.
+ */
 public abstract class SynchronizedData<T extends Serializable> implements Comparable<SynchronizedData<T>>, Serializable {
     // The actual data:
     protected T data;
@@ -59,9 +64,6 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     }
     public String getName(){
 	    return name;
-    }
-    public String getKey(){
-        return parentID + name;
     }
 
     public T getData(){

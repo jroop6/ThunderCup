@@ -37,7 +37,6 @@ import static javafx.scene.layout.AnchorPane.setRightAnchor;
 
 /**
  * Created by Jonathan Roop on 7/22/2017.
- *
  */
 public class GameScene extends Scene {
     static final double GRAVITY = 1000.0; // pixels per second squared
@@ -52,6 +51,8 @@ public class GameScene extends Scene {
     private ChatBox chatBox;
     private PlayerData localPlayer;
     private List<PlayerData> players;
+
+    Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
 
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
@@ -82,7 +83,6 @@ public class GameScene extends Scene {
     private SendPacketsTasks sendPacketsTasks = new SendPacketsTasks();
     private ReportingTasks reportingTasks = new ReportingTasks();
     private ExecutorService workerThread = Executors.newSingleThreadExecutor();
-    private Future<FrameResult> resultHolder;
 
     private boolean victoryPauseStarted2 = false;
     private boolean victoryDisplayStarted2 = false;
@@ -139,7 +139,6 @@ public class GameScene extends Scene {
         chatBox = new ChatBox(localPlayer, 125, false);
         chatBox.displayMessage(new Message("Use mouse wheel to scroll messages", localPlayer.getPlayerID()));
         chatBox.displayMessage(new Message("Press p to pause", localPlayer.getPlayerID()));
-
         AnchorPane chatBoxPositioner = new AnchorPane();
         chatBoxPositioner.getChildren().add(chatBox);
         setBottomAnchor(chatBox,0.0);
@@ -198,9 +197,6 @@ public class GameScene extends Scene {
                     nextSendInstance = now;
                     nextReport = now;
 
-                    // Initialize resultHolder by computing the first frame:
-                    resultHolder = workerThread.submit(updateFrameTasks);
-
                     initializing = false;
                 }
 
@@ -211,23 +207,11 @@ public class GameScene extends Scene {
                 if(now>nextDataUpdateInstance){
                     nextDataUpdateInstance += 1000000000L/ DATA_FRAME_RATE;
 
-                    try{
-                        // Retrieve the previous results:
-                        FrameResult previousResult = resultHolder.get(0,TimeUnit.MILLISECONDS);
+                    // Have the worker thread start computing the next frame:
+                    workerThread.submit(updateFrameTasks);
 
-                        // Have the worker thread start computing the next frame:
-                        resultHolder = workerThread.submit(updateFrameTasks);
-
-                        // Play sound effects:
-                        for(SoundEffect soundEffect : previousResult.soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
-
-                    }catch (ExecutionException | InterruptedException e){
-                        System.err.println("ExecutionException encountered. Stack trace:");
-                        e.getCause().printStackTrace();
-                    }catch (TimeoutException e){
-                        //todo: consider reducing DATA_FRAME_RATE
-                        System.err.println("Warning! Future.get() timed out. Skipping the next submit() operation.");
-                    }
+                    // Play sound effects:
+                    playSoundEffects();
 
                     workerThread.submit(sendPacketsTasks);
                 }
@@ -257,6 +241,13 @@ public class GameScene extends Scene {
         animationTimer.start();
     }
 
+    private void playSoundEffects(){
+        synchronized (connectionManager.getSynchronizer()){ // we don't want a new sound effect to be added just before we clear the Set.
+            for(SoundEffect soundEffect : soundEffectsToPlay) SoundManager.playSoundEffect(soundEffect);
+            soundEffectsToPlay.clear();
+        }
+    }
+
     private void updateGameView(){
         // pause the game if doing so is indicated:
         if(gameData.getPause().getData()) displayPauseMenu();
@@ -277,7 +268,6 @@ public class GameScene extends Scene {
 
     private void updatePlayPanelViews(){
         for(PlayPanel playPanel : playPanelMap.values()){
-            // Repaint the PlayPanel:
             playPanel.repaint();
         }
     }
@@ -331,16 +321,15 @@ public class GameScene extends Scene {
         }
     }
 
-    private class UpdateFrameTasks implements Callable<FrameResult> {
+    private class UpdateFrameTasks implements Callable<Void> {
         @Override
-        public FrameResult call(){
+        public Void call(){
             // Process bot players. This is done only by the host to ensure a consistent outcome (if clients did the
             // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
             // suppose I could just make sure they use the same random number generator, but having the host do it
             // is just easier and reduces the overall amount of computation for the clients.
             if(!gameData.getPause().getData() && isHost) processBots();
 
-            Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
             if(!gameData.getPause().getData()){
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
@@ -358,20 +347,7 @@ public class GameScene extends Scene {
 
             // Check for victory conditions:
             checkForVictory_Model();
-
-            // Copy the playPanel
-            List<PlayPanel> playPanelList = new LinkedList<>();
-            for(PlayPanel playPanel : playPanelMap.values()){
-                playPanelList.add(new PlayPanel(playPanel));
-            }
-
-            // Copy the playerData
-            List<PlayerData> playerDataList = new LinkedList<>();
-            for(PlayerData player : players){
-                playerDataList.add(new PlayerData(player));
-            }
-
-            return new FrameResult(soundEffectsToPlay, new GameData(gameData) , playPanelList, playerDataList);
+            return null;
         }
     }
 
@@ -463,9 +439,8 @@ public class GameScene extends Scene {
             localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
 
             // Since we've received a packet from this player, reset missedPacketsCount:
-            // todo: this is horribly inefficient. Organize synchronizedData by ID in the synchronizer.
-            for(SynchronizedData synchronizedData : receivedSynchronizer.getAll().values()){
-                long id = synchronizedData.getParentID();
+            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
+                long id = entry.getKey();
                 if(receivedSynchronizer.get(id,"playerType").getData()==PlayerData.PlayerType.LOCAL){
                     gameData.setMissedPacketsCount(id,0);
                     break;
@@ -505,7 +480,6 @@ public class GameScene extends Scene {
         // reset the local change flags so that they are only broadcast once:
         localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
-        gameData.resetFlags();
     }
 
     private void checkForDisconnectedPlayers(){
@@ -556,7 +530,6 @@ public class GameScene extends Scene {
         // reset local change flags so that they are sent only once:
         localPlayer.resetFlags();
         playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
-        gameData.resetFlags();
     }
 
     // Todo: make this dialog automatically disappear if the player reconnects

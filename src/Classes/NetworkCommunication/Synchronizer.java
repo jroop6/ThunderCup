@@ -4,9 +4,13 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 import java.util.*;
 
-/** A container for all the data that must be kept synchronized between host and client */
+/** A container for all the data that must be kept synchronized between host and client. All the data is held in a
+ * 2-level HashMap structure. The first level organizes data by an ID value (such as playerID) and the second level
+ * organizes the data by the String variable name (such as "username"). Hence, to retrieve the username of the player
+ * whose ID is 1234, you could use synchronizedDataMap.get(1234).get("username"). For convenience, a special getter of
+ * the form get(long id, String varName) is provided.*/
 public class Synchronizer implements Serializable {
-    private HashMap<String, SynchronizedData> synchronizedDataMap = new HashMap<>();
+    private HashMap<Long, HashMap<String, SynchronizedData>> synchronizedDataMap = new HashMap<>();
     private LinkedList<SynchronizedData> changedData = new LinkedList<>(); // todo: consider making this a Set instead of a list.
 
     public Synchronizer(){
@@ -16,18 +20,22 @@ public class Synchronizer implements Serializable {
     public Synchronizer(Synchronizer other){
         synchronized (other){ // we don't want the other data to be modified while we're trying to copy it.
             // Copy the synchronizedDataMap
-            for(SynchronizedData synchronizedData : other.synchronizedDataMap.values()){
-                SynchronizedData synchronizedDataCopy = synchronizedData.copyForNetworking(this);
-                synchronizedDataMap.put(synchronizedDataCopy.getKey(), synchronizedDataCopy);
+            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : other.synchronizedDataMap.entrySet()){
+                HashMap<String, SynchronizedData> mapCopy = new HashMap<>();
+                synchronizedDataMap.put(entry.getKey(), mapCopy);
+                for(SynchronizedData synchronizedData : entry.getValue().values()){
+                    SynchronizedData synchronizedDataCopy = synchronizedData.copyForNetworking(this);
+                    mapCopy.put(synchronizedDataCopy.getName(), synchronizedDataCopy);
+                }
             }
             // Copy the changedData List
             for(SynchronizedData synchronizedData : other.changedData){
+                SynchronizedData officialSynchronizedData = get(synchronizedData.getParentID(),synchronizedData.getName());
                 // A quick sanity check to help detect problems in the future:
-                SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getKey());
                 if(officialSynchronizedData==null){
-                    System.err.println("Error in Synchronizer copy constructor! The data " + synchronizedData.getKey() +
-                            " exists in the changedData list, but not in the synchronizedDataMap. This should not be " +
-                            "possible.");
+                    System.err.println("Error in Synchronizer copy constructor! The data (" +
+                            synchronizedData.getParentID() + ", " + synchronizedData.getName() + ") exists in the " +
+                            "changedData list, but not in the synchronizedDataMap. This should not be possible.");
                 }
                 changedData.add(officialSynchronizedData);
             }
@@ -36,7 +44,17 @@ public class Synchronizer implements Serializable {
 
     public void register(SynchronizedData synchronizedData){
         synchronized (this){ // we don't want to add data while someone else is trying to access the hashmap (put() is not thread-safe).
-            synchronizedDataMap.put(synchronizedData.getKey(), synchronizedData);
+            //synchronizedDataMap.put(synchronizedData.getKey(), synchronizedData);
+            // First check to see whether we already have data associated with this ID. Create a group if one doesn't exist:
+            long id = synchronizedData.getParentID();
+            HashMap<String, SynchronizedData> entry = synchronizedDataMap.get(id);
+            if(entry==null){
+                entry = new HashMap<>();
+                synchronizedDataMap.put(id, entry);
+            }
+
+            // Now add the data:
+            entry.put(synchronizedData.getName(), synchronizedData);
         }
     }
 
@@ -55,19 +73,17 @@ public class Synchronizer implements Serializable {
             }
 
             // remove the data from the synchronizedDataMap:
-            it = synchronizedDataMap.values().iterator();
-            while(it.hasNext()){
-                SynchronizedData data = it.next();
-                if(data.getParentID()==id){
-                    it.remove();
-                }
+            if(synchronizedDataMap.remove(id)==null){
+                // To help with future debugging:
+                System.err.println("Warning! While de-registering id " + id + ", no data data was actually found for " +
+                        "that ID. Did you call deRegisterAllWithID(id) twice? Or perhaps the data never existed?");
             }
         }
     }
 
     public void addToChangedData(SynchronizedData synchronizedData){
         synchronized (this){ // we don't want to add data while someone else is trying to access the LinkedList (add() is not thread-safe), nor do we want someone else to modify the HashMap while we're trying to access it.
-            SynchronizedData officialSynchronizedData = synchronizedDataMap.get(synchronizedData.getKey());
+            SynchronizedData officialSynchronizedData = get(synchronizedData.getParentID(),synchronizedData.getName());
             if(officialSynchronizedData==null){
                 System.err.println("Error! Attempted to change a data value that was somehow not registered to the " +
                         "synchronizer! This issue needs to be debugged. Perhaps you have multiple Synchronizers running " +
@@ -91,18 +107,21 @@ public class Synchronizer implements Serializable {
 
     private boolean sanitizeClientData(SynchronizedData hostData, SynchronizedData clientData){
         if(hostData == null){
-            System.err.println("Error! A client sent us unrecognized data: " + clientData.getKey());
+            System.err.println("Error! A client sent us unrecognized data: (" + clientData.getParentID() + ", "
+                    + clientData.getName() + ")");
             return false;
         }
         if(hostData.getPrecedence() == SynchronizedData.Precedence.HOST){
-            System.err.println("Warning! A client attempted to set data without permission! " + clientData.getKey());
+            System.err.println("Warning! A client attempted to set data without permission! (" +
+                    clientData.getParentID() + ", " + clientData.getName() + ")");
             return false;
         }
         return true;
     }
     private boolean sanitizeHostData(SynchronizedData hostData, SynchronizedData clientData){
         if(clientData == null){
-            System.err.println("Error! The host sent us unrecognized data: " + hostData.getKey());
+            System.err.println("Error! The host sent us unrecognized data: (" + hostData.getParentID() + ", "
+                    + hostData.getName() + ")");
             return false;
         }
         return true;
@@ -112,7 +131,7 @@ public class Synchronizer implements Serializable {
         synchronized (this){
             if(isHost){
                 for(SynchronizedData clientData : other.changedData){
-                    SynchronizedData hostData = synchronizedDataMap.get(clientData.getKey());
+                    SynchronizedData hostData = get(clientData.getParentID(), clientData.getName());
                     if(!sanitizeClientData(hostData, clientData)) continue;
                     switch(hostData.getPrecedence()){
                         case HOST:
@@ -131,9 +150,9 @@ public class Synchronizer implements Serializable {
             else{
                 // The client looks at the host's changedData first, and immediately syncs with anything in there.
                 for(SynchronizedData hostData : other.changedData){
-                    SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
+                    SynchronizedData clientData = get(hostData.getParentID(), hostData.getName());
                     if(!sanitizeHostData(hostData, clientData)) continue;
-                    if(clientData.compareTo(hostData)!=0){
+                    //if(clientData.compareTo(hostData)!=0){
                         switch(clientData.getPrecedence()){
                             case HOST:
                                 // The host has precedence, so we must accept whatever the host says.
@@ -147,33 +166,35 @@ public class Synchronizer implements Serializable {
                                 // The data is for informational purposes only, and doesn't need to be kept in sync.
                                 break;
                         }
-                    }
+                    //}
                 }
                 // Now the client checks the consistency of the rest of its data with the host.
-                for(SynchronizedData hostData : other.synchronizedDataMap.values()){
-                    SynchronizedData clientData = synchronizedDataMap.get(hostData.getKey());
-                    if(!sanitizeHostData(hostData, clientData)) continue;
-                    if(clientData.compareTo(hostData)!=0){
-                        clientData.incrementFramesOutOfSync();
-                        if(clientData.isOutOfSync()){
-                            switch(clientData.getPrecedence()){
-                                case HOST:
-                                    // The host has precedence and we've been out of sync for too long, so override the locally-held data with what the host says.
-                                    clientData.setTo(hostData.data);
-                                    break;
-                                case CLIENT:
-                                    // The host must have never received a command we sent. It's probably too late to re-send the command automatically, so just accept the host data:
-                                    System.err.println("It appears that the host failed to receive a command we sent.");
-                                    clientData.setTo(hostData.data);
-                                    break;
-                                case INFORMATIONAL:
-                                    // The data is for informational purposes only, and doesn't need to be kept in sync.
-                                    break;
+                for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : other.synchronizedDataMap.entrySet()){
+                    for(SynchronizedData hostData : entry.getValue().values()){
+                        SynchronizedData clientData = get(hostData.getParentID(), hostData.getName());
+                        if(!sanitizeHostData(hostData, clientData)) continue;
+                        if(clientData.compareTo(hostData)!=0){
+                            clientData.incrementFramesOutOfSync();
+                            if(clientData.isOutOfSync()){
+                                switch(clientData.getPrecedence()){
+                                    case HOST:
+                                        // The host has precedence and we've been out of sync for too long, so override the locally-held data with what the host says.
+                                        clientData.setTo(hostData.data);
+                                        break;
+                                    case CLIENT:
+                                        // The host must have never received a command we sent. It's probably too late to re-send the command automatically, so just accept the host data:
+                                        System.err.println("It appears that the host failed to receive a command we sent.");
+                                        clientData.setTo(hostData.data);
+                                        break;
+                                    case INFORMATIONAL:
+                                        // The data is for informational purposes only, and doesn't need to be kept in sync.
+                                        break;
+                                }
+                                clientData.resetFramesOutOfSync();
                             }
-                            clientData.resetFramesOutOfSync();
                         }
+                        else clientData.resetFramesOutOfSync();
                     }
-                    else clientData.resetFramesOutOfSync();
                 }
             }
         }
@@ -188,11 +209,13 @@ public class Synchronizer implements Serializable {
     // 4. thread1 calls list.get(1) <-- Boom!
     // Notice that thread1 didn't even try to change the data; just looking at it is dangerous.
 
-    public SynchronizedData get(long parentID, String key){
-        return synchronizedDataMap.get(parentID + key);
+    public SynchronizedData get(long parentID, String varName){
+        HashMap<String, SynchronizedData> entry = synchronizedDataMap.get(parentID);
+        if(entry==null) return null;
+        return entry.get(varName);
     }
 
-    public HashMap<String, SynchronizedData> getAll(){
+    public HashMap<Long, HashMap<String, SynchronizedData>> getAll(){
         return synchronizedDataMap;
     }
 
@@ -202,20 +225,23 @@ public class Synchronizer implements Serializable {
 
     // For debugging
     public void printData(){
-        for(SynchronizedData synchronizedData : synchronizedDataMap.values()){
-            if(synchronizedData instanceof SynchronizedArray){
-                System.out.print("SynchronizedArray " + synchronizedData.getKey() + ": [");
-                for(int i=0; i<((Object[][])synchronizedData.data).length; i++){
-                    Object[] row = ((Object[][])synchronizedData.data)[i];
-                    for(int j=0; j<row.length-1; j++){
-                        System.out.print(row[j] + ", ");
+        for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : synchronizedDataMap.entrySet()){
+            System.out.println("Data for ID " + entry.getKey() + ":");
+            for(SynchronizedData synchronizedData : entry.getValue().values()){
+                if(synchronizedData instanceof SynchronizedArray){
+                    System.out.print("   SynchronizedArray " + synchronizedData.getName() + ": [");
+                    for(int i=0; i<((Object[][])synchronizedData.data).length; i++){
+                        Object[] row = ((Object[][])synchronizedData.data)[i];
+                        for(int j=0; j<row.length-1; j++){
+                            System.out.print(row[j] + ", ");
+                        }
+                        System.out.print(row[row.length-1] + "; ");
                     }
-                    System.out.print(row[row.length-1] + "; ");
+                    System.out.print("]");
+                    System.out.println();
                 }
-                System.out.print("]");
-                System.out.println();
+                else System.out.println("   " + synchronizedData.getName() + ": " + synchronizedData.data);
             }
-            else System.out.println(synchronizedData.getKey() + ": " + synchronizedData.data);
         }
     }
 }

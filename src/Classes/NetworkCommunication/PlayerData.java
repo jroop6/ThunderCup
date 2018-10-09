@@ -36,7 +36,6 @@ public class PlayerData implements Serializable {
     private SynchronizedList<Message> messagesOut;
     private transient long latency;
     private List<OrbData> ammunitionOrbs = new LinkedList<>();
-    //private Queue<OrbData> firedOrbs = new LinkedList<>();
     private SynchronizedList<OrbData> firedOrbs;
 
     // An enum indicating a special state of player:

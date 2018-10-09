@@ -275,8 +275,8 @@ public class MultiplayerSelectionScene extends Scene {
             Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
             // check to see whether the local player in the received packet exists in our playerSlots list:
-            for(SynchronizedData data : receivedSynchronizer.getAll().values()){
-                long id = data.getParentID();
+            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
+                long id = entry.getKey();
                 if(id>=0 || id == HOST_ID) continue; // 0 is GAME_ID an anything >0 indicates a team, not a player.
                 if(receivedSynchronizer.get(id,"playerType").getData() != PlayerData.PlayerType.LOCAL) continue;
                 synchronized (localSynchronizer){
@@ -417,8 +417,8 @@ public class MultiplayerSelectionScene extends Scene {
             Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
             // Look for new players in the received Synchronizer:
-            for(SynchronizedData data : receivedSynchronizer.getAll().values()){
-                long id = data.getParentID();
+            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
+                long id = entry.getKey();
                 if(id>=0 || id == HOST_ID) continue; // 0 is GAME_ID an anything >0 indicates a team, not a player. We've also already added the host player.
                 synchronized (localSynchronizer){
                     if(localSynchronizer.get(id,"username")==null){
