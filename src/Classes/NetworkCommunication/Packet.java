@@ -16,9 +16,9 @@ public class Packet implements Serializable{
     private Synchronizer synchronizer;
     private boolean connectionRejected = false;
 
-    // Constructor used in MultiplayerSelectionScene
+    // Constructor used in LobbyScene
     public Packet(Synchronizer synchronizer){
-        this.synchronizer = new Synchronizer(synchronizer);
+        this.synchronizer = synchronizer.copyForNetworking();
     }
 
     // Constructor used in GameScene, where playPanelData is also relevant.
@@ -26,7 +26,7 @@ public class Packet implements Serializable{
         this.gameData = gameData;
         playerDataList.add(playerData);
         playPanelList.add(playPanel);
-        this.synchronizer = new Synchronizer(synchronizer);
+        this.synchronizer = synchronizer.copyForNetworking();
     }
 
     public void addPlayerData(PlayerData playerData){
@@ -41,24 +41,8 @@ public class Packet implements Serializable{
         connectionRejected = true;
     }
 
-    public GameData getGameData(){
-        return gameData;
-    }
-
-    public Queue<PlayPanel> getPlayPanelList(){
-        return playPanelList;
-    }
-
     public Synchronizer getSynchronizer(){
         return synchronizer;
-    }
-
-    public PlayerData popPlayer(){
-        return playerDataList.poll();
-    }
-
-    public PlayPanel popPlayPanel(){
-        return playPanelList.poll();
     }
 
     public boolean isConnectionRejected(){

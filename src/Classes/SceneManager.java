@@ -87,8 +87,8 @@ public class SceneManager extends Application {
             if (result.get() == yes) {
                 SoundManager.silenceMusic();
                 Scene currentScene = primaryStage.getScene();
-                if(currentScene.getClass() == MultiplayerSelectionScene.class){
-                    ((MultiplayerSelectionScene)currentScene).cleanUp();
+                if(currentScene.getClass() == LobbyScene.class){
+                    ((LobbyScene)currentScene).cleanUp();
                 }
                 else if(currentScene.getClass() == GameScene.class){
                     ((GameScene)currentScene).cleanUp();
@@ -136,9 +136,9 @@ public class SceneManager extends Application {
 
     static void switchToMultiplayerMode(boolean isHost, String hostName, int port, String username){
         System.out.println("building multiplayer selection scene...");
-        MultiplayerSelectionScene multiplayerSelectionScene = new MultiplayerSelectionScene(isHost, username, hostName, port);
-        if(multiplayerSelectionScene.isConnected()){
-            setSceneWorkaround(multiplayerSelectionScene);
+        LobbyScene lobbyScene = new LobbyScene(isHost, username, hostName, port);
+        if(lobbyScene.isConnected()){
+            setSceneWorkaround(lobbyScene);
             SoundManager.silenceMusic();
         }
         else{

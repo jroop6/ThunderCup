@@ -3,7 +3,7 @@ package Classes;
 import Classes.Animation.*;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.Synchronizer;
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
@@ -80,14 +80,14 @@ public class MainMenuScene extends Scene {
         rootNode.getChildren().add(scaledRoot);
 
         // Add slowly-moving background clouds:
-        createCloud(StaticBgImages.FAR_CLOUD_1,635.0,210000,0);
-        createCloud(StaticBgImages.FAR_CLOUD_2,615.0,200000,118000);
-        createCloud(StaticBgImages.FAR_CLOUD_3,706.0, 190000,69200);
-        createCloud(StaticBgImages.FAR_CLOUD_WITH_BUBBLES_2,20,180000,63600);
-        createCloud(StaticBgImages.FAR_CLOUD_WITH_BUBBLES_1,-20,170000,130000);
+        createCloud(Drawing.FAR_CLOUD_1,635.0,210000,0);
+        createCloud(Drawing.FAR_CLOUD_2,615.0,200000,118000);
+        createCloud(Drawing.FAR_CLOUD_3,706.0, 190000,69200);
+        createCloud(Drawing.FAR_CLOUD_WITH_BUBBLES_2,20,180000,63600);
+        createCloud(Drawing.FAR_CLOUD_WITH_BUBBLES_1,-20,170000,130000);
 
         // Add the foreground cloud and character:
-        ImageView nearCloud = StaticBgImages.NEAR_CLOUD_1.getImageView();
+        ImageView nearCloud = Drawing.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         ImageView characterView = new ImageView();
         CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID, new Synchronizer());
@@ -210,7 +210,7 @@ public class MainMenuScene extends Scene {
         animationTimer.start();
     }
 
-    private void createCloud(StaticBgImages imageEnum, double yPos, int durationInMillis, int startTimeInMillis){
+    private void createCloud(Drawing imageEnum, double yPos, int durationInMillis, int startTimeInMillis){
         ImageView cloud = imageEnum.getImageView();
         TranslateTransition cloudTranslation = new TranslateTransition(Duration.millis(durationInMillis),cloud);
         cloudTranslation.setFromX(-cloud.getImage().getWidth());

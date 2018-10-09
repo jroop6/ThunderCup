@@ -2,10 +2,9 @@ package Classes;
 
 import Classes.Animation.*;
 import Classes.Audio.SoundEffect;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.BotPlayer;
-import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
@@ -122,8 +121,8 @@ public class PlayPanel extends Pane implements Serializable {
         getChildren().add(orbCanvas);
 
         // Add and initialize players to the PlayPanel:
-        StaticBgImages foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
-        StaticBgImages dropCloudEnum = locationType.getDropCloudEnum();
+        Drawing foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
+        Drawing dropCloudEnum = locationType.getDropCloudEnum();
         for(int i=0; i<players.size(); ++i){
             PlayerData player = players.get(i);
 

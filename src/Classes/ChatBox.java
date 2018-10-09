@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.*;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -14,7 +14,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import static javafx.scene.layout.HBox.setHgrow;
 import static javafx.scene.layout.VBox.setVgrow;
@@ -73,7 +72,7 @@ public class ChatBox extends StackPane {
         messageScrollPane = new ScrollPane();
         messageContainer = new VBox();
         if(showBackground){
-            messageContainer.setBackground(new Background(new BackgroundImage(StaticBgImages.CHATBOX_SCROLLPANE_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+            messageContainer.setBackground(new Background(new BackgroundImage(Drawing.CHATBOX_SCROLLPANE_BACKGROUND.getImageView().getImage(),null,null,null,null)));
             messageScrollPane.setFitToWidth(true);  // This ensures that the background spans the entire width of the ScrollPane
             messageScrollPane.setFitToHeight(true); // This ensures that the background spans the entire height of the ScrollPane
         }
@@ -98,7 +97,7 @@ public class ChatBox extends StackPane {
         textField = new TextField();
         textField.setPromptText("Enter chat messages here");
         textField.setStyle("-fx-prompt-text-fill: rgba(0,0,0,0.75);");
-        if(showBackground) textField.setBackground(new Background(new BackgroundImage(StaticBgImages.CHATBOX_TEXTFIELD_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+        if(showBackground) textField.setBackground(new Background(new BackgroundImage(Drawing.CHATBOX_TEXTFIELD_BACKGROUND.getImageView().getImage(),null,null,null,null)));
         else{
             textField.setBackground(new Background(new BackgroundFill(new Color(0,0,0,0.5), CornerRadii.EMPTY,Insets.EMPTY)));
             textField.setStyle("-fx-text-fill: white;");

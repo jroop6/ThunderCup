@@ -7,10 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static Classes.NetworkCommunication.PlayerData.GAME_ID;
 
 public class GameData implements Serializable{
-    private SynchronizedComparable<Boolean> gameCanceled;
     private SynchronizedComparable<Boolean> pause;
-    private SynchronizedComparable<Boolean> gameStarted;
-
     private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
 
     // Variables related to displaying victory/defeat graphics:
@@ -21,9 +18,7 @@ public class GameData implements Serializable{
 
     public GameData(Synchronizer synchronizer){
         synchronized (synchronizer){
-            gameCanceled = new SynchronizedComparable<>("cancelGame", false, SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
             pause = new SynchronizedComparable<>("pause", false, SynchronizedData.Precedence.CLIENT, GAME_ID, synchronizer);
-            gameStarted = new SynchronizedComparable<>("gameStarted", false, SynchronizedData.Precedence.HOST, GAME_ID, synchronizer);
         }
     }
 
@@ -31,8 +26,6 @@ public class GameData implements Serializable{
     public GameData(GameData other){
         Synchronizer synchronizer = new Synchronizer();
         pause = new SynchronizedComparable<>("pause", other.pause.getData(), other.pause.getPrecedence(), GAME_ID, synchronizer);
-        gameCanceled = new SynchronizedComparable<>("cancelGame", other.gameCanceled.getData(), other.gameCanceled.getPrecedence(), GAME_ID, synchronizer);
-        gameStarted = new SynchronizedComparable<>("gameStarted", other.gameStarted.getData(), other.gameStarted.getPrecedence(), GAME_ID, synchronizer);
         victoryPauseStarted = other.victoryPauseStarted;
         victoryDisplayStarted = other.victoryDisplayStarted;
         victoryTime = other.victoryTime;
@@ -72,12 +65,6 @@ public class GameData implements Serializable{
     }
     public SynchronizedComparable<Boolean> getPause(){
         return pause;
-    }
-    public SynchronizedComparable<Boolean> getGameCanceled(){
-        return gameCanceled;
-    }
-    public SynchronizedComparable<Boolean> getGameStarted(){
-        return gameStarted;
     }
 
 

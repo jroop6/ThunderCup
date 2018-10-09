@@ -77,7 +77,7 @@ public class PlayerData implements Serializable {
         int myTeam;
         switch(playerType){
             case UNCLAIMED:
-                // corresponds to an open slot in the MultiplayerSelectionScene
+                // corresponds to an open slot in the LobbyScene
                 myCharacterEnum = CharacterType.UNKNOWN_CHARACTER;
                 myCannonType = CannonType.UNKNOWN_CANNON;
                 myTeam = 0;

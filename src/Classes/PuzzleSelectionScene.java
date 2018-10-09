@@ -2,14 +2,12 @@ package Classes;
 
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
+import Classes.Images.Drawing;
 import Classes.Images.PuzzleSet;
-import Classes.Images.StaticBgImages;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -23,7 +21,7 @@ public class PuzzleSelectionScene extends Scene {
         VBox rootNode = (VBox)getRoot();
 
         // Get a background for the PlayerSlot container:
-        ImageView scrollableViewBackground = StaticBgImages.DAY_SKY.getImageView();
+        ImageView scrollableViewBackground = Drawing.DAY_SKY.getImageView();
 
         // Create a ScrollableView and place big Buttons in it:
         ScrollableView<Button> puzzleButtonContainer = new ScrollableView<>(scrollableViewBackground,new Rectangle(0.0,0.0,Color.TRANSPARENT));
@@ -35,7 +33,7 @@ public class PuzzleSelectionScene extends Scene {
 
         // There are buttons directly beneath the ScrollPanel which allow the player to either return to the main menu or mute music.
         AnchorPane buttonHolder = new AnchorPane();
-        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
+        buttonHolder.setBackground(new Background(new BackgroundImage(Drawing.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
         buttonHolder.setPickOnBounds(false);
         HBox leftSideButtonsHolder = new HBox();
         leftSideButtonsHolder.setPickOnBounds(false);

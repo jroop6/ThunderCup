@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Images.ButtonType;
 import Classes.Animation.CharacterType;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
 import javafx.animation.AnimationTimer;
@@ -31,19 +31,20 @@ import static javafx.scene.layout.AnchorPane.setRightAnchor;
 /**
  * Created by Jonathan Roop on 7/26/2017.
  */
-//todo: there are a couple of places where I use synchronized(). The current implementation of MultiplayerSelectionScene is single-threaded, however. Consider removing these in the final version of the game if it stays single-threaded.
-public class MultiplayerSelectionScene extends Scene {
+//todo: there are a couple of places where I use synchronized(). The current implementation of LobbyScene is single-threaded, however. Consider removing these in the final version of the game if it stays single-threaded.
+public class LobbyScene extends Scene {
 
     // misc variables accessed by different methods in this class:
     private ConnectionManager connectionManager;
     private PlayerData localPlayer;
-    private GameData gameData;
     private ScrollableView<PlayerSlot> playerSlotContainer;
     private Scale scaler = new Scale();
     private ChatBox chatBox;
     private final int FRAME_RATE = 24;
     private long nextAnimationFrameInstance = 0; // Time at which all animations will be updated to the next frame (nanoseconds).
     private boolean initializing = true;
+    private SynchronizedComparable<Boolean> gameCanceled;
+    private SynchronizedComparable<Boolean> gameStarted;
 
     private Alert kickAlert;
     private int kickTimeout = FRAME_RATE*3;
@@ -59,7 +60,7 @@ public class MultiplayerSelectionScene extends Scene {
 
     private AnimationTimer animationTimer;
 
-    MultiplayerSelectionScene(boolean isHost, String username, String host, int port){
+    LobbyScene(boolean isHost, String username, String host, int port){
         super(new VBox());
         VBox rootNode = (VBox)getRoot();
         this.isHost = isHost;
@@ -82,10 +83,13 @@ public class MultiplayerSelectionScene extends Scene {
             return;
         }
 
-        gameData = new GameData(connectionManager.getSynchronizer());
+        synchronized (connectionManager.getSynchronizer()){
+            gameCanceled = new SynchronizedComparable<>("cancelGame", false, SynchronizedData.Precedence.HOST, GAME_ID, connectionManager.getSynchronizer());
+            gameStarted = new SynchronizedComparable<>("gameStarted", false, SynchronizedData.Precedence.HOST, GAME_ID, connectionManager.getSynchronizer());
+        }
 
         // Get a background for the PlayerSlot container:
-        ImageView scrollableViewbackground = StaticBgImages.DAY_SKY.getImageView();
+        ImageView scrollableViewbackground = Drawing.DAY_SKY.getImageView();
 
         // Create a ScrollableView and place PlayerSlots in it:
         playerSlotContainer = new ScrollableView<>(scrollableViewbackground,new Rectangle(0.0,0.0,Color.TRANSPARENT));
@@ -122,24 +126,14 @@ public class MultiplayerSelectionScene extends Scene {
         // There are one or more buttons directly beneath the PlayerSlots, which allow the player to return to the main
         // menu, ask for the computer's name and port (host only), and start the game (host only)
         AnchorPane buttonHolder = new AnchorPane();
-        buttonHolder.setBackground(new Background(new BackgroundImage(StaticBgImages.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
+        buttonHolder.setBackground(new Background(new BackgroundImage(Drawing.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
         buttonHolder.setPickOnBounds(false);
         HBox rightSideButtonsHolder = new HBox();
         rightSideButtonsHolder.setPickOnBounds(false);
         ThunderButton start = new ThunderButton(ButtonType.START, (event)->{
             // Todo: check whether there are any unclaimed open spots before starting the game.
             System.out.println("pressed Start!");
-            gameData.getGameStarted().changeTo(true);
-            prepareAndSendPacket();
-            // wait a little bit to make sure the packet gets through:
-            try{
-                Thread.sleep(2000/FRAME_RATE);
-            } catch (InterruptedException e){
-                System.err.println("InterruptedException encountered while trying to start the game. Other players" +
-                        "might not be informed that the game has started but... oh well, starting anyways.");
-                e.printStackTrace();
-            }
-            startGame();
+            gameStarted.changeTo(true);
         });
         start.setScaleX(-1.0);
         ThunderButton hostNameAndPort = new ThunderButton(ButtonType.HOST_AND_PORT, (event)->{
@@ -167,7 +161,7 @@ public class MultiplayerSelectionScene extends Scene {
         rootNode.getChildren().add(buttonHolder);
 
         // A ChatBox is located under the Buttons:
-        ImageView chatBoxBackground = StaticBgImages.CHATBOX_SCROLLPANE_BACKGROUND.getImageView();
+        ImageView chatBoxBackground = Drawing.CHATBOX_SCROLLPANE_BACKGROUND.getImageView();
         chatBox = new ChatBox(localPlayer, 200, true);
         rootNode.getChildren().add(chatBox);
 
@@ -177,7 +171,7 @@ public class MultiplayerSelectionScene extends Scene {
         hostNameAndPort.getTransforms().add(scaler);
         start.getTransforms().add(scaler);
         rootNode.heightProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("New height of MultiplayerSelectionScene: " + newValue);
+            System.out.println("New height of LobbyScene: " + newValue);
             double scaleValue = (double)newValue/1080.0;
             scaler.setX(scaleValue);
             scaler.setY(scaleValue);
@@ -227,9 +221,17 @@ public class MultiplayerSelectionScene extends Scene {
                     }
 
                     if(isHost)deleteRemovedPlayers();
-                    prepareAndSendPacket();
 
+                    prepareAndSendPacket();
                     connectionManager.getSynchronizer().resetChangedData();
+
+                    // Perform special processing for game data:
+                    if(gameCanceled.getData()){
+                       cleanUp();
+                       SceneManager.switchToMainMenu();
+                       if(!isHost)showGameCanceledDialog();
+                    }
+                    if(gameStarted.getData()) startGame();
                     checkForDisconnectedPlayers();
                 }
 
@@ -468,17 +470,6 @@ public class MultiplayerSelectionScene extends Scene {
             // Since we've received a packet from the host, reset missedPacketsCount
             missedPacketsCount.replace(HOST_ID, 0);
 
-            // Perform special processing for game data:
-            if(((SynchronizedComparable<Boolean>)(localSynchronizer.get(GAME_ID,"cancelGame"))).getData()){
-                cleanUp();
-                SceneManager.switchToMainMenu();
-                showGameCanceledDialog();
-            }
-            if(((SynchronizedComparable<Boolean>)(localSynchronizer.get(GAME_ID,"gameStarted"))).getData()){
-                System.out.println("host has started the game!");
-                startGame();
-            }
-
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
         }
@@ -535,7 +526,7 @@ public class MultiplayerSelectionScene extends Scene {
 
     public void cleanUp(){
         if(isHost){
-            gameData.getGameCanceled().changeTo(true);
+            gameCanceled.changeTo(true);
         }
         else{
             localPlayer.getState().changeTo(PlayerData.State.DISCONNECTED);
@@ -558,7 +549,8 @@ public class MultiplayerSelectionScene extends Scene {
         for (PlayerSlot playerSlot: playerSlotContainer.getContents()){
             players.add(playerSlot.getPlayerData());
         }
-        SceneManager.startMultiplayerGame(isHost,connectionManager,players);
+        connectionManager.getSynchronizer().deRegisterAllWithID(GAME_ID); // deletes any networked data that we no longer need, such as gameStarted.
         animationTimer.stop();
+        SceneManager.startMultiplayerGame(isHost,connectionManager,players);
     }
 }

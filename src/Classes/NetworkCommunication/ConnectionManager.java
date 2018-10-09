@@ -40,7 +40,7 @@ public abstract class ConnectionManager extends Thread {
     }
 
     // Note: A Client will only have 1 senderWorker.
-    // Before sending, outPacket is to be built in either the GameScene or MultiplayerSelectionScene.
+    // Before sending, outPacket is to be built in either the GameScene or LobbyScene.
     public void send(Object object){
         for (SenderWorker senderWorker : senderWorkers) {
             senderWorker.send(object);

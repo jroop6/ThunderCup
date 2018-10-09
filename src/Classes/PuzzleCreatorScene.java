@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Animation.OrbColor;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -40,7 +40,7 @@ public class PuzzleCreatorScene extends Scene {
         AnchorPane rootNode = (AnchorPane)getRoot();
 
         // Give everything a nice background:
-        ImageView nightSky = StaticBgImages.NIGHT_SKY.getImageView();
+        ImageView nightSky = Drawing.NIGHT_SKY.getImageView();
         rootNode.getChildren().add(nightSky);
         AnchorPane.setBottomAnchor(nightSky,0.0);
         AnchorPane.setTopAnchor(nightSky,0.0);

@@ -5,7 +5,7 @@ import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
 import Classes.Images.CannonType;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
 import javafx.animation.AnimationTimer;
@@ -30,6 +30,7 @@ import java.util.concurrent.*;
 
 import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
 import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
+import static Classes.NetworkCommunication.PlayerData.GAME_ID;
 import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
@@ -51,6 +52,8 @@ public class GameScene extends Scene {
     private ChatBox chatBox;
     private PlayerData localPlayer;
     private List<PlayerData> players;
+
+    private SynchronizedComparable<Boolean> gameCanceled;
 
     Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
 
@@ -94,6 +97,9 @@ public class GameScene extends Scene {
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
         this.connectionManager = connectionManager;
+
+        gameCanceled = new SynchronizedComparable<>("cancelGame", false, SynchronizedData.Precedence.HOST, GAME_ID, connectionManager.getSynchronizer());
+
         gameData = new GameData(connectionManager.getSynchronizer());
         this.players = players;
         maxConsecutivePacketsMissed = DATA_FRAME_RATE * 5;
@@ -254,7 +260,7 @@ public class GameScene extends Scene {
         else removePauseMenu();
 
         // If the host has canceled the game, return to the main menu:
-        if(gameData.getGameCanceled().getData()){
+        if(gameCanceled.getData()){
             cleanUp();
             SceneManager.switchToMainMenu();
             showGameCanceledDialog();
@@ -609,7 +615,7 @@ public class GameScene extends Scene {
     public void cleanUp(){
         // Tell the other players that we're leaving:
         if(isHost){
-            gameData.getGameCanceled().changeTo(true);
+            gameCanceled.changeTo(true);
             prepareAndSendServerPacket();
         }
         else{
@@ -656,7 +662,7 @@ public class GameScene extends Scene {
         StackPane pauseMenu = new StackPane();
 
         // Get the pause menu background:
-        ImageView background = StaticBgImages.PAUSE_MENU_BACKDROP.getImageView();
+        ImageView background = Drawing.PAUSE_MENU_BACKDROP.getImageView();
         pauseMenu.getChildren().add(background);
 
         // place the title and buttons:
@@ -807,19 +813,19 @@ public class GameScene extends Scene {
 }
 
 enum LocationType {
-    NIGHTTIME(StaticBgImages.NIGHT_SKY,
-            StaticBgImages.NIGHT_SKY_CLOUDS,
-            StaticBgImages.PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS,
-            StaticBgImages.PLAYPANEL_NIGHTSKY_DROPCLOUD,
-            StaticBgImages.PLAYPANEL_NIGHTSKY_SEPARATOR);
+    NIGHTTIME(Drawing.NIGHT_SKY,
+            Drawing.NIGHT_SKY_CLOUDS,
+            Drawing.PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS,
+            Drawing.PLAYPANEL_NIGHTSKY_DROPCLOUD,
+            Drawing.PLAYPANEL_NIGHTSKY_SEPARATOR);
 
-    private StaticBgImages background;
-    private StaticBgImages midground;
-    private StaticBgImages foregroundCloudsEnum;
-    private StaticBgImages dropCloudEnum;
-    private StaticBgImages separator;
+    private Drawing background;
+    private Drawing midground;
+    private Drawing foregroundCloudsEnum;
+    private Drawing dropCloudEnum;
+    private Drawing separator;
 
-    LocationType(StaticBgImages background, StaticBgImages midground, StaticBgImages foregroundCloudsEnum, StaticBgImages dropCloudEnum, StaticBgImages separator){
+    LocationType(Drawing background, Drawing midground, Drawing foregroundCloudsEnum, Drawing dropCloudEnum, Drawing separator){
         this.background = background;
         this.midground = midground;
         this.foregroundCloudsEnum = foregroundCloudsEnum;
@@ -827,19 +833,19 @@ enum LocationType {
         this.separator = separator;
     }
 
-    public StaticBgImages getBackground(){
+    public Drawing getBackground(){
         return background;
     }
-    public StaticBgImages getMidground(){
+    public Drawing getMidground(){
         return midground;
     }
-    public StaticBgImages getForegroundCloudsEnum(){
+    public Drawing getForegroundCloudsEnum(){
         return foregroundCloudsEnum;
     }
-    public StaticBgImages getDropCloudEnum(){
+    public Drawing getDropCloudEnum(){
         return dropCloudEnum;
     }
-    public StaticBgImages getSeparator(){
+    public Drawing getSeparator(){
         return separator;
     }
 }

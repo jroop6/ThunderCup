@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Images.ButtonType;
-import Classes.Images.StaticBgImages;
+import Classes.Images.Drawing;
 import Classes.NetworkCommunication.PlayerData;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -18,9 +18,9 @@ import javafx.scene.text.TextAlignment;
 import java.util.Optional;
 
 /**
- * Displays a player in the MultiplayerSelectionScene.
+ * Displays a player in the LobbyScene.
  */
-//todo: there are a couple of places where I use synchronized(). The current implementation of MultiplayerSelectionScene is single-threaded, however. Consider removing these in the final version of the game if it stays single-threaded.
+//todo: there are a couple of places where I use synchronized(). The current implementation of LobbyScene is single-threaded, however. Consider removing these in the final version of the game if it stays single-threaded.
 public class PlayerSlot extends StackPane{
 
     // Character and Cannon positioning on the PlayerSlot:
@@ -49,7 +49,7 @@ public class PlayerSlot extends StackPane{
         setAlignment(Pos.TOP_LEFT);
 
         // Add background image:
-        ImageView background = StaticBgImages.PLAYER_SLOT_BACKGROUND.getImageView();
+        ImageView background = Drawing.PLAYER_SLOT_BACKGROUND.getImageView();
         getChildren().add(background);
 
         // Add CharacterAnimations and cannon images. They are placed on a Pane for more control over positioning:
@@ -60,7 +60,7 @@ public class PlayerSlot extends StackPane{
         getChildren().add(characterAndCannonPositioner);
 
         // Add foreground image:
-        ImageView foreground = StaticBgImages.PLAYER_SLOT_FOREGROUND.getImageView();
+        ImageView foreground = Drawing.PLAYER_SLOT_FOREGROUND.getImageView();
         getChildren().add(foreground);
 
         // A GridPane is used to layout information and selectable options:
