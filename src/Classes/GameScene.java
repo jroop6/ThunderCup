@@ -5,11 +5,10 @@ import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
 import Classes.Images.CannonType;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
 import javafx.animation.AnimationTimer;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -30,8 +29,8 @@ import java.util.concurrent.*;
 
 import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
 import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
-import static Classes.NetworkCommunication.PlayerData.GAME_ID;
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.GAME_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
@@ -48,10 +47,17 @@ public class GameScene extends Scene {
 
     // Fields containing data, controllers, or mix of data and JavaFx nodes:
     private Map<Integer, PlayPanel> playPanelMap = new HashMap<>(); // For quick access to a PlayPanel using the team number
-    private GameData gameData;
     private ChatBox chatBox;
-    private PlayerData localPlayer;
-    private List<PlayerData> players;
+    private Player localPlayer;
+    private List<Player> players;
+
+    private SynchronizedComparable<Boolean> pause;
+
+    // Variables related to displaying victory/defeat graphics:
+    private boolean victoryPauseStarted = false;
+    private boolean victoryDisplayStarted = false;
+    private long victoryTime = 0;
+    private int victoriousTeam;
 
     private SynchronizedComparable<Boolean> gameCanceled;
 
@@ -92,7 +98,7 @@ public class GameScene extends Scene {
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
     // todo: don't use indices for the puzzles. Instead, pass a PuzzleSet enum, and have the PuzzleSet store pointers to the various puzzles. Include special enums for random puzzles.
-    public GameScene(boolean isHost, ConnectionManager connectionManager, List<PlayerData> players, LocationType locationType, int puzzleGroupIndex){
+    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
         super(new StackPane());
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
@@ -100,32 +106,32 @@ public class GameScene extends Scene {
 
         gameCanceled = new SynchronizedComparable<>("cancelGame", false, SynchronizedData.Precedence.HOST, GAME_ID, connectionManager.getSynchronizer());
 
-        gameData = new GameData(connectionManager.getSynchronizer());
+        pause = new SynchronizedComparable<>("pause", false, SynchronizedData.Precedence.CLIENT, GAME_ID, connectionManager.getSynchronizer());
         this.players = players;
         maxConsecutivePacketsMissed = DATA_FRAME_RATE * 5;
 
         // Arrange the players into their teams by adding each one to an appropriate List:
-        Map<Integer, List<PlayerData>> teams = new HashMap<>();
-        for (PlayerData player: players) {
+        Map<Integer, List<Player>> teams = new HashMap<>();
+        for (Player player: players) {
             int team = player.getTeam().getData();
             if(teams.containsKey(team)){
                 teams.get(team).add(player);
             }
             else{
-                List<PlayerData> newTeam = new LinkedList<>();
+                List<Player> newTeam = new LinkedList<>();
                 newTeam.add(player);
                 teams.put(team,newTeam);
             }
 
             // while we're here, check to see if this is the LocalPlayer.
-            if(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL){
+            if(player.getPlayerType().getData() == Player.PlayerType.LOCAL){
                 if(localPlayer!=null) System.err.println("Warning! There's more than one localplayer!");
                 localPlayer = player;
             }
         }
 
         // Now create one PlayPanel for each team and assign its players:
-        for (List<PlayerData> playerList: teams.values()){
+        for (List<Player> playerList: teams.values()){
             int team = playerList.get(0).getTeam().getData();
             String puzzleURL;
             if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
@@ -177,10 +183,10 @@ public class GameScene extends Scene {
                     break;
                 case P:
                     System.out.println("Pause pressed!");
-                    gameData.getPause().changeTo(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
+                    pause.changeTo(true); // ToDo: Temporary. This should actually TOGGLE the boolean, not just set it to true.
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
-                    gameData.getPause().changeTo(false);
+                    pause.changeTo(false);
             }
         });
 
@@ -255,7 +261,7 @@ public class GameScene extends Scene {
 
     private void updateGameView(){
         // pause the game if doing so is indicated:
-        if(gameData.getPause().getData()) displayPauseMenu();
+        if(pause.getData()) displayPauseMenu();
         else removePauseMenu();
 
         // If the host has canceled the game, return to the main menu:
@@ -267,8 +273,8 @@ public class GameScene extends Scene {
 
         // Check whether victory has been declared:
         // todo: there's got to be a better way of ensuring that these methods are only called once...
-        if(gameData.getVictoryPauseStarted() && !gameData.getVictoryDisplayStarted()) startVictoryPause_View();
-        else if(gameData.getVictoryDisplayStarted()) startVictoryDisplay_View(gameData.getVictoriousTeam());
+        if(victoryPauseStarted && !victoryDisplayStarted) startVictoryPause_View();
+        else if(victoryPauseStarted) startVictoryDisplay_View(victoriousTeam);
     }
 
     private void updatePlayPanelViews(){
@@ -291,9 +297,9 @@ public class GameScene extends Scene {
         // In competitive multiplayer (or Vs Computer) games, check to see whether there's only 1 live team left
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
-            for(PlayerData player : players){
-                PlayerData.State playerState = player.getState().getData();
-                if(playerState!=PlayerData.State.DEFEATED && playerState!=PlayerData.State.DISCONNECTED) liveTeams.add(player.getTeam().getData());
+            for(Player player : players){
+                Player.State playerState = player.getState().getData();
+                if(playerState!= Player.State.DEFEATED && playerState!= Player.State.DISCONNECTED) liveTeams.add(player.getTeam().getData());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -308,12 +314,12 @@ public class GameScene extends Scene {
 
         // In puzzle games, check to see whether the only existing team has lost:
         else{
-            if(players.get(0).getState().getData()== PlayerData.State.DEFEATED) startVictoryPause_Model(-1);
+            if(players.get(0).getState().getData()== Player.State.DEFEATED) startVictoryPause_Model(-1);
         }
 
         // If someone has won, handle the delay before the victory graphics are actually displayed:
-        if(gameData.getVictoryPauseStarted() && !gameData.getVictoryDisplayStarted()){
-            if(((System.nanoTime() - gameData.getVictoryTime())/1000000000)>0.85) startVictoryDisplay_Model();
+        if(victoryPauseStarted && !victoryDisplayStarted){
+            if(((System.nanoTime() - victoryTime)/1000000000)>0.85) victoryDisplayStarted = true;
         }
     }
 
@@ -332,9 +338,9 @@ public class GameScene extends Scene {
             // processing, you could end up with 2 clients computing different outcomes for a common robot ally. I
             // suppose I could just make sure they use the same random number generator, but having the host do it
             // is just easier and reduces the overall amount of computation for the clients.
-            if(!gameData.getPause().getData() && isHost) processBots();
+            if(!pause.getData() && isHost) processBots();
 
-            if(!gameData.getPause().getData()){
+            if(!pause.getData()){
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
                     long time = System.nanoTime();
@@ -357,14 +363,12 @@ public class GameScene extends Scene {
 
     private class FrameResult{
         Set<SoundEffect> soundEffectsToPlay;
-        GameData gameDataCopy;
         List<PlayPanel> playPanelListCopy;
-        List<PlayerData> playerDataListCopy;
-        FrameResult(Set<SoundEffect> soundEffectsToPlay, GameData gameData, List<PlayPanel> playPanelList, List<PlayerData> playerDataList){
+        List<Player> playerListCopy;
+        FrameResult(Set<SoundEffect> soundEffectsToPlay, List<PlayPanel> playPanelList, List<Player> playerList){
             this.soundEffectsToPlay = soundEffectsToPlay;
-            gameDataCopy = gameData;
             playPanelListCopy = playPanelList;
-            playerDataListCopy = playerDataList;
+            playerListCopy = playerList;
         }
     }
 
@@ -372,21 +376,20 @@ public class GameScene extends Scene {
         @Override
         public Void call(){
             // Put a timestamp on fired Orbs:
-            /*if(localPlayer.getPlayerData().isFiring()){
-                for(Orb orb: localPlayer.getPlayerData().getFiredOrbs()){
+            /*if(localPlayer.getPlayer().isFiring()){
+                for(Orb orb: localPlayer.getPlayer().getFiredOrbs()){
                     long prevSendInstance = nextSendInstance - 1000000000L/connectionManager.getPacketsSentPerSecond();
                     orb.computeTimeStamp(prevSendInstance);
                 }
             }*/
 
             // Display new chat messages in the chat box
-            for(PlayerData player : players){
+            for(Player player : players){
                 chatBox.displayMessages(player.getMessagesOut().getData());
             }
 
             // Process outgoing Packets
-            if(isHost) prepareAndSendServerPacket();
-            else prepareAndSendClientPacket();
+            connectionManager.send(new Packet(connectionManager.getSynchronizer()));
 
             checkForDisconnectedPlayers();
 
@@ -406,7 +409,7 @@ public class GameScene extends Scene {
             // compile all the individual bot retargeting times.
             long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time.
             for(PlayPanel playPanel : playPanelMap.values()){
-                for (PlayerData player : playPanel.getPlayerList()){
+                for (Player player : playPanel.getPlayerList()){
                     if (player instanceof BotPlayer){
                         long[] times = ((BotPlayer) player).getBotRetargetTime();
                         botRetargetTime[0] += times[0];
@@ -424,7 +427,7 @@ public class GameScene extends Scene {
 
     private void processBots(){
         for(PlayPanel playPanel : playPanelMap.values()){
-            for (PlayerData player : playPanel.getPlayerList()){
+            for (Player player : playPanel.getPlayerList()){
                 if (player instanceof BotPlayer){
                     ((BotPlayer) player).tick();
                 }
@@ -447,70 +450,24 @@ public class GameScene extends Scene {
         }
     }
 
-    private void prepareAndSendServerPacket(){
-        // We must create a copy of the local PlayerData, GameData, and PlayPanel and add those copies to the packet. This
-        // is to prevent the change flags within the local PlayerData and GameData from being reset before the packet is
-        // sent (note the last 4 lines of this method).
-        PlayerData localPlayerData = new PlayerData(localPlayer);
-        GameData localGameData = new GameData(gameData);
-        PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayer.getTeam().getData()));
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel, connectionManager.getSynchronizer());
-
-        for (PlayerData player: players) {
-            if(player.getPlayerID()==0) continue; // we've already added the localPlayer's PlayerData to the packet.
-            PlayerData playerCopy = new PlayerData(player); // Yes, these need to be *new* PlayerData instances because there may be locally-stored bot data. see note regarding local player data, above.
-            outPacket.addPlayerData(playerCopy);
-            player.resetFlags(); // reset the local change flags so that they are only broadcast once
-        }
-
-        for (PlayPanel playPanel: playPanelMap.values()){
-            if(playPanel.getTeam()==localPlayerData.getTeam().getData()) continue; // we've already added the localPlayer's PlayPanel to the packet.
-            PlayPanel playPanelCopy = new PlayPanel(playPanel);
-            outPacket.addPlayPanel(playPanelCopy);
-            playPanel.resetFlags(); // reset the local change flags so that they are only broadcast once
-        }
-
-        connectionManager.send(outPacket);
-
-        // reset the local change flags so that they are only broadcast once:
-        localPlayer.resetFlags();
-        playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
-    }
-
     private void checkForDisconnectedPlayers(){
         List<Long> disconnectedPlayerIDs = connectionManager.getSynchronizer().getDisconnectedIDs(maxConsecutivePacketsMissed);
 
-        for (PlayerData player: players) {
-            PlayerData.PlayerType playerType = player.getPlayerType().getData();
-            if(!(playerType == PlayerData.PlayerType.REMOTE_CLIENTVIEW || playerType == PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
+        for (Player player: players) {
+            Player.PlayerType playerType = player.getPlayerType().getData();
+            if(!(playerType == Player.PlayerType.REMOTE_CLIENTVIEW || playerType == Player.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
             if(!isHost && player.getPlayerID()!=HOST_ID) continue; // Clients only keep track of the host's connection to them.
 
             // If the player has been gone for too long, ask the user what to do:
             if(disconnectedPlayerIDs.contains(player.getPlayerID())){
-                System.out.println("disconnected playerID: " + player.getPlayerID() + " who's been gone for " + connectionManager.getSynchronizer().getDisconnectedTime(player.getPlayerID()));
+                connectionManager.getSynchronizer().printDisconnectedPlayer(player.getPlayerID());
                 showConnectionLostDialog(player);
             }
         }
     }
 
-    private void prepareAndSendClientPacket(){
-        // The network must create a copy of the local PlayerData and GameData and send those copies instead of the
-        // originals. This is to prevent the change flags within the PlayerData and GameData from being reset before the
-        // packet is sent.
-        PlayerData localPlayerData = new PlayerData(localPlayer);
-        GameData localGameData = new GameData(gameData);
-        PlayPanel localPlayPanel = new PlayPanel(playPanelMap.get(localPlayerData.getTeam().getData()));
-
-        Packet outPacket = new Packet(localPlayerData, localGameData, localPlayPanel, connectionManager.getSynchronizer());
-        connectionManager.send(outPacket);
-
-        // reset local change flags so that they are sent only once:
-        localPlayer.resetFlags();
-        playPanelMap.get(localPlayerData.getTeam().getData()).resetFlags();
-    }
-
     // Todo: make this dialog automatically disappear if the player reconnects
-    private void showConnectionLostDialog(PlayerData player){
+    private void showConnectionLostDialog(Player player){
         boolean droppedPlayerIsHost = player.getPlayerID()==0;
 
         // The dialog box is nonmodal and is constructed on a new stage:
@@ -550,7 +507,7 @@ public class GameScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                player.getState().changeTo(PlayerData.State.DEFEATED);
+                player.getState().changeTo(Player.State.DEFEATED);
             }
             dialogStage.close();
         }));
@@ -587,12 +544,11 @@ public class GameScene extends Scene {
         // Tell the other players that we're leaving:
         if(isHost){
             gameCanceled.changeTo(true);
-            prepareAndSendServerPacket();
         }
         else{
-            localPlayer.getState().changeTo(PlayerData.State.DISCONNECTED);
-            prepareAndSendClientPacket();
+            localPlayer.getState().changeTo(Player.State.DISCONNECTED);
         }
+        connectionManager.send(new Packet(connectionManager.getSynchronizer()));
 
         // wait a little bit to make sure the packet gets through:
         // todo: replace this with a blocking send() method of some sort?
@@ -608,7 +564,7 @@ public class GameScene extends Scene {
         animationTimer.stop();
         connectionManager.cleanUp(); // stops the receiver and sender workers in the connectionManager
         for(PlayPanel playPanel : playPanelMap.values()){
-            for(PlayerData player : playPanel.getPlayerList()){
+            for(Player player : playPanel.getPlayerList()){
                 if(player instanceof BotPlayer){
                     ((BotPlayer) player).cleanUp(); // shuts down the BotPlayer's thread pool
                 }
@@ -633,7 +589,7 @@ public class GameScene extends Scene {
         StackPane pauseMenu = new StackPane();
 
         // Get the pause menu background:
-        ImageView background = Drawing.PAUSE_MENU_BACKDROP.getImageView();
+        ImageView background = DrawingName.PAUSE_MENU_BACKDROP.getImageView();
         pauseMenu.getChildren().add(background);
 
         // place the title and buttons:
@@ -681,7 +637,7 @@ public class GameScene extends Scene {
                 case UNPAUSE:
                     System.out.println("Unpause Button Pressed!");
                     //removePauseMenu();
-                    gameData.getPause().changeTo(false);
+                    pause.changeTo(false);
                     break;
                 case RETURN_TO_MAIN_MENU_CLIENT:
                     System.out.println("We're done!");
@@ -701,13 +657,13 @@ public class GameScene extends Scene {
     private void tick(){
         // transfer the transferOutOrbs.
         for(PlayPanel fromPlayPanel : playPanelMap.values()){
-            List<OrbData> transferOutOrbs = fromPlayPanel.getTransferOutOrbs();
+            List<Orb> transferOutOrbs = fromPlayPanel.getTransferOutOrbs();
             if(!transferOutOrbs.isEmpty()){
                 for(PlayPanel toPlayPanel : playPanelMap.values()){
                     if(fromPlayPanel!=toPlayPanel){
-                        Set<OrbData> transferInOrbs = toPlayPanel.getTransferInOrbs();
+                        Set<Orb> transferInOrbs = toPlayPanel.getTransferInOrbs();
                         Random randomTransferOrbGenerator = toPlayPanel.getRandomTransferOrbGenerator();
-                        OrbData[][] orbArray = toPlayPanel.getOrbArray();
+                        Orb[][] orbArray = toPlayPanel.getOrbArray();
                         toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs,randomTransferOrbGenerator,orbArray);
                     }
                 }
@@ -719,18 +675,18 @@ public class GameScene extends Scene {
     // If victoriousTeam == -1, that means nobody won (player failed a puzzle challenge, for example)
     // todo: what about ties? Am I gonna bother with those?
     private void startVictoryPause_Model(int victoriousTeam){
-        if(gameData.getVictoryPauseStarted()) return; // To ensure that the effects of this method are only applied once.
-        gameData.setVictoryTime(System.nanoTime());
-        gameData.setVictoriousTeam(victoriousTeam);
+        if(victoryPauseStarted) return; // To ensure that the effects of this method are only applied once.
+        victoryTime = System.nanoTime();
+        this.victoriousTeam = victoriousTeam;
 
         // Disable all cannons and freeze all defeated players:
-        for(PlayerData player : players){
+        for(Player player : players){
             if(player.getTeam().getData() == victoriousTeam){
-                player.getCharacterData().setCharacterAnimationState(VICTORIOUS);
+                player.getCharacter().setCharacterAnimationState(VICTORIOUS);
             }
             else{
-                player.getCharacterData().setCharacterAnimationState(DEFEATED);
-                player.getCannonData().setCannonAnimationState(CannonType.CannonAnimationState.DEFEATED);
+                player.getCharacter().setCharacterAnimationState(DEFEATED);
+                player.getCannon().setCannonAnimationState(CannonType.CannonAnimationState.DEFEATED);
             }
         }
 
@@ -739,7 +695,7 @@ public class GameScene extends Scene {
             playPanel.getShootingOrbs().clear();
         }
 
-        gameData.setVictoryPauseStarted(true);
+        victoryPauseStarted = true;
         System.out.println("team " + victoriousTeam + " has won.");
     }
 
@@ -751,10 +707,6 @@ public class GameScene extends Scene {
         SoundManager.silenceAllSoundEffects();
         SoundManager.playSoundEffect(SoundEffect.VICTORY_FLOURISH);
         victoryPauseStarted2 = true;
-    }
-
-    private void startVictoryDisplay_Model(){
-        gameData.setVictoryDisplayStarted(true);
     }
 
     private void startVictoryDisplay_View(int victoriousTeam){
@@ -784,19 +736,19 @@ public class GameScene extends Scene {
 }
 
 enum LocationType {
-    NIGHTTIME(Drawing.NIGHT_SKY,
-            Drawing.NIGHT_SKY_CLOUDS,
-            Drawing.PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS,
-            Drawing.PLAYPANEL_NIGHTSKY_DROPCLOUD,
-            Drawing.PLAYPANEL_NIGHTSKY_SEPARATOR);
+    NIGHTTIME(DrawingName.NIGHT_SKY,
+            DrawingName.NIGHT_SKY_CLOUDS,
+            DrawingName.PLAYPANEL_NIGHTSKY_FOREGROUND_CLOUDS,
+            DrawingName.PLAYPANEL_NIGHTSKY_DROPCLOUD,
+            DrawingName.PLAYPANEL_NIGHTSKY_SEPARATOR);
 
-    private Drawing background;
-    private Drawing midground;
-    private Drawing foregroundCloudsEnum;
-    private Drawing dropCloudEnum;
-    private Drawing separator;
+    private DrawingName background;
+    private DrawingName midground;
+    private DrawingName foregroundCloudsEnum;
+    private DrawingName dropCloudEnum;
+    private DrawingName separator;
 
-    LocationType(Drawing background, Drawing midground, Drawing foregroundCloudsEnum, Drawing dropCloudEnum, Drawing separator){
+    LocationType(DrawingName background, DrawingName midground, DrawingName foregroundCloudsEnum, DrawingName dropCloudEnum, DrawingName separator){
         this.background = background;
         this.midground = midground;
         this.foregroundCloudsEnum = foregroundCloudsEnum;
@@ -804,19 +756,19 @@ enum LocationType {
         this.separator = separator;
     }
 
-    public Drawing getBackground(){
+    public DrawingName getBackground(){
         return background;
     }
-    public Drawing getMidground(){
+    public DrawingName getMidground(){
         return midground;
     }
-    public Drawing getForegroundCloudsEnum(){
+    public DrawingName getForegroundCloudsEnum(){
         return foregroundCloudsEnum;
     }
-    public Drawing getDropCloudEnum(){
+    public DrawingName getDropCloudEnum(){
         return dropCloudEnum;
     }
-    public Drawing getSeparator(){
+    public DrawingName getSeparator(){
         return separator;
     }
 }

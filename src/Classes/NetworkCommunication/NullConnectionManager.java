@@ -1,6 +1,6 @@
 package Classes.NetworkCommunication;
 
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 
 /**
  * The GameScene needs a ConnectionManager to operate. For single-player games, the NullConnectionManager keeps the

@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Images.ButtonType;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -33,7 +33,7 @@ public class ScrollableView<T extends Node> extends AnchorPane {
     private HBox contentsContainer = new HBox();
     private Node background;
     private Node midground;
-    private Drawing spacerEnum = null;
+    private DrawingName spacerEnum = null;
     private int numSpecialItems = 0; // special items that are *not* of type T within the contentsContainer.
 
     // Values used for scrolling:
@@ -106,7 +106,7 @@ public class ScrollableView<T extends Node> extends AnchorPane {
 
     }
 
-    public ScrollableView(Node background, Node midground, Drawing spacerEnum){
+    public ScrollableView(Node background, Node midground, DrawingName spacerEnum){
         this(background, midground);
         this.spacerEnum = spacerEnum;
 

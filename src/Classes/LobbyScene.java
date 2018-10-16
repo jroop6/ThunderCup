@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Images.ButtonType;
 import Classes.Animation.CharacterType;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.*;
 import javafx.animation.AnimationTimer;
@@ -22,8 +22,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 
-import static Classes.NetworkCommunication.PlayerData.GAME_ID;
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.GAME_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
 
@@ -36,7 +36,7 @@ public class LobbyScene extends Scene {
 
     // misc variables accessed by different methods in this class:
     private ConnectionManager connectionManager;
-    private PlayerData localPlayer;
+    private Player localPlayer;
     private ScrollableView<PlayerSlot> playerSlotContainer;
     private Scale scaler = new Scale();
     private ChatBox chatBox;
@@ -67,11 +67,11 @@ public class LobbyScene extends Scene {
         // set up connection framework:
         if(isHost){
             connectionManager = new HostConnectionManager(port);
-            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
+            localPlayer = new Player(username, Player.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
         }
         else{
-            connectionManager = new ClientConnectionManager(PlayerData.createID(), host, port);
-            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
+            connectionManager = new ClientConnectionManager(Player.createID(), host, port);
+            localPlayer = new Player(username, Player.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
         }
         connectionManager.setPlayerID(localPlayer.getPlayerID());
         System.out.println("our ID is " + localPlayer.getPlayerID());
@@ -87,7 +87,7 @@ public class LobbyScene extends Scene {
         }
 
         // Get a background for the PlayerSlot container:
-        ImageView scrollableViewbackground = Drawing.DAY_SKY.getImageView();
+        ImageView scrollableViewbackground = DrawingName.DAY_SKY.getImageView();
 
         // Create a ScrollableView and place PlayerSlots in it:
         playerSlotContainer = new ScrollableView<>(scrollableViewbackground,new Rectangle(0.0,0.0,Color.TRANSPARENT));
@@ -98,7 +98,7 @@ public class LobbyScene extends Scene {
             PlayerSlot hostPlayerSlot = new PlayerSlot(localPlayer, true);
             playerSlotContainer.addItem(hostPlayerSlot);
             Button addPlayerBtn = new ThunderButton(ButtonType.ADD_PLAYER,(event)->{
-                playerSlotContainer.addItem(new PlayerSlot(new PlayerData("Open Slot", PlayerData.PlayerType.UNCLAIMED, PlayerData.createID(), connectionManager.getSynchronizer()), isHost));
+                playerSlotContainer.addItem(new PlayerSlot(new Player("Open Slot", Player.PlayerType.UNCLAIMED, Player.createID(), connectionManager.getSynchronizer()), isHost));
                 ((HostConnectionManager)connectionManager).addOpenSlot();
             });
             Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->{
@@ -113,7 +113,7 @@ public class LobbyScene extends Scene {
         }
         // otherwise, add both a remote player (representing the host) and a localplayer. The hostplayer's data will eventually be updated:
         else{
-            PlayerData hostPlayer = new PlayerData("???", PlayerData.PlayerType.REMOTE_CLIENTVIEW, HOST_ID, connectionManager.getSynchronizer());
+            Player hostPlayer = new Player("???", Player.PlayerType.REMOTE_CLIENTVIEW, HOST_ID, connectionManager.getSynchronizer());
             PlayerSlot hostPlayerSlot = new PlayerSlot(hostPlayer,isHost);
             PlayerSlot localPlayerSlot = new PlayerSlot(localPlayer,isHost);
             playerSlotContainer.addItem(hostPlayerSlot);
@@ -123,7 +123,7 @@ public class LobbyScene extends Scene {
         // There are one or more buttons directly beneath the PlayerSlots, which allow the player to return to the main
         // menu, ask for the computer's name and port (host only), and start the game (host only)
         AnchorPane buttonHolder = new AnchorPane();
-        buttonHolder.setBackground(new Background(new BackgroundImage(Drawing.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
+        buttonHolder.setBackground(new Background(new BackgroundImage(DrawingName.MSS_BUTTONS_BACKDROP.getImageView().getImage(),null,null,null,null)));
         buttonHolder.setPickOnBounds(false);
         HBox rightSideButtonsHolder = new HBox();
         rightSideButtonsHolder.setPickOnBounds(false);
@@ -158,7 +158,7 @@ public class LobbyScene extends Scene {
         rootNode.getChildren().add(buttonHolder);
 
         // A ChatBox is located under the Buttons:
-        ImageView chatBoxBackground = Drawing.CHATBOX_SCROLLPANE_BACKGROUND.getImageView();
+        ImageView chatBoxBackground = DrawingName.CHATBOX_SCROLLPANE_BACKGROUND.getImageView();
         chatBox = new ChatBox(localPlayer, 200, true);
         rootNode.getChildren().add(chatBox);
 
@@ -214,7 +214,7 @@ public class LobbyScene extends Scene {
                     for (PlayerSlot playerSlot : playerSlotContainer.getContents()){
                         playerSlot.tick(0);
                         playerSlot.repaint(isHost);
-                        chatBox.displayMessages(playerSlot.getPlayerData().getMessagesOut().getData());
+                        chatBox.displayMessages(playerSlot.getPlayer().getMessagesOut().getData());
                     }
 
                     if(isHost)deleteRemovedPlayers();
@@ -257,9 +257,9 @@ public class LobbyScene extends Scene {
         Map<Long,Long> latencies = connectionManager.getLatencies();
         System.out.print("Latencies: ");
         for(PlayerSlot playerSlot : playerSlotContainer.getContents()){
-            PlayerData playerData = playerSlot.getPlayerData();
-            if(latencies.containsKey(playerData.getPlayerID())){
-                System.out.print(playerData.getUsername().getData() + ": " + latencies.get(playerData.getPlayerID()) + " // ");
+            Player player = playerSlot.getPlayer();
+            if(latencies.containsKey(player.getPlayerID())){
+                System.out.print(player.getUsername().getData() + ": " + latencies.get(player.getPlayerID()) + " // ");
             }
         }
         System.out.print("\n");
@@ -281,11 +281,11 @@ public class LobbyScene extends Scene {
                     PlayerSlot availableSlot = getUnclaimedSlot();
                     if(availableSlot!=null){
                         // De-register the open slot playerdata:
-                        localSynchronizer.deRegisterAllWithID(availableSlot.getPlayerData().getPlayerID());
+                        localSynchronizer.deRegisterAllWithID(availableSlot.getPlayer().getPlayerID());
 
                         // create the player and put him/her in the slot:
                         String username = (String)receivedSynchronizer.get(id,"username").getData();
-                        PlayerData newRemotePlayer = new PlayerData(username, PlayerData.PlayerType.REMOTE_HOSTVIEW, id, localSynchronizer);
+                        Player newRemotePlayer = new Player(username, Player.PlayerType.REMOTE_HOSTVIEW, id, localSynchronizer);
                         availableSlot.changePlayer(newRemotePlayer, isHost);
                     }
                 }
@@ -301,7 +301,7 @@ public class LobbyScene extends Scene {
 
     private PlayerSlot getUnclaimedSlot(){
         for(PlayerSlot playerSlot : playerSlotContainer.getContents()){
-            if(playerSlot.getPlayerData().getPlayerType().getData() == PlayerData.PlayerType.UNCLAIMED) return playerSlot;
+            if(playerSlot.getPlayer().getPlayerType().getData() == Player.PlayerType.UNCLAIMED) return playerSlot;
         }
         return null;
     }
@@ -311,21 +311,21 @@ public class LobbyScene extends Scene {
 
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots) {
-            PlayerData playerData = playerSlot.getPlayerData();
-            PlayerData.PlayerType playerType = playerSlot.getPlayerData().getPlayerType().getData();
-            if(!(playerType == PlayerData.PlayerType.REMOTE_CLIENTVIEW || playerType == PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
-            if(!isHost && playerData.getPlayerID()!=HOST_ID) continue; // Clients only keep track of the host's connection to them.
+            Player player = playerSlot.getPlayer();
+            Player.PlayerType playerType = playerSlot.getPlayer().getPlayerType().getData();
+            if(!(playerType == Player.PlayerType.REMOTE_CLIENTVIEW || playerType == Player.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
+            if(!isHost && player.getPlayerID()!=HOST_ID) continue; // Clients only keep track of the host's connection to them.
 
             // If the player has been gone for too long, ask the user what to do:
-            if(disconnectedPlayerIDs.contains(playerData.getPlayerID())){
-                System.out.println("disconnected playerID: " + playerData.getPlayerID() + " who's been gone for " + connectionManager.getSynchronizer().getDisconnectedTime(playerData.getPlayerID()));
-                showConnectionLostDialog(playerData);
+            if(disconnectedPlayerIDs.contains(player.getPlayerID())){
+                connectionManager.getSynchronizer().printDisconnectedPlayer(player.getPlayerID());
+                showConnectionLostDialog(player);
             }
         }
     }
 
     // Todo: make this dialog automatically disappear if the player reconnects
-    private void showConnectionLostDialog(PlayerData playerdata){
+    private void showConnectionLostDialog(Player playerdata){
         // The dialog box is nonmodal and is constructed on a new stage:
         Stage dialogStage = new Stage();
         VBox dialogRoot = new VBox();
@@ -363,7 +363,7 @@ public class LobbyScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                playerdata.getState().changeTo(PlayerData.State.DISCONNECTED);
+                playerdata.getState().changeTo(Player.State.DISCONNECTED);
             }
             dialogStage.close();
         }));
@@ -380,12 +380,12 @@ public class LobbyScene extends Scene {
     private void deleteRemovedPlayers(){
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots){
-            if(playerSlot.getPlayerData().getState().getData()== PlayerData.State.DISCONNECTED){
-                if (playerSlot.getPlayerData().getPlayerType().getData()== PlayerData.PlayerType.UNCLAIMED){
+            if(playerSlot.getPlayer().getState().getData()== Player.State.DISCONNECTED){
+                if (playerSlot.getPlayer().getPlayerType().getData()== Player.PlayerType.UNCLAIMED){
                     // An open slot is being removed, so decrement the open slot counter:
                     ((HostConnectionManager)connectionManager).removeOpenSlot();
                 }
-                connectionManager.getSynchronizer().deRegisterAllWithID(playerSlot.getPlayerData().getPlayerID());
+                connectionManager.getSynchronizer().deRegisterAllWithID(playerSlot.getPlayer().getPlayerID());
                 System.out.println("INSIDE HERE!");
                 playerSlotContainer.removeItem(playerSlot);
             }
@@ -407,9 +407,9 @@ public class LobbyScene extends Scene {
                     if(localSynchronizer.get(id,"username")==null){
                         // this is a new player, so create it:
                         String username = (String)receivedSynchronizer.get(id,"username").getData();
-                        PlayerData.PlayerType playerType = (PlayerData.PlayerType)receivedSynchronizer.get(id,"playerType").getData();
-                        if(playerType!= PlayerData.PlayerType.UNCLAIMED) playerType = PlayerData.PlayerType.REMOTE_CLIENTVIEW;
-                        PlayerData newRemotePlayer = new PlayerData(username, playerType, id, localSynchronizer);
+                        Player.PlayerType playerType = (Player.PlayerType)receivedSynchronizer.get(id,"playerType").getData();
+                        if(playerType!= Player.PlayerType.UNCLAIMED) playerType = Player.PlayerType.REMOTE_CLIENTVIEW;
+                        Player newRemotePlayer = new Player(username, playerType, id, localSynchronizer);
                         playerSlotContainer.addItem(new PlayerSlot(newRemotePlayer,isHost));
                     }
                 }
@@ -419,11 +419,11 @@ public class LobbyScene extends Scene {
             List<PlayerSlot> playerSlotsToRemove = new LinkedList<>();
             synchronized (localSynchronizer){
                 for(PlayerSlot playerSlot : playerSlotContainer.getContents()){
-                    long id = playerSlot.getPlayerData().getPlayerID();
+                    long id = playerSlot.getPlayer().getPlayerID();
                     if(receivedSynchronizer.get(id,"username")==null){
-                        System.out.println("dropped player detected: " + playerSlot.getPlayerData().getUsername().getData() + " id: " + playerSlot.getPlayerData().getPlayerID());
+                        System.out.println("dropped player detected: " + playerSlot.getPlayer().getUsername().getData() + " id: " + playerSlot.getPlayer().getPlayerID());
                         // This player was dropped by the host, so let's drop them too:
-                        if(playerSlot.getPlayerData() == localPlayer){
+                        if(playerSlot.getPlayer() == localPlayer){
                             // Uh-oh, that's us! Let's wait a few seconds, first; maybe we *just* connected and the host
                             // hasn't instantiated our player yet.
                             kickTimeout--;
@@ -441,7 +441,7 @@ public class LobbyScene extends Scene {
                 }
                 for(PlayerSlot playerSlot : playerSlotsToRemove){
                     playerSlotContainer.removeItem(playerSlot);
-                    connectionManager.getSynchronizer().deRegisterAllWithID(playerSlot.getPlayerData().getPlayerID());
+                    connectionManager.getSynchronizer().deRegisterAllWithID(playerSlot.getPlayer().getPlayerID());
                 }
             }
 
@@ -507,7 +507,7 @@ public class LobbyScene extends Scene {
             gameCanceled.changeTo(true);
         }
         else{
-            localPlayer.getState().changeTo(PlayerData.State.DISCONNECTED);
+            localPlayer.getState().changeTo(Player.State.DISCONNECTED);
         }
         prepareAndSendPacket();
         // wait a little bit to make sure the packet gets through:
@@ -523,9 +523,9 @@ public class LobbyScene extends Scene {
     }
 
     private void startGame(){
-        List<PlayerData> players = new LinkedList<>();
+        List<Player> players = new LinkedList<>();
         for (PlayerSlot playerSlot: playerSlotContainer.getContents()){
-            players.add(playerSlot.getPlayerData());
+            players.add(playerSlot.getPlayer());
         }
         connectionManager.getSynchronizer().deRegisterAllWithID(GAME_ID); // deletes any networked data that we no longer need, such as gameStarted.
         animationTimer.stop();

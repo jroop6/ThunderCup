@@ -2,7 +2,7 @@ package Classes;
 
 import Classes.Animation.*;
 import Classes.Audio.SoundEffect;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import Classes.NetworkCommunication.*;
 import Classes.PlayerTypes.BotPlayer;
 import javafx.geometry.Point2D;
@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.List;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
-import static Classes.OrbData.*;
+import static Classes.Orb.*;
 import static java.lang.Math.PI;
 
 /**
@@ -60,17 +60,17 @@ public class PlayPanel extends Pane implements Serializable {
     private final int arrayWidth;
     private final int seed;
     private SynchronizedComparable<TeamState> teamState;
-    private final List<PlayerData> players;
+    private final List<Player> players;
     private int shotsUntilNewRow;
-    private OrbData orbArray[][];
-    private OrbData deathOrbs[]; // orbs below the line of death. If these are not immediately cleared in 1 frame, then this team has lost.
-    private List<OrbData> shootingOrbs = new LinkedList<>();
-    private List<OrbData> burstingOrbs = new LinkedList<>();
-    private List<OrbData> droppingOrbs = new LinkedList<>();
-    private List<OrbData> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
-    private Set<OrbData> transferInOrbs = new HashSet<>(); // orbs to be transferred from other players
-    private List<OrbData> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
-    private List<AnimationData> visualFlourishes = new LinkedList<>();
+    private Orb orbArray[][];
+    private Orb deathOrbs[]; // orbs below the line of death. If these are not immediately cleared in 1 frame, then this team has lost.
+    private List<Orb> shootingOrbs = new LinkedList<>();
+    private List<Orb> burstingOrbs = new LinkedList<>();
+    private List<Orb> droppingOrbs = new LinkedList<>();
+    private List<Orb> transferOutOrbs = new LinkedList<>(); // orbs to be transferred to other players
+    private Set<Orb> transferInOrbs = new HashSet<>(); // orbs to be transferred from other players
+    private List<Orb> thunderOrbs = new LinkedList<>(); // orbs that have dropped off the PlayPanel explode in thunder.
+    private List<Animation> visualFlourishes = new LinkedList<>();
 
     public enum TeamState {DEFEATED, VICTORIOUS, NORMAL}
 
@@ -91,7 +91,6 @@ public class PlayPanel extends Pane implements Serializable {
     private boolean transferOutOrbsChanged = false;
     private boolean transferInOrbsChanged = false;
     private boolean deathOrbsChanged = false;
-    private boolean shotsFiredChanged = false;
 
     // Counter for how many frames the local orbArray data has been inconsistent with data from the host:
     private int inconsistencyCounter = 0; // hopefully 0 most of the time!
@@ -105,7 +104,7 @@ public class PlayPanel extends Pane implements Serializable {
     private Random miscRandomGenerator = new Random();
     private String puzzleUrl;
 
-    PlayPanel(int team, List<PlayerData> players, int seed, String puzzleUrl, Synchronizer synchronizer, LocationType locationType){
+    PlayPanel(int team, List<Player> players, int seed, String puzzleUrl, Synchronizer synchronizer, LocationType locationType){
         // The size of the PlayPanel is determined by the liveBoundary rectangle.
         arrayWidth = ARRAY_WIDTH_PER_CHARACTER*players.size();
         liveBoundary = new Rectangle(PLAYPANEL_WIDTH_PER_PLAYER*players.size() + ORB_RADIUS, PLAYPANEL_HEIGHT, Color.TRANSPARENT);
@@ -121,16 +120,16 @@ public class PlayPanel extends Pane implements Serializable {
         getChildren().add(orbCanvas);
 
         // Add and initialize players to the PlayPanel:
-        Drawing foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
-        Drawing dropCloudEnum = locationType.getDropCloudEnum();
+        DrawingName foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
+        DrawingName dropCloudEnum = locationType.getDropCloudEnum();
         for(int i=0; i<players.size(); ++i){
-            PlayerData player = players.get(i);
+            Player player = players.get(i);
 
             // register the new player, add his/her cannon and character to the UI, and add other background image components:
             player.registerToPlayPanel(this);
             player.relocateCannon(CANNON_X_POS + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
-            player.relocateCharacter(player.getCannonData().getCannonType().getData().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
-                    player.getCannonData().getCannonType().getData().getCharacterY());
+            player.relocateCharacter(player.getCannon().getCannonType().getData().getCharacterX() + (PLAYPANEL_WIDTH_PER_PLAYER)*(i) + ORB_RADIUS,
+                    player.getCannon().getCannonType().getData().getCharacterY());
             ImageView foregroundClouds = foregroundCloudsEnum.getImageView();
             foregroundClouds.relocate(PLAYPANEL_WIDTH_PER_PLAYER*i,PLAYPANEL_HEIGHT-foregroundCloudsEnum.getHeight());
             getChildren().add(foregroundClouds);
@@ -142,7 +141,7 @@ public class PlayPanel extends Pane implements Serializable {
             player.initializePlayerPos(i);
             player.readAmmunitionOrbs(puzzleUrl, seed);
             Point2D ammunitionOrb1Pos = new Point2D(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
-            Point2D ammunitionOrb2Pos = new Point2D(CANNON_X_POS + player.getCannonData().getCannonType().getData().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS + player.getCannonData().getCannonType().getData().getAmmunitionRelativeY());
+            Point2D ammunitionOrb2Pos = new Point2D(CANNON_X_POS + player.getCannon().getCannonType().getData().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS + player.getCannon().getCannonType().getData().getAmmunitionRelativeY());
             player.setAmmunitionOrbPositions(ammunitionOrb1Pos, ammunitionOrb2Pos);
             player.positionAmmunitionOrbs();
         }
@@ -154,52 +153,52 @@ public class PlayPanel extends Pane implements Serializable {
         this.puzzleUrl = puzzleUrl;
         this.teamState = new SynchronizedComparable<>("teamState", TeamState.NORMAL,
                 (TeamState newVal, Mode mode, int i, int j) ->{
-                    PlayerData.State newState;
+                    Player.State newState;
                     switch(newVal){
                         case VICTORIOUS:
-                            newState = PlayerData.State.VICTORIOUS;
+                            newState = Player.State.VICTORIOUS;
                             break;
                         case DEFEATED:
-                            newState = PlayerData.State.DEFEATED;
+                            newState = Player.State.DEFEATED;
                             break;
                         default:
-                            newState = PlayerData.State.NORMAL;
+                            newState = Player.State.NORMAL;
                             break;
                     }
-                    for(PlayerData playerData : players){
-                        playerData.getState().setTo(newState);
+                    for(Player player : players){
+                        player.getState().setTo(newState);
                     }
                 },
                 (TeamState newVal, Mode mode, int i, int j) ->{
-                    PlayerData.State newState;
+                    Player.State newState;
                     switch(newVal){
                         case VICTORIOUS:
-                            newState = PlayerData.State.VICTORIOUS;
+                            newState = Player.State.VICTORIOUS;
                             break;
                         case DEFEATED:
-                            newState = PlayerData.State.DEFEATED;
+                            newState = Player.State.DEFEATED;
                             break;
                         default:
-                            newState = PlayerData.State.NORMAL;
+                            newState = Player.State.NORMAL;
                             break;
                     }
-                    for(PlayerData playerData : players){
-                        playerData.getState().setTo(newState);
+                    for(Player player : players){
+                        player.getState().setTo(newState);
                     }
                 },
                 SynchronizedData.Precedence.HOST,team,synchronizer,0);
 
         // If this playpanel contains the localPlayer and we're not the host, change precedence to CLIENT:
-        for(PlayerData player : players){
-            if(player.getPlayerType().getData()==PlayerData.PlayerType.LOCAL && player.getPlayerID()!=PlayerData.HOST_ID){
+        for(Player player : players){
+            if(player.getPlayerType().getData()== Player.PlayerType.LOCAL && player.getPlayerID()!= Player.HOST_ID){
                 teamState.setPrecedence(SynchronizedData.Precedence.CLIENT);
             }
         }
 
-        orbArray = new OrbData[ARRAY_HEIGHT][arrayWidth];
+        orbArray = new Orb[ARRAY_HEIGHT][arrayWidth];
         initializeOrbArray(this.puzzleUrl);
 
-        deathOrbs = new OrbData[arrayWidth];
+        deathOrbs = new Orb[arrayWidth];
         Arrays.fill(deathOrbs,NULL);
 
         shotsUntilNewRow = SHOTS_BETWEEN_DROPS*players.size();
@@ -217,11 +216,11 @@ public class PlayPanel extends Pane implements Serializable {
         orbArray = deepCopyOrbArray(other.orbArray);
 
         //todo: don't copy NULL. Just set the reference to NULL.
-        deathOrbs = new OrbData[ARRAY_WIDTH_PER_CHARACTER*players.size()];
-        OrbData[] otherDeathOrbs = other.deathOrbs;
+        deathOrbs = new Orb[ARRAY_WIDTH_PER_CHARACTER*players.size()];
+        Orb[] otherDeathOrbs = other.deathOrbs;
         // System.arraycopy(other.getDeathOrbs(),0,deathOrbs,0,deathOrbs.length); // Unfortunately, System.arraycopy doesn't work because it only copies references to the orbs. Hence, the orbs might get modified before they are sent over the socket connection.
         for(int j=0; j<ARRAY_WIDTH_PER_CHARACTER*players.size(); j++){
-            deathOrbs[j] = new OrbData(otherDeathOrbs[j]);
+            deathOrbs[j] = new Orb(otherDeathOrbs[j]);
         }
 
         shootingOrbs = deepCopyOrbList(other.shootingOrbs);
@@ -242,16 +241,15 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     /* Specialized Changers */
-    public void changeAddShootingOrbs(Queue<OrbData> newShootingOrbs){
+    public void changeAddShootingOrbs(Queue<Orb> newShootingOrbs){
         //todo: this needs to be synchronized on the synchronizer object
         shootingOrbs.addAll(newShootingOrbs);
         shootingOrbsChanged = true;
         cumulativeShotsFired +=newShootingOrbs.size();
-        shotsFiredChanged = true;
     }
-    public void changeAddTransferOutOrbs(List<OrbData> newTransferOrbs){
-        for(OrbData orbData : newTransferOrbs){
-            orbData.setOrbAnimationState(OrbData.OrbAnimationState.TRANSFERRING);
+    public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
+        for(Orb orb : newTransferOrbs){
+            orb.setOrbAnimationState(Orb.OrbAnimationState.TRANSFERRING);
         }
         transferOutOrbs.addAll(newTransferOrbs);
         cumulativeOrbsTransferred += newTransferOrbs.size();
@@ -264,41 +262,41 @@ public class PlayPanel extends Pane implements Serializable {
 
     /* Setters: These are called by clients when they are updating their data according to data from the host*/
     //ToDo: Do I really need these, or should I just use the copy constructor?
-    public void setAddShootingOrbs(Queue<OrbData> newShootingOrbs){
+    public void setAddShootingOrbs(Queue<Orb> newShootingOrbs){
         shootingOrbs.addAll(newShootingOrbs);
         cumulativeShotsFired +=newShootingOrbs.size();
     }
-    public void setAddDroppingOrb(OrbData newOrb){
+    public void setAddDroppingOrb(Orb newOrb){
         droppingOrbs.add(newOrb);
     }
-    public void setAddThunderOrbs(List<OrbData> newThunderOrbs){
-        for(OrbData orbData : newThunderOrbs){
-            orbData.setOrbAnimationState(OrbData.OrbAnimationState.THUNDERING);
+    public void setAddThunderOrbs(List<Orb> newThunderOrbs){
+        for(Orb orb : newThunderOrbs){
+            orb.setOrbAnimationState(Orb.OrbAnimationState.THUNDERING);
         }
         thunderOrbs.addAll(newThunderOrbs);
     }
-    public void setOrbArray(OrbData[][] newOrbArray){
+    public void setOrbArray(Orb[][] newOrbArray){
         for (int i=0; i<ARRAY_HEIGHT; i++){
             //System.arraycopy(newOrbArray[i],0,orbArray[i],0,orbArray[i].length); // System.arraycopy is faster, but it might cost more memory because it causes the game to retain a reference to the packet from the host. I'm not sure which option is better... Either way, I'd have to replace all the NULL orbs with references to the local NULL orb anyways.
             for(int j=0; j<arrayWidth; j++){
-                OrbData otherOrbData = newOrbArray[i][j];
-                if(otherOrbData.equals(NULL)) orbArray[i][j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
-                else orbArray[i][j] = new OrbData(otherOrbData);
+                Orb otherOrb = newOrbArray[i][j];
+                if(otherOrb.equals(NULL)) orbArray[i][j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
+                else orbArray[i][j] = new Orb(otherOrb);
             }
         }
     }
-    public void setDeathOrbs(OrbData[] newDeathOrbs){
+    public void setDeathOrbs(Orb[] newDeathOrbs){
         for(int j=0; j<arrayWidth; j++){
-            OrbData otherOrbData = newDeathOrbs[j];
-            if(otherOrbData.equals(NULL)) deathOrbs[j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
-            else deathOrbs[j] = new OrbData(otherOrbData);
+            Orb otherOrb = newDeathOrbs[j];
+            if(otherOrb.equals(NULL)) deathOrbs[j] = NULL; // note: The host's Orb.NULL is different from our own. This is why we must use .equals instead of == and replace all these instances with a reference to our own Orb.NULL.
+            else deathOrbs[j] = new Orb(otherOrb);
         }
     }
-    public <E extends Collection<OrbData>> void setOrbCollection(E collectionToOverwrite, E collectionToCopy){
+    public <E extends Collection<Orb>> void setOrbCollection(E collectionToOverwrite, E collectionToCopy){
         System.out.println("setting an orb collection");
         collectionToOverwrite.clear();
         // Using addAll() would be faster and cleaner, but may use more memory because the game would have to keep a reference to the entire PlayPanelData from the host.
-        for(OrbData orbData : collectionToCopy) collectionToOverwrite.add(new OrbData(orbData));
+        for(Orb orb : collectionToCopy) collectionToOverwrite.add(new Orb(orb));
     }
 
 
@@ -306,19 +304,19 @@ public class PlayPanel extends Pane implements Serializable {
     public int getTeam(){
         return team;
     }
-    public OrbData[][] getOrbArray(){
+    public Orb[][] getOrbArray(){
         return orbArray;
     }
-    public List<OrbData> getShootingOrbs(){
+    public List<Orb> getShootingOrbs(){
         return shootingOrbs;
     }
-    public List<OrbData> getTransferOutOrbs(){
+    public List<Orb> getTransferOutOrbs(){
         return transferOutOrbs;
     }
-    public Set<OrbData> getTransferInOrbs(){
+    public Set<Orb> getTransferInOrbs(){
         return transferInOrbs;
     }
-    public OrbData[] getDeathOrbs(){
+    public Orb[] getDeathOrbs(){
         return deathOrbs;
     }
     public SynchronizedComparable<TeamState> getTeamState(){
@@ -333,7 +331,6 @@ public class PlayPanel extends Pane implements Serializable {
         transferOutOrbsChanged = false;
         transferInOrbsChanged = false;
         deathOrbsChanged = false;
-        shotsFiredChanged = false;
     }
 
     // repaints all orbs and Character animations on the PlayPanel.
@@ -350,7 +347,7 @@ public class PlayPanel extends Pane implements Serializable {
 
         synchronized (synchronizer){
             // Paint dropping Orbs:
-            for(OrbData orbData : droppingOrbs) orbData.drawSelf(orbDrawer, vibrationOffset);
+            for(Orb orb : droppingOrbs) orb.drawSelf(orbDrawer, vibrationOffset);
 
             // If we are close to adding 1 more level to the orbArray, apply a vibration effect to the array orbs:
             if(shotsUntilNewRow<=VIBRATION_FREQUENCIES.length && shotsUntilNewRow>0){
@@ -365,34 +362,34 @@ public class PlayPanel extends Pane implements Serializable {
             }
 
             // paint Death orbs:
-            for(OrbData orbData : deathOrbs) orbData.drawSelf(orbDrawer,vibrationOffset);
+            for(Orb orb : deathOrbs) orb.drawSelf(orbDrawer,vibrationOffset);
 
             // paint VisualFlourishes:
-            for(AnimationData visualFlourish : visualFlourishes) visualFlourish.drawSelf(orbDrawer);
+            for(Animation visualFlourish : visualFlourishes) visualFlourish.drawSelf(orbDrawer);
 
             // paint transferring orbs:
-            for(OrbData orbData : transferInOrbs) orbData.drawSelf(orbDrawer, vibrationOffset);
+            for(Orb orb : transferInOrbs) orb.drawSelf(orbDrawer, vibrationOffset);
 
             // remaining orbs should not vibrate:
             vibrationOffset = 0.0;
 
             // Paint bursting orbs:
-            for(OrbData orbData : burstingOrbs){
-                orbData.drawSelf(orbDrawer, vibrationOffset);
+            for(Orb orb : burstingOrbs){
+                orb.drawSelf(orbDrawer, vibrationOffset);
             }
 
             // Paint each player and his/her ammunition orbs:
-            for(PlayerData playerData : players){
-                if(playerData.getTeam().getData() == team){
-                    playerData.drawSelf(orbDrawer);
-                    List<OrbData> ammunitionOrbs = playerData.getAmmunition();
+            for(Player player : players){
+                if(player.getTeam().getData() == team){
+                    player.drawSelf(orbDrawer);
+                    List<Orb> ammunitionOrbs = player.getAmmunition();
                     ammunitionOrbs.get(0).drawSelf(orbDrawer, vibrationOffset);
                     ammunitionOrbs.get(1).drawSelf(orbDrawer, vibrationOffset);
                 }
             }
 
             // Paint shooting orbs:
-            for(OrbData orbData : shootingOrbs) orbData.drawSelf(orbDrawer, vibrationOffset);
+            for(Orb orb : shootingOrbs) orb.drawSelf(orbDrawer, vibrationOffset);
         }
     }
 
@@ -440,36 +437,36 @@ public class PlayPanel extends Pane implements Serializable {
         return chosenEnum;
     }
 
-    public List<PlayerData> getPlayerList(){
+    public List<Player> getPlayerList(){
         return players;
     }
 
     public void displayVictoryResults(VictoryType victoryType){
         Text statistics;
-        AnimationData visualFlourish;
+        Animation visualFlourish;
         String specializedStatistic;
 
         // Note: we must add getDroppingOrbs().size() to getCumulativeOrbsTransferred() because orbs that are dropping at the very end of the game haven't been added to the transferOutOrbs list, yet.
         switch(victoryType) {
             case VS_WIN:
-                visualFlourish = new AnimationData(Animation.WIN_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
+                visualFlourish = new Animation(AnimationName.WIN_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs transferred to other players: " + (cumulativeOrbsTransferred + droppingOrbs.size()) + "\n";
                 break;
             case VS_LOSE:
-                visualFlourish = new AnimationData(Animation.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
+                visualFlourish = new Animation(AnimationName.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs transferred to other players: " + (cumulativeOrbsTransferred + droppingOrbs.size()) + "\n";
                 break;
             case PUZZLE_CLEARED:
-                visualFlourish = new AnimationData(Animation.CLEAR_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
+                visualFlourish = new Animation(AnimationName.CLEAR_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs dropped: " + cumulativeOrbsDropped + "\n";
                 break;
             case PUZZLE_FAILED:
-                visualFlourish = new AnimationData(Animation.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
+                visualFlourish = new Animation(AnimationName.LOSE_SCREEN, 0, 0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "Orbs dropped: " + cumulativeOrbsDropped + "\n";
                 break;
             default:
                 System.err.println("Unrecognized VictoryType. setting default visual Flourish.");
-                visualFlourish = new AnimationData(Animation.WIN_SCREEN,0,0, PlayOption.PLAY_ONCE_THEN_PAUSE);
+                visualFlourish = new Animation(AnimationName.WIN_SCREEN,0,0, PlayOption.PLAY_ONCE_THEN_PAUSE);
                 specializedStatistic = "\n";
         }
 
@@ -515,7 +512,7 @@ public class PlayPanel extends Pane implements Serializable {
     public void checkForConsistency(PlayPanel other){
         // Check that the orbArray is consistent between the two sets of data:
         boolean inconsistent = false;
-        OrbData[][] otherArray = other.orbArray;
+        Orb[][] otherArray = other.orbArray;
         for(int i=0; i<ARRAY_HEIGHT; i++) {
             for (int j=0; j<arrayWidth; j++) {
                 if (otherArray[i][j].equals(NULL) && !(orbArray[i][j] == NULL)){ // note: cannot use == in the first clause because the host has a different instance of Orb.NULL than we do.
@@ -528,7 +525,7 @@ public class PlayPanel extends Pane implements Serializable {
         }
 
         // Check that the deathOrbs array is consistent between the two sets of data:
-        OrbData[] otherDeathOrbs = other.deathOrbs;
+        Orb[] otherDeathOrbs = other.deathOrbs;
         for (int j=0; j <arrayWidth; j++) {
             if (otherDeathOrbs[j].equals(NULL) && !(deathOrbs[j] == NULL)){ // note: cannot use == in the first clause because the host has a different instance of Orb.NULL than we do.
                 inconsistent = true;
@@ -577,8 +574,8 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     public boolean isDeathOrbsEmpty(){
-        for (OrbData orbData : deathOrbs){
-            if(orbData != NULL) return false;
+        for (Orb orb : deathOrbs){
+            if(orb != NULL) return false;
         }
         return true;
     }
@@ -608,7 +605,7 @@ public class PlayPanel extends Pane implements Serializable {
                     if(j%2==i%2){
                         int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
                         OrbColor orbImage = orbImages[randomOrdinal];
-                        orbArray[i][j] = new OrbData(orbImage,i,j, OrbData.OrbAnimationState.STATIC);
+                        orbArray[i][j] = new Orb(orbImage,i,j, Orb.OrbAnimationState.STATIC);
                     }
                     else orbArray[i][j] = NULL;
                 }
@@ -637,7 +634,7 @@ public class PlayPanel extends Pane implements Serializable {
                         char orbSymbol = line.charAt(j);
                         OrbColor orbEnum = OrbColor.lookupOrbImageBySymbol(orbSymbol);
                         if(orbEnum==null) orbArray[i][j] = NULL;
-                        else orbArray[i][j] = new OrbData(orbEnum,i,j, OrbData.OrbAnimationState.STATIC);
+                        else orbArray[i][j] = new Orb(orbEnum,i,j, Orb.OrbAnimationState.STATIC);
                     }
                     // if the input line was too short to fill the entire puzzle line, fill in the rest of the line with NULL orbs:
                     for(/*j is already set*/; j<arrayWidth; j++){
@@ -682,7 +679,7 @@ public class PlayPanel extends Pane implements Serializable {
         }
 
         // Move all transferring orbs down 1 index:
-        for(OrbData transferOrb : transferInOrbs){
+        for(Orb transferOrb : transferInOrbs){
             transferOrb.setIJ(transferOrb.getI()+1,transferOrb.getJ());
         }
 
@@ -704,19 +701,19 @@ public class PlayPanel extends Pane implements Serializable {
             if(j%2==newRowOffset){
                 int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
                 OrbColor orbImage = orbImages[randomOrdinal];
-                orbArray[i][j] = new OrbData(orbImage,i,j, OrbData.OrbAnimationState.STATIC);
+                orbArray[i][j] = new Orb(orbImage,i,j, Orb.OrbAnimationState.STATIC);
             }
             else orbArray[i][j] = NULL;
         }
     }
 
-    public int getLowestOccupiedRow(OrbData[][] orbArray, OrbData[] deathOrbs) {
-        for(OrbData orbData : deathOrbs){
-            if (orbData != NULL) return ARRAY_HEIGHT;
+    public int getLowestOccupiedRow(Orb[][] orbArray, Orb[] deathOrbs) {
+        for(Orb orb : deathOrbs){
+            if (orb != NULL) return ARRAY_HEIGHT;
         }
 
         for (int i = ARRAY_HEIGHT-1; i>=0; i--) {
-            OrbData[] row = orbArray[i];
+            Orb[] row = orbArray[i];
             for (int j=arrayWidth-1; j >= 0; j--) {
                 if (row[j] != NULL) {
                     return i;
@@ -731,32 +728,32 @@ public class PlayPanel extends Pane implements Serializable {
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
     void tick(Set<SoundEffect> soundEffectsToPlay){
         // New Sets and lists that will be filled via side-effects:
-        List<OrbData> orbsToDrop = new LinkedList<>(); // Orbs that are no longer connected to the ceiling by the end of this frame
-        List<OrbData> orbsToTransfer = new LinkedList<>(); // Orbs to transfer to other PlayPanels
+        List<Orb> orbsToDrop = new LinkedList<>(); // Orbs that are no longer connected to the ceiling by the end of this frame
+        List<Orb> orbsToTransfer = new LinkedList<>(); // Orbs to transfer to other PlayPanels
         List<Collision> collisions = new LinkedList<>(); // All collisions that happen during this frame
-        Set<OrbData> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
-        List<OrbData> arrayOrbsToBurst = new LinkedList<>(); // Orbs in the array that will be burst this frame
+        Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
+        List<Orb> arrayOrbsToBurst = new LinkedList<>(); // Orbs in the array that will be burst this frame
 
         // Most of the computation work is done in here. All the lists are updated via side-effects:
         simulateOrbs(orbArray, burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, 1/(double) DATA_FRAME_RATE);
 
         // Advance the animation frame of the existing visual flourishes:
-        List<AnimationData> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
+        List<Animation> flourishesToRemove = advanceVisualFlourishes(visualFlourishes);
         visualFlourishes.removeAll(flourishesToRemove);
 
         // If orbs were dropped or a sufficient number were burst, add visual flourishes for the orbs to be transferred:
         if(!orbsToDrop.isEmpty() || !orbsToTransfer.isEmpty()){
             soundEffectsToPlay.add(SoundEffect.DROP);
-            for(OrbData orbData : orbsToDrop){
-                visualFlourishes.add(new AnimationData(Animation.EXCLAMATION_MARK, orbData.getXPos(), orbData.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
+            for(Orb orb : orbsToDrop){
+                visualFlourishes.add(new Animation(AnimationName.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
-            for(OrbData orbData : orbsToTransfer){
-                visualFlourishes.add(new AnimationData(Animation.EXCLAMATION_MARK, orbData.getXPos(), orbData.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
+            for(Orb orb : orbsToTransfer){
+                visualFlourishes.add(new Animation(AnimationName.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
         }
 
         // Advance the animation frame of existing bursting orbs:
-        List<OrbData> orbsToRemove = advanceBurstingOrbs(burstingOrbs);
+        List<Orb> orbsToRemove = advanceBurstingOrbs(burstingOrbs);
         burstingOrbs.removeAll(orbsToRemove);
 
         // Advance the animation frame of the electrified orbs:
@@ -767,12 +764,12 @@ public class PlayPanel extends Pane implements Serializable {
         thunderOrbs.removeAll(orbsToRemove);
 
         // Advance existing dropping orbs:
-        List<OrbData> orbsToThunder = advanceDroppingOrbs();
+        List<Orb> orbsToThunder = advanceDroppingOrbs();
         droppingOrbs.removeAll(orbsToThunder);
 
         // If orbs dropped off the bottom of the PlayPanel, add them to the orbsToTransfer list AND the thunderOrbs list.
         if(!orbsToThunder.isEmpty()){
-            for(OrbData orbData : orbsToThunder) orbsToTransfer.add(new OrbData(orbData)); // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
+            for(Orb orb : orbsToThunder) orbsToTransfer.add(new Orb(orb)); // We must create a copy so that we can change the animationEnum without affecting the transferOutOrbs.
             setAddThunderOrbs(orbsToThunder);
         }
 
@@ -780,7 +777,7 @@ public class PlayPanel extends Pane implements Serializable {
         if(!orbsToTransfer.isEmpty()) changeAddTransferOutOrbs(orbsToTransfer);
 
         // Advance the existing transfer-in Orbs, adding visual flourishes if they're done:
-        List<OrbData> transferOrbsToSnap = advanceTransferringOrbs();
+        List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
         snapTransferOrbs(transferOrbsToSnap, orbArray, connectedOrbs, soundEffectsToPlay, visualFlourishes, transferInOrbs);
 
         // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
@@ -797,7 +794,7 @@ public class PlayPanel extends Pane implements Serializable {
                 }
                 else{
                     for(int i=0; i<players.size(); i++){
-                        PlayerData player = players.get(i);
+                        Player player = players.get(i);
                         player.readAmmunitionOrbs(puzzleUrl, seed);
                         player.positionAmmunitionOrbs();
                     }
@@ -818,14 +815,14 @@ public class PlayPanel extends Pane implements Serializable {
 
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!isDeathOrbsEmpty()){
-            for(PlayerData defeatedPlayer : players){
-                defeatedPlayer.getState().changeTo(PlayerData.State.DEFEATED);
+            for(Player defeatedPlayer : players){
+                defeatedPlayer.getState().changeTo(Player.State.DEFEATED);
             }
         }
 
         // update each player's animation state:
         int lowestRow = getLowestOccupiedRow(orbArray, deathOrbs);
-        for(PlayerData player : players){
+        for(Player player : players){
             if (player instanceof BotPlayer) continue; // we've already ticked() the BotPlayers.
             player.tick(lowestRow);
         }
@@ -833,11 +830,11 @@ public class PlayPanel extends Pane implements Serializable {
         removeStrayOrbs();
     }
 
-    void updatePlayer(PlayerData playerData, boolean isHost){
+    void updatePlayer(Player playerData, boolean isHost){
         //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
-        //Todo: note: simply adding a getPlayerData() method to PlayerData won't work (the reference has been lost over transmission).
-        PlayerData player = players.get(0);
-        for(PlayerData tempPlayer: players){
+        //Todo: note: simply adding a getPlayer() method to Player won't work (the reference has been lost over transmission).
+        Player player = players.get(0);
+        for(Player tempPlayer: players){
             if(tempPlayer.getPlayerID() == playerData.getPlayerID()){
                 player = tempPlayer;
                 break;
@@ -851,11 +848,11 @@ public class PlayPanel extends Pane implements Serializable {
             player.updateWithChangers(playerData, null); // Relevant changes to playerData include: cannonAngle, defeated status, whether he/she is firing his/her cannon, and changes in BubbleData
         }
         else{
-            /*if(playerData.isFiring() && !(player.getPlayerType().getData() == PlayerData.PlayerType.LOCAL)){
+            /*if(playerData.isFiring() && !(player.getPlayerType().getData() == Player.PlayerType.LOCAL)){
                 System.out.println("CLIENT: Another player has fired. Adding their obs to the playpanel");
                 setAddShootingOrbs(playerData.getFiredOrbs()); // updates model
             }*/
-            player.updateWithSetters(playerData, player.getPlayerType().getData());
+            player.updateWithSetters(playerData);
         }
     }
 
@@ -863,43 +860,43 @@ public class PlayPanel extends Pane implements Serializable {
     // shooting orbs are also checked, just in case.
     private void removeStrayOrbs()
     {
-        List<OrbData> orbsToRemove = new LinkedList<>();
+        List<Orb> orbsToRemove = new LinkedList<>();
         // Although it should never happen, let's look for stray shooting orbs and remove them:
-        for(OrbData orbData : shootingOrbs)
+        for(Orb orb : shootingOrbs)
         {
-            if(orbData.getXPos()<-ORB_RADIUS
-                    || orbData.getXPos()>PLAYPANEL_WIDTH_PER_PLAYER*players.size()+2*ORB_RADIUS
-                    || orbData.getYPos()<-ORB_RADIUS
-                    || orbData.getYPos()>PLAYPANEL_HEIGHT)
-                orbsToRemove.add(orbData);
+            if(orb.getXPos()<-ORB_RADIUS
+                    || orb.getXPos()>PLAYPANEL_WIDTH_PER_PLAYER*players.size()+2*ORB_RADIUS
+                    || orb.getYPos()<-ORB_RADIUS
+                    || orb.getYPos()>PLAYPANEL_HEIGHT)
+                orbsToRemove.add(orb);
         }
         shootingOrbs.removeAll(orbsToRemove);
     }
 
-    public List<OrbData> advanceBurstingOrbs(List<OrbData> burstingOrbs) {
-        List<OrbData> orbsToRemove = new LinkedList<>();
-        for(OrbData orbData : burstingOrbs){
-            if(orbData.tick()){
-                orbsToRemove.add(orbData);
+    public List<Orb> advanceBurstingOrbs(List<Orb> burstingOrbs) {
+        List<Orb> orbsToRemove = new LinkedList<>();
+        for(Orb orb : burstingOrbs){
+            if(orb.tick()){
+                orbsToRemove.add(orb);
             }
         }
         return orbsToRemove;
     }
 
     private void advanceElectrifyingOrbs(){
-        OrbData orbData;
+        Orb orb;
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<arrayWidth; j++) {
-                orbData = orbArray[i][j];
-                if(orbData !=NULL){
-                    switch(orbData.getOrbAnimationState()){
+                orb = orbArray[i][j];
+                if(orb !=NULL){
+                    switch(orb.getOrbAnimationState()){
                         case STATIC:
                             if(miscRandomGenerator.nextDouble()< ELECTRIFICATION_PROBABILITY){
-                                orbData.setOrbAnimationState(OrbData.OrbAnimationState.ELECTRIFYING);
+                                orb.setOrbAnimationState(Orb.OrbAnimationState.ELECTRIFYING);
                             }
                             break;
                         case ELECTRIFYING:
-                            orbData.tick();
+                            orb.tick();
                             break;
                     }
                 }
@@ -907,42 +904,42 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    private List<OrbData> advanceTransferringOrbs(){
-        List<OrbData> transferOrbsToSnap = new LinkedList<>();
-        for(OrbData orbData : transferInOrbs){
-            if (orbData.tick()){
-                transferOrbsToSnap.add(orbData);
+    private List<Orb> advanceTransferringOrbs(){
+        List<Orb> transferOrbsToSnap = new LinkedList<>();
+        for(Orb orb : transferInOrbs){
+            if (orb.tick()){
+                transferOrbsToSnap.add(orb);
             }
         }
         return transferOrbsToSnap;
     }
 
     // Todo: there are several methods exactly like this one. Can it be reduced to one using generics? Actually, it might require casting outside this method call, so think about it carefully.
-    private List<AnimationData> advanceVisualFlourishes(List<AnimationData> visualFlourishes){
-        List<AnimationData> visualFlourishesToRemove = new LinkedList<>();
-        for(AnimationData visualFlourish : visualFlourishes){
+    private List<Animation> advanceVisualFlourishes(List<Animation> visualFlourishes){
+        List<Animation> visualFlourishesToRemove = new LinkedList<>();
+        for(Animation visualFlourish : visualFlourishes){
             if(visualFlourish.tick()) visualFlourishesToRemove.add(visualFlourish);
         }
         return visualFlourishesToRemove;
     }
 
-    private List<OrbData> advanceDroppingOrbs(){
-        List<OrbData> orbsToTransfer = new LinkedList<>();
-        for(OrbData orbData : droppingOrbs){
-            orbData.setSpeed(orbData.getSpeed() + GameScene.GRAVITY/ DATA_FRAME_RATE);
-            orbData.relocate(orbData.getXPos(), orbData.getYPos() + orbData.getSpeed()/ DATA_FRAME_RATE);
-            if(orbData.getYPos() > PLAYPANEL_HEIGHT){
-                orbsToTransfer.add(orbData);
+    private List<Orb> advanceDroppingOrbs(){
+        List<Orb> orbsToTransfer = new LinkedList<>();
+        for(Orb orb : droppingOrbs){
+            orb.setSpeed(orb.getSpeed() + GameScene.GRAVITY/ DATA_FRAME_RATE);
+            orb.relocate(orb.getXPos(), orb.getYPos() + orb.getSpeed()/ DATA_FRAME_RATE);
+            if(orb.getYPos() > PLAYPANEL_HEIGHT){
+                orbsToTransfer.add(orb);
             }
         }
         return orbsToTransfer;
     }
 
-    private List<OrbData> advanceThunderOrbs(){
-        List<OrbData> orbsToRemove = new LinkedList<>();
-        for(OrbData orbData : thunderOrbs){
-            if(orbData.tick()){
-                orbsToRemove.add(orbData);
+    private List<Orb> advanceThunderOrbs(){
+        List<Orb> orbsToRemove = new LinkedList<>();
+        for(Orb orb : thunderOrbs){
+            if(orb.tick()){
+                orbsToRemove.add(orb);
             }
         }
         return orbsToRemove;
@@ -950,12 +947,12 @@ public class PlayPanel extends Pane implements Serializable {
 
     /* *********************************************** UTILITY *********************************************** */
 
-    public void findPatternCompletions(List<Collision> collisions, OrbData[][] orbArray, List<OrbData> shootingOrbsToBurst, Set<SoundEffect> soundEffectsToPlay, List<OrbData> orbsToTransfer, List<OrbData> arrayOrbsToBurst){
+    public void findPatternCompletions(List<Collision> collisions, Orb[][] orbArray, List<Orb> shootingOrbsToBurst, Set<SoundEffect> soundEffectsToPlay, List<Orb> orbsToTransfer, List<Orb> arrayOrbsToBurst){
         for(Collision collision : collisions){
             if(shootingOrbsToBurst.contains(collision.shooterOrb)) continue; // Only consider orbs that are not already in the bursting orbs list
 
             // find all connected orbs of the same color
-            Set<OrbData> connectedOrbs = new HashSet<>();
+            Set<Orb> connectedOrbs = new HashSet<>();
             cumulativeDepthFirstSearch(collision.shooterOrb, connectedOrbs, orbArray, FilterOption.SAME_COLOR);
             if(connectedOrbs.size() > 2) arrayOrbsToBurst.addAll(connectedOrbs);
 
@@ -963,10 +960,10 @@ public class PlayPanel extends Pane implements Serializable {
             int numTransferOrbs;
             if((numTransferOrbs = (connectedOrbs.size()-3)/2) > 0) {
                 soundEffectsToPlay.add(SoundEffect.DROP);
-                Iterator<OrbData> orbIterator = connectedOrbs.iterator();
+                Iterator<Orb> orbIterator = connectedOrbs.iterator();
                 for(int k=0; k<numTransferOrbs; k++){
-                    OrbData orbToTransfer = orbIterator.next();
-                    orbsToTransfer.add(new OrbData(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
+                    Orb orbToTransfer = orbIterator.next();
+                    orbsToTransfer.add(new Orb(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
                 }
             }
             // todo: move this code outside of this class.
@@ -976,7 +973,7 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    public void findConnectedOrbs(OrbData[][] orbArray, Set<OrbData> connectedOrbs){
+    public void findConnectedOrbs(Orb[][] orbArray, Set<Orb> connectedOrbs){
         // find all orbs connected to the ceiling:
         for(int j=0; j<orbArray[0].length; j++){
             if(orbArray[0][j]==NULL) continue;
@@ -1004,11 +1001,11 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     // Finds floating orbs and drops them. Also checks for victory conditions
-    public void findFloatingOrbs(Set<OrbData> connectedOrbs, OrbData[][] orbArray, List<OrbData> orbsToDrop){
+    public void findFloatingOrbs(Set<Orb> connectedOrbs, Orb[][] orbArray, List<Orb> orbsToDrop){
         // any orbs in the array that are not among the connectedOrbs Set are floating.
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<orbArray[i].length; j++){
-                OrbData arrayOrb = orbArray[i][j];
+                Orb arrayOrb = orbArray[i][j];
                 if(arrayOrb!=NULL && !connectedOrbs.contains(arrayOrb)){
                     orbsToDrop.add(arrayOrb);
                 }
@@ -1016,7 +1013,7 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    public void cumulativeDepthFirstSearch(OrbData source, Set<OrbData> matches, OrbData[][] orbArray, FilterOption filter) {
+    public void cumulativeDepthFirstSearch(Orb source, Set<Orb> matches, Orb[][] orbArray, FilterOption filter) {
 
         // A boolean orbArray that has the same size as the orbArray, to mark orbs as "examined"
         Boolean[][] examined = new Boolean[orbArray.length][orbArray[0].length];
@@ -1027,21 +1024,21 @@ public class PlayPanel extends Pane implements Serializable {
         }
 
         // A stack containing the "active" elements to be examined next
-        Deque<OrbData> active = new LinkedList<>();
+        Deque<Orb> active = new LinkedList<>();
 
         // Add the source Orb to the active list and mark it as "examined"
         active.push(source);
         if(validArrayCoordinates(source, examined)) examined[source.getI()][source.getJ()] = true; // deathOrbs have "invalid" coordinates, so we have to check whether the coordinates are valid.
 
         // Mark everything in the starting set as "examined"
-        for(OrbData orbData : matches) examined[orbData.getI()][orbData.getJ()] = true;
+        for(Orb orb : matches) examined[orb.getI()][orb.getJ()] = true;
 
         // Do a depth-first search
         while (!active.isEmpty()) {
-            OrbData activeOrb = active.pop();
+            Orb activeOrb = active.pop();
             matches.add(activeOrb);
-            List<OrbData> neighbors = getNeighbors(activeOrb, orbArray); // recall: neighbors does not contain any death Orbs. Only orbArray Orbs.
-            for (OrbData neighbor : neighbors) {
+            List<Orb> neighbors = getNeighbors(activeOrb, orbArray); // recall: neighbors does not contain any death Orbs. Only orbArray Orbs.
+            for (Orb neighbor : neighbors) {
                 if (!examined[neighbor.getI()][neighbor.getJ()]) {
                     // apply the filter option
                     boolean passesFilter = false;
@@ -1074,12 +1071,12 @@ public class PlayPanel extends Pane implements Serializable {
     /* *********************************************** SIMULATION *********************************************** */
 
 
-    public void simulateOrbs(OrbData[][] orbArray, List<OrbData> burstingOrbs, List<OrbData> shootingOrbs, List<OrbData> droppingOrbs, OrbData[] deathOrbs, Set<SoundEffect> soundEffectsToPlay, List<OrbData> orbsToDrop, List<OrbData> orbsToTransfer, List<Collision> collisions, Set<OrbData> connectedOrbs, List<OrbData> arrayOrbsToBurst, double deltaTime){
+    public void simulateOrbs(Orb[][] orbArray, List<Orb> burstingOrbs, List<Orb> shootingOrbs, List<Orb> droppingOrbs, Orb[] deathOrbs, Set<SoundEffect> soundEffectsToPlay, List<Orb> orbsToDrop, List<Orb> orbsToTransfer, List<Collision> collisions, Set<Orb> connectedOrbs, List<Orb> arrayOrbsToBurst, double deltaTime){
         // Advance shooting orbs and detect collisions:
         advanceShootingOrbs(shootingOrbs, orbArray, deltaTime, soundEffectsToPlay, collisions); // Updates model
 
         // Snap any landed shooting orbs into place on the orbArray (or deathOrbs array):
-        List<OrbData> shootingOrbsToBurst = snapOrbs(collisions, orbArray, deathOrbs,soundEffectsToPlay);
+        List<Orb> shootingOrbsToBurst = snapOrbs(collisions, orbArray, deathOrbs,soundEffectsToPlay);
 
         // Remove the collided shooting orbs from the shootingOrbs list
         for(Collision collision : collisions) shootingOrbs.remove(collision.shooterOrb);
@@ -1108,13 +1105,13 @@ public class PlayPanel extends Pane implements Serializable {
     // Returns a list of all orbs that will attempt to snap; some of them may end up bursting instead during the call to
     // snapOrbs if (and only if) s-s collisions are turned off.
     // Note: recall that the y-axis points downward and shootingOrb.getCannonAngle() returns a negative value.
-    public void advanceShootingOrbs(List<OrbData> shootingOrbs, OrbData[][] orbArray, double timeRemainingInFrame, Set<SoundEffect> soundEffectsToPlay, List<Collision> collisions) {
+    public void advanceShootingOrbs(List<Orb> shootingOrbs, Orb[][] orbArray, double timeRemainingInFrame, Set<SoundEffect> soundEffectsToPlay, List<Collision> collisions) {
         // Put all possible collisions in here. If a shooter orb's path this frame would put it on a collision course
         // with the ceiling, a wall, or an array orb, then that collision will be added to this list, even if there is
         // another orb in the way.
         List<Collision> possibleCollisionPoints = new LinkedList<>();
 
-        for (OrbData shootingOrb : shootingOrbs) {
+        for (Orb shootingOrb : shootingOrbs) {
             double speed = shootingOrb.getSpeed();
             double angle = shootingOrb.getAngle();
             double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
@@ -1189,11 +1186,11 @@ public class PlayPanel extends Pane implements Serializable {
             double yCeilingP = ORB_RADIUS - y0;
             if (x1P >= xRightWallP) {
                 double timeToCollision = timeRemainingInFrame * xRightWallP / x1P;
-                possibleCollisionPoints.add(new Collision(shootingOrb, OrbData.WALL, timeToCollision));
+                possibleCollisionPoints.add(new Collision(shootingOrb, Orb.WALL, timeToCollision));
             }
             if (x1P <= xLeftWallP) {
                 double timeToCollision = timeRemainingInFrame * xLeftWallP / x1P;
-                possibleCollisionPoints.add(new Collision(shootingOrb, OrbData.WALL, timeToCollision));
+                possibleCollisionPoints.add(new Collision(shootingOrb, Orb.WALL, timeToCollision));
             }
 
             // ToDo: check for and add collisions with other shooting orbs
@@ -1201,7 +1198,7 @@ public class PlayPanel extends Pane implements Serializable {
             // Check for and add collisions with the ceiling:
             if(y1P<yCeilingP){
                 double timeToCollision = timeRemainingInFrame * yCeilingP / y1P;
-                possibleCollisionPoints.add(new Collision(shootingOrb, OrbData.CEILING, timeToCollision));
+                possibleCollisionPoints.add(new Collision(shootingOrb, Orb.CEILING, timeToCollision));
             }
         }
 
@@ -1217,16 +1214,16 @@ public class PlayPanel extends Pane implements Serializable {
 
         // Advance all shooting orbs to that point in time and deal with the collision.
         if (soonestCollision != null) {
-            for (OrbData shootingOrb : shootingOrbs) {
+            for (Orb shootingOrb : shootingOrbs) {
                 double angle = shootingOrb.getAngle();
                 double distanceToTravel = shootingOrb.getSpeed() * soonestCollisionTime;
                 shootingOrb.relocate(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle), shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
             }
 
             // If there was a collision with a wall, then just reflect the shooter orb's angle.
-            if (soonestCollision.arrayOrb == OrbData.WALL) {
+            if (soonestCollision.arrayOrb == Orb.WALL) {
                 soundEffectsToPlay.add(SoundEffect.CHINK);
-                OrbData shooterOrb = soonestCollision.shooterOrb;
+                Orb shooterOrb = soonestCollision.shooterOrb;
                 shooterOrb.setAngle(PI - shooterOrb.getAngle());
             }
 
@@ -1237,7 +1234,7 @@ public class PlayPanel extends Pane implements Serializable {
             }
 
             // If the collision was with the ceiling, set that orb's speed to zero and add it to the collisions list.
-            else if(soonestCollision.arrayOrb == OrbData.CEILING){
+            else if(soonestCollision.arrayOrb == Orb.CEILING){
                 soonestCollision.shooterOrb.setSpeed(0.0);
                 collisions.add(soonestCollision);
             }
@@ -1255,7 +1252,7 @@ public class PlayPanel extends Pane implements Serializable {
 
         // If there are no more collisions, just advance all orbs to the end of the frame.
         else {
-            for (OrbData shootingOrb : shootingOrbs) {
+            for (Orb shootingOrb : shootingOrbs) {
                 double angle = shootingOrb.getAngle();
                 double distanceToTravel = shootingOrb.getSpeed() * timeRemainingInFrame;
                 shootingOrb.relocate(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle), shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
@@ -1263,16 +1260,16 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    public List<OrbData> snapOrbs(List<Collision> snaps, OrbData[][] orbArray, OrbData[] deathOrbs, Set<SoundEffect> soundEffectsToPlay){
+    public List<Orb> snapOrbs(List<Collision> snaps, Orb[][] orbArray, Orb[] deathOrbs, Set<SoundEffect> soundEffectsToPlay){
 
-        List<OrbData> orbsToBurst = new LinkedList<>();
+        List<Orb> orbsToBurst = new LinkedList<>();
 
         for(Collision snap : snaps){
             int iSnap;
             int jSnap;
 
             // Compute snap coordinates for orbs that collided with the ceiling
-            if(snap.arrayOrb== OrbData.CEILING){
+            if(snap.arrayOrb== Orb.CEILING){
                 int offset = 0;
                 for(int j=0; j<orbArray[0].length; j++){
                     if(orbArray[0][j] != NULL){
@@ -1360,47 +1357,47 @@ public class PlayPanel extends Pane implements Serializable {
 
     /* *********************************************** CHANGERS *********************************************** */
 
-    public void changeBurstShootingOrbs(List<OrbData> newBurstingOrbs, List<OrbData> shootingOrbs, List<OrbData> burstingOrbs){
+    public void changeBurstShootingOrbs(List<Orb> newBurstingOrbs, List<Orb> shootingOrbs, List<Orb> burstingOrbs){
         shootingOrbs.removeAll(newBurstingOrbs);
         burstingOrbs.addAll(newBurstingOrbs);
-        for(OrbData orbData : newBurstingOrbs){
-            orbData.setOrbAnimationState(OrbData.OrbAnimationState.IMPLODING);
+        for(Orb orb : newBurstingOrbs){
+            orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
         }
     }
 
-    public void changeBurstArrayOrbs(List<OrbData> newBurstingOrbs, OrbData[][] orbArray, OrbData[] deathOrbs, List<OrbData> burstingOrbs){
-        for(OrbData orbData : newBurstingOrbs){
-            if(validArrayCoordinates(orbData, orbArray)){
-                orbArray[orbData.getI()][orbData.getJ()] = NULL;
+    public void changeBurstArrayOrbs(List<Orb> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
+        for(Orb orb : newBurstingOrbs){
+            if(validArrayCoordinates(orb, orbArray)){
+                orbArray[orb.getI()][orb.getJ()] = NULL;
             }
             else{ // the Orb is on the deathOrbs array.
-                deathOrbs[orbData.getJ()] = NULL;
+                deathOrbs[orb.getJ()] = NULL;
             }
-            orbData.setOrbAnimationState(OrbData.OrbAnimationState.IMPLODING);
-            burstingOrbs.add(orbData);
+            orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
+            burstingOrbs.add(orb);
         }
         // todo: move this code outside of the simulation.
         if(burstingOrbs == this.burstingOrbs){ // to prevent a simulated shot from setting these values.
             cumulativeOrbsBurst += newBurstingOrbs.size();
         }
     }
-    public void changeDropArrayOrbs(List<OrbData> newDroppingOrbs, List<OrbData> droppingOrbs, OrbData[][] orbArray){
-        for(OrbData orbData : newDroppingOrbs){
-            droppingOrbs.add(orbData);
-            orbArray[orbData.getI()][orbData.getJ()] = NULL;
+    public void changeDropArrayOrbs(List<Orb> newDroppingOrbs, List<Orb> droppingOrbs, Orb[][] orbArray){
+        for(Orb orb : newDroppingOrbs){
+            droppingOrbs.add(orb);
+            orbArray[orb.getI()][orb.getJ()] = NULL;
         }
         // todo: move this code outside of the simulation.
         if(droppingOrbs == this.droppingOrbs){ // to prevent a simulated shot from setting these values.
             cumulativeOrbsDropped += newDroppingOrbs.size();
         }
     }
-    public void changeAddDeathOrb(OrbData orbData, OrbData[] deathOrbs){
-        deathOrbs[orbData.getJ()] = orbData;
+    public void changeAddDeathOrb(Orb orb, Orb[] deathOrbs){
+        deathOrbs[orb.getJ()] = orb;
     }
 
-    public void transferOrbs(List<OrbData> transferOutOrbs, Set<OrbData> transferInOrbs, Random randomTransferOrbGenerator, OrbData[][] orbArray){
+    public void transferOrbs(List<Orb> transferOutOrbs, Set<Orb> transferInOrbs, Random randomTransferOrbGenerator, Orb[][] orbArray){
         // Make a deep copy of the orbs to be transferred. We can't place the same orb instance in 2 PlayPanels
-        List<OrbData> newTransferOrbs = deepCopyOrbList(transferOutOrbs);
+        List<Orb> newTransferOrbs = deepCopyOrbList(transferOutOrbs);
 
         // The new transfer orbs need to be placed appropriately. Find open, connected spots:
         int offset = 0;
@@ -1422,28 +1419,28 @@ public class PlayPanel extends Pane implements Serializable {
         // Now pick one spot for each orb:
         //todo: if the orbArray is full, put transfer orbs in the deathOrbs list
         //todo: if there are otherwise not enough open, connected spots, then place transferOrbs in secondary and tertiary locations.
-        List<OrbData> addedTransferOrbs = new LinkedList<>();
-        for(OrbData orbData : newTransferOrbs){
+        List<Orb> addedTransferOrbs = new LinkedList<>();
+        for(Orb orb : newTransferOrbs){
             if(openSpots.isEmpty()) break; //todo: temporary fix to avoid calling nextInt(0). In the future, place transferOrbs in secondary and tertiary locations.
             int index = randomTransferOrbGenerator.nextInt(openSpots.size());
             PointInt openSpot = openSpots.get(index);
-            orbData.setIJ(openSpot.getI(),openSpot.getJ());
+            orb.setIJ(openSpot.getI(),openSpot.getJ());
             openSpots.remove(index);
-            addedTransferOrbs.add(orbData);
+            addedTransferOrbs.add(orb);
         }
 
         // now, finally add them to the appropriate Orb list:
         transferInOrbs.addAll(addedTransferOrbs);
     }
 
-    public void snapTransferOrbs(List<OrbData> transferOrbsToSnap, OrbData[][] orbArray, Set<OrbData> connectedOrbs, Set<SoundEffect> soundEffectsToPlay, List<AnimationData> visualFlourishes, Set<OrbData> transferInOrbs){
-        for(OrbData orbData : transferOrbsToSnap){
+    public void snapTransferOrbs(List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<Orb> connectedOrbs, Set<SoundEffect> soundEffectsToPlay, List<Animation> visualFlourishes, Set<Orb> transferInOrbs){
+        for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
-            List<OrbData> neighbors = getNeighbors(orbData, orbArray);
-            if((orbData.getI()==0 || !Collections.disjoint(neighbors,connectedOrbs)) && orbArray[orbData.getI()][orbData.getJ()] == NULL){
-                orbArray[orbData.getI()][orbData.getJ()] = orbData;
+            List<Orb> neighbors = getNeighbors(orb, orbArray);
+            if((orb.getI()==0 || !Collections.disjoint(neighbors,connectedOrbs)) && orbArray[orb.getI()][orb.getJ()] == NULL){
+                orbArray[orb.getI()][orb.getJ()] = orb;
                 soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
-                visualFlourishes.add(new AnimationData(Animation.MAGIC_TELEPORTATION, orbData.getXPos(), orbData.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
+                visualFlourishes.add(new Animation(AnimationName.MAGIC_TELEPORTATION, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
         }
 
@@ -1474,18 +1471,18 @@ public class PlayPanel extends Pane implements Serializable {
         return (i>=0 && i<array.length && j>=0 && j<array[i].length);
     }
 
-    public boolean validDeathOrbsCoordinates(PointInt testPoint, OrbData[] deathOrbsArray){
+    public boolean validDeathOrbsCoordinates(PointInt testPoint, Orb[] deathOrbsArray){
         return validDeathOrbsCoordinates(testPoint.getI(), testPoint.getJ(), deathOrbsArray);
     }
 
     // Overloaded method to avoid the creation of a temporary object.
-    public boolean validDeathOrbsCoordinates(int iCoordinate, int jCoordinate, OrbData[] deathOrbsArray){
+    public boolean validDeathOrbsCoordinates(int iCoordinate, int jCoordinate, Orb[] deathOrbsArray){
         return (iCoordinate==ARRAY_HEIGHT && jCoordinate>=0 && jCoordinate<deathOrbsArray.length);
     }
 
-    private boolean isTransferInOrbOccupyingPosition(int i, int j, Set<OrbData> transferInOrbs){
-        for(OrbData orbData : transferInOrbs){
-            if(orbData.getI()==i && orbData.getJ()==j) return true;
+    private boolean isTransferInOrbOccupyingPosition(int i, int j, Set<Orb> transferInOrbs){
+        for(Orb orb : transferInOrbs){
+            if(orb.getI()==i && orb.getJ()==j) return true;
         }
         return false;
     }
@@ -1494,47 +1491,47 @@ public class PlayPanel extends Pane implements Serializable {
 
 /* *********************************************** DEEP COPIERS *********************************************** */
 
-    public OrbData[][] deepCopyOrbArray(OrbData[][] other){
-        OrbData[][] copiedArray = new OrbData[other.length][other[0].length];
+    public Orb[][] deepCopyOrbArray(Orb[][] other){
+        Orb[][] copiedArray = new Orb[other.length][other[0].length];
         // deep copy one row at a time:
         for(int i=0; i<other.length; i++){
             for(int j=0; j<other[0].length; j++){
                 if(other[i][j].equals(NULL)) copiedArray[i][j] = NULL;
-                else copiedArray[i][j] = new OrbData(other[i][j]);
+                else copiedArray[i][j] = new Orb(other[i][j]);
             }
         }
         return copiedArray;
     }
 
-    public OrbData[] deepCopyOrbArray(OrbData[] other){
-        OrbData[] copiedArray = new OrbData[other.length];
+    public Orb[] deepCopyOrbArray(Orb[] other){
+        Orb[] copiedArray = new Orb[other.length];
         for(int j=0; j<other.length; j++){
             if(other[j].equals(NULL)) copiedArray[j] = NULL;
-            else other[j] = new OrbData(other[j]);
+            else other[j] = new Orb(other[j]);
         }
         return copiedArray;
     }
 
-    public List<OrbData> deepCopyOrbList(List<OrbData> other){
-        List<OrbData> copiedList = new LinkedList<>();
-        for(OrbData orbData : other){
-            copiedList.add(new OrbData(orbData));
+    public List<Orb> deepCopyOrbList(List<Orb> other){
+        List<Orb> copiedList = new LinkedList<>();
+        for(Orb orb : other){
+            copiedList.add(new Orb(orb));
         }
         return copiedList;
     }
 
-    public List<AnimationData> deepCopyVisualFlourishesList(List<AnimationData> other){
-        List<AnimationData> copiedList = new LinkedList<>();
-        for(AnimationData visualFlourish : other){
-            copiedList.add(new AnimationData(visualFlourish));
+    public List<Animation> deepCopyVisualFlourishesList(List<Animation> other){
+        List<Animation> copiedList = new LinkedList<>();
+        for(Animation visualFlourish : other){
+            copiedList.add(new Animation(visualFlourish));
         }
         return copiedList;
     }
 
-    public Set<OrbData> deepCopyOrbSet(Set<OrbData> other){
-        Set<OrbData> copiedSet = new HashSet<>();
-        for(OrbData orbData : other){
-            copiedSet.add(new OrbData(orbData));
+    public Set<Orb> deepCopyOrbSet(Set<Orb> other){
+        Set<Orb> copiedSet = new HashSet<>();
+        for(Orb orb : other){
+            copiedSet.add(new Orb(orb));
         }
         return copiedSet;
     }

@@ -1,11 +1,9 @@
 package Classes.NetworkCommunication;
 
-import org.omg.PortableInterceptor.HOLDING;
-
 import java.io.Serializable;
 import java.util.Arrays;
 
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 
 public class SynchronizedArray<T extends Comparable<T> & Serializable> extends SynchronizedData<T[][]> {
     public SynchronizedArray(String name, T[][] data, Precedence precedence, long parentID, Synchronizer synchronizer){

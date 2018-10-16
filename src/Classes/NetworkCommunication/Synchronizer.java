@@ -266,9 +266,9 @@ public class Synchronizer implements Serializable {
         return disconnectedIDs;
     }
 
-    // todo: temporary.
-    public long getDisconnectedTime(long playerID){
-        return missedPacketsCount.get(playerID);
+    // For debugging
+    public void printDisconnectedPlayer(long playerID){
+        System.out.println("disconnected playerID: " + playerID + " who's been gone for " + missedPacketsCount.get(playerID) + " frames");
     }
 
     // For debugging

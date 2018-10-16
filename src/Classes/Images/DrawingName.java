@@ -3,7 +3,7 @@ package Classes.Images;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-public enum Drawing {
+public enum DrawingName {
     /* BUTTONS */
     TUTORIAL("res/images/buttons/TUTORIAL_MODE.png"),
     TUTORIAL_SEL("res/images/buttons/TUTORIAL_MODE_SEL.png"),
@@ -92,7 +92,7 @@ public enum Drawing {
 
     private Image image;
 
-    Drawing(String url){
+    DrawingName(String url){
         image = new Image(url);
     }
 

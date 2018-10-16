@@ -4,18 +4,18 @@ import Classes.*;
 import Classes.Animation.OrbColor;
 import Classes.Audio.SoundEffect;
 import Classes.Animation.CharacterType;
-import Classes.NetworkCommunication.PlayerData;
+import Classes.NetworkCommunication.Player;
 import Classes.NetworkCommunication.Synchronizer;
 
 import java.util.*;
 import java.util.concurrent.*;
 
-import static Classes.OrbData.NULL;
+import static Classes.Orb.NULL;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
 
-public class BotPlayer extends PlayerData{
+public class BotPlayer extends Player {
 
     // Targeting
     private Difficulty difficulty;
@@ -26,7 +26,7 @@ public class BotPlayer extends PlayerData{
     private double fineMovementOffset;
     private Random offsetGenerator = new Random();
 
-    // Cannon Animation control
+    // Cannon AnimationName control
     private Phase currentPhase = Phase.THINKING;
     private int currentFrame = 0;
     private int transitionFrame;
@@ -38,15 +38,15 @@ public class BotPlayer extends PlayerData{
     // Misc, for debugging
     private long[] botRetargetTime = {0,0,Long.MAX_VALUE,0}; // number of times the retarget() method has been called on bots, the cumulative tiem (nanoseconds) for their executions, minimum execution time, maximum execution time
 
-    public BotPlayer(PlayerData playerData){
-        super(playerData.getUsername().getData(), playerData.getPlayerType().getData() , playerData.getPlayerID(), playerData.getSynchronizer());
-        difficulty = playerData.getCharacterData().getCharacterType().getData().getBotDifficulty();
+    public BotPlayer(Player player){
+        super(player.getUsername().getData(), player.getPlayerType().getData() , player.getPlayerID(), player.getSynchronizer());
+        difficulty = player.getCharacter().getCharacterType().getData().getBotDifficulty();
         transitionFrame = difficulty.getThinkingFrames();
     }
 
     public BotPlayer(CharacterType characterType, Synchronizer synchronizer){
         super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, createID(), synchronizer);
-        difficulty = characterData.getCharacterType().getData().getBotDifficulty();
+        difficulty = character.getCharacterType().getData().getBotDifficulty();
         transitionFrame = difficulty.getThinkingFrames();
     }
 
@@ -72,14 +72,14 @@ public class BotPlayer extends PlayerData{
             case PRE_MOVEMENT:
                 break;
             case BROAD_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannonData.getCannonAngle().getData();
+                if(currentFrame == 0) startingAngle = cannon.getCannonAngle().getData();
                 if(currentFrame==transitionFrame-1) pointCannon(target+broadMovementOffset);
                 else pointCannon(getSmoothedAngle(broadMovementOffset));
                 break;
             case INTERCESSION:
                 break;
             case FINE_MOVEMENT:
-                if(currentFrame == 0) startingAngle = cannonData.getCannonAngle().getData();
+                if(currentFrame == 0) startingAngle = cannon.getCannonAngle().getData();
                 if(currentFrame==transitionFrame-1) pointCannon(target + fineMovementOffset);
                 else pointCannon(getSmoothedAngle(fineMovementOffset));
                 break;
@@ -125,7 +125,7 @@ public class BotPlayer extends PlayerData{
         }
     }
 
-    public double computeInitialDistance(OrbData orbData){
+    public double computeInitialDistance(Orb orb){
         return 0.0;
     }
 
@@ -136,18 +136,18 @@ public class BotPlayer extends PlayerData{
      */
     private void retarget(){
         // Create copies of the existing data:
-        OrbData[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray());
-        OrbData[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
+        Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray());
+        Orb[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
 
         // New collections that will be affected by side-effects:
-        List<OrbData> burstingOrbsCopy = new LinkedList<>();
-        List<OrbData> droppingOrbsCopy = new LinkedList<>();
+        List<Orb> burstingOrbsCopy = new LinkedList<>();
+        List<Orb> droppingOrbsCopy = new LinkedList<>();
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
-        List<OrbData> arrayOrbsToBurst = new LinkedList<>();
-        List<OrbData> orbsToDrop = new LinkedList<>();
-        List<OrbData> orbsToTransfer = new LinkedList<>();
+        List<Orb> arrayOrbsToBurst = new LinkedList<>();
+        List<Orb> orbsToDrop = new LinkedList<>();
+        List<Orb> orbsToTransfer = new LinkedList<>();
         List<Collision> collisions = new LinkedList<>();
-        Set<OrbData> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
+        Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
 
         // Advance all existing shooter orbs, one at a time in order.
         // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
@@ -155,10 +155,10 @@ public class BotPlayer extends PlayerData{
         // won't be simulated, and the 2nd shooting orb will get blocked in its simulation. This still isn't perfect
         // (for example, a more recently-fired shot might actually reach its target before a previous shot) but should
         // be pretty good.
-        for(OrbData shootingOrb : playPanel.getShootingOrbs()){
+        for(Orb shootingOrb : playPanel.getShootingOrbs()){
             // Create a temporary shootingOrbs list that contains a copy of only one of the current shooting orbs:
-            List<OrbData> shootingOrbCopy = new LinkedList<>();
-            shootingOrbCopy.add(new OrbData(shootingOrb));
+            List<Orb> shootingOrbCopy = new LinkedList<>();
+            shootingOrbCopy.add(new Orb(shootingOrb));
 
             // Clear the other lists
             arrayOrbsToBurst.clear();
@@ -179,8 +179,8 @@ public class BotPlayer extends PlayerData{
 
         // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
         boolean empty = true;
-        for (OrbData orbData : orbArrayCopy[0]){ // only need to check for Orbs along the ceiling
-            if(orbData !=NULL){
+        for (Orb orb : orbArrayCopy[0]){ // only need to check for Orbs along the ceiling
+            if(orb !=NULL){
                 empty = false;
                 break;
             }
@@ -238,13 +238,13 @@ public class BotPlayer extends PlayerData{
     }
 
     private class HypotheticalOrbSimulator implements Callable<List<Outcome>>{
-        OrbData[][] orbArrayCopy;
-        OrbData[] deathOrbsCopy;
+        Orb[][] orbArrayCopy;
+        Orb[] deathOrbsCopy;
         int lowestRow;
         double startAngle;
         double endAngle;
 
-        HypotheticalOrbSimulator(double startAngle, double endAngle, OrbData[][] orbArrayCopy, OrbData[] deathOrbsCopy, int lowestRow){
+        HypotheticalOrbSimulator(double startAngle, double endAngle, Orb[][] orbArrayCopy, Orb[] deathOrbsCopy, int lowestRow){
             this.startAngle = startAngle;
             this.endAngle = endAngle;
             this.orbArrayCopy = orbArrayCopy;
@@ -255,13 +255,13 @@ public class BotPlayer extends PlayerData{
         @Override
         public List<Outcome> call(){
             LinkedList<Outcome> choices = new LinkedList<>();
-            List<OrbData> arrayOrbsToBurst = new LinkedList<>();
-            List<OrbData> orbsToDrop = new LinkedList<>();
-            List<OrbData> orbsToTransfer = new LinkedList<>();
-            Set<OrbData> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
+            List<Orb> arrayOrbsToBurst = new LinkedList<>();
+            List<Orb> orbsToDrop = new LinkedList<>();
+            List<Orb> orbsToTransfer = new LinkedList<>();
+            Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
             List<Collision> collisions = new LinkedList<>();
-            List<OrbData> burstingOrbsCopy = new LinkedList<>();
-            List<OrbData> droppingOrbsCopy = new LinkedList<>();
+            List<Orb> burstingOrbsCopy = new LinkedList<>();
+            List<Orb> droppingOrbsCopy = new LinkedList<>();
             Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
             for(double angle = startAngle; angle>endAngle; angle-=ANGLE_INCREMENT){
                 if (Math.abs(angle + 90)<0.0001) angle+=0.001; // todo: if the angle is exactly -90, then weird things happen. Look into this and fix it.
@@ -270,16 +270,16 @@ public class BotPlayer extends PlayerData{
 
                 // Create a hypothetical shooter orb for the simulated shot:
                 OrbColor currentShooterOrbEnum = getAmmunition().get(0).getOrbColor();
-                OrbData hypotheticalOrb = new OrbData(currentShooterOrbEnum,0,0, OrbData.OrbAnimationState.STATIC);
+                Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0, Orb.OrbAnimationState.STATIC);
                 hypotheticalOrb.relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*getPlayerPos(),CANNON_Y_POS);
                 hypotheticalOrb.setAngle(Math.toRadians(angle));
                 hypotheticalOrb.setSpeed(hypotheticalOrb.getOrbColor().getOrbSpeed());
-                List<OrbData> shootingOrbCopy = new LinkedList<>();
+                List<Orb> shootingOrbCopy = new LinkedList<>();
                 shootingOrbCopy.add(hypotheticalOrb);
 
                 // Create copies of the simulated orbArray and deathOrbs:
-                OrbData[][] orbArrayCopyTemp = playPanel.deepCopyOrbArray(orbArrayCopy);
-                OrbData[] deathOrbsCopyTemp = playPanel.deepCopyOrbArray(deathOrbsCopy);
+                Orb[][] orbArrayCopyTemp = playPanel.deepCopyOrbArray(orbArrayCopy);
+                Orb[] deathOrbsCopyTemp = playPanel.deepCopyOrbArray(deathOrbsCopy);
 
                 // clear the other lists
                 arrayOrbsToBurst.clear();
@@ -330,7 +330,7 @@ public class BotPlayer extends PlayerData{
         return bins;
     }
 
-    private int assignScore(OrbData hypotheticalOrb, double angle, List<OrbData> orbsToTransfer, List<OrbData> orbsToDrop, List<OrbData> arrayOrbsToBurst, OrbData[][] orbArray, int lowestRow){
+    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray, int lowestRow){
         int score = 0;
 
         // transferring Orbs is a very good thing:
@@ -351,7 +351,7 @@ public class BotPlayer extends PlayerData{
         if (hypotheticalOrb.getI()==0) score-=5;
 
         // It looks nicer if the computer doesn't keep shooting in the same direction:
-        if((cannonData.getCannonAngle().getData()<-90 && angle<-90) || (cannonData.getCannonAngle().getData()>-90 && angle>-90)) --score;
+        if((cannon.getCannonAngle().getData()<-90 && angle<-90) || (cannon.getCannonAngle().getData()>-90 && angle>-90)) --score;
 
         // If the orb brings us closer to the death line, it is unfavorable
         if(hypotheticalOrb.getI() > lowestRow) score-=2;

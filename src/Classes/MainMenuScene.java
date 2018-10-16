@@ -3,9 +3,8 @@ package Classes;
 import Classes.Animation.*;
 import Classes.Audio.SoundManager;
 import Classes.Images.ButtonType;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import Classes.NetworkCommunication.Synchronizer;
-import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.animation.TranslateTransition;
@@ -31,7 +30,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 
 /**
  * Created by HydrusBeta on 7/23/2017.
@@ -80,22 +79,22 @@ public class MainMenuScene extends Scene {
         rootNode.getChildren().add(scaledRoot);
 
         // Add slowly-moving background clouds:
-        createCloud(Drawing.FAR_CLOUD_1,635.0,210000,0);
-        createCloud(Drawing.FAR_CLOUD_2,615.0,200000,118000);
-        createCloud(Drawing.FAR_CLOUD_3,706.0, 190000,69200);
-        createCloud(Drawing.FAR_CLOUD_WITH_BUBBLES_2,20,180000,63600);
-        createCloud(Drawing.FAR_CLOUD_WITH_BUBBLES_1,-20,170000,130000);
+        createCloud(DrawingName.FAR_CLOUD_1,635.0,210000,0);
+        createCloud(DrawingName.FAR_CLOUD_2,615.0,200000,118000);
+        createCloud(DrawingName.FAR_CLOUD_3,706.0, 190000,69200);
+        createCloud(DrawingName.FAR_CLOUD_WITH_BUBBLES_2,20,180000,63600);
+        createCloud(DrawingName.FAR_CLOUD_WITH_BUBBLES_1,-20,170000,130000);
 
         // Add the foreground cloud and character:
-        ImageView nearCloud = Drawing.NEAR_CLOUD_1.getImageView();
+        ImageView nearCloud = DrawingName.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         ImageView characterView = new ImageView();
-        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID, new Synchronizer(HOST_ID));
-        characterData.relocate(550,850);
+        Character character = new Character(CharacterType.BLITZ, HOST_ID, new Synchronizer(HOST_ID));
+        character.relocate(550,850);
         scaledRoot.getChildren().addAll(nearCloud, characterView);
 
         // Add the animated title:
-        AnimationData title = new AnimationData(Classes.Animation.Animation.TITLE,1920/2, 550/2, PlayOption.PLAY_ONCE_THEN_PAUSE);
+        Animation title = new Animation(AnimationName.TITLE,1920/2, 550/2, PlayOption.PLAY_ONCE_THEN_PAUSE);
         ImageView titleView = new ImageView();
         scaledRoot.getChildren().add(titleView);
 
@@ -201,8 +200,8 @@ public class MainMenuScene extends Scene {
                 if(now>nextAnimationFrameInstance){
                     title.tick();
                     title.drawSelf(titleView);
-                    characterData.tick(0);
-                    characterData.drawSelf(characterView);
+                    character.tick(0);
+                    character.drawSelf(characterView);
                     nextAnimationFrameInstance += 1000000000L/ DATA_FRAME_RATE;
                 }
             }
@@ -210,13 +209,13 @@ public class MainMenuScene extends Scene {
         animationTimer.start();
     }
 
-    private void createCloud(Drawing imageEnum, double yPos, int durationInMillis, int startTimeInMillis){
+    private void createCloud(DrawingName imageEnum, double yPos, int durationInMillis, int startTimeInMillis){
         ImageView cloud = imageEnum.getImageView();
         TranslateTransition cloudTranslation = new TranslateTransition(Duration.millis(durationInMillis),cloud);
         cloudTranslation.setFromX(-cloud.getImage().getWidth());
         cloudTranslation.setFromY(yPos);
         cloudTranslation.setByX(1920.0 + cloud.getImage().getWidth());
-        cloudTranslation.setCycleCount(Animation.INDEFINITE);
+        cloudTranslation.setCycleCount(javafx.animation.Animation.INDEFINITE);
         cloudTranslation.setInterpolator(Interpolator.LINEAR);
         cloudTranslation.jumpTo(Duration.millis(startTimeInMillis));
         cloudTranslation.play();

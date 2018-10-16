@@ -4,25 +4,25 @@ package Classes.Animation;
  * Note: Orbs are assumed to be 46 pixels in diameter. This cannot easily be changed.
  */
 public enum OrbColor {
-    RED(Animation.RED_ORB_IMPLODING, 720.0, 'R'),
-    GREEN(Animation.GREEN_ORB_IMPLODING, 720.0, 'G'),
-    BLUE(Animation.BLUE_ORB_IMPLODING, 720.0, 'B'),
-    YELLOW(Animation.YELLOW_ORB_IMPLODING, 720.0, 'Y'),
-    BLACK(Animation.BLACK_ORB_IMPLODING, 720.0, 'K'),
-    WHITE(Animation.WHITE_ORB_IMPLODING, 720.0, 'W');
+    RED(AnimationName.RED_ORB_IMPLODING, 720.0, 'R'),
+    GREEN(AnimationName.GREEN_ORB_IMPLODING, 720.0, 'G'),
+    BLUE(AnimationName.BLUE_ORB_IMPLODING, 720.0, 'B'),
+    YELLOW(AnimationName.YELLOW_ORB_IMPLODING, 720.0, 'Y'),
+    BLACK(AnimationName.BLACK_ORB_IMPLODING, 720.0, 'K'),
+    WHITE(AnimationName.WHITE_ORB_IMPLODING, 720.0, 'W');
 
-    private Animation implodeAnimation;
+    private AnimationName implodeAnimationName;
     private double orbSpeed; // pixels per second
     private char symbol; // Symbol used to specify this type of Orb in a puzzle file or ammunition file.
 
-    OrbColor(Animation implodeAnimation, double orbSpeed, char symbol){
-        this.implodeAnimation = implodeAnimation;
+    OrbColor(AnimationName implodeAnimationName, double orbSpeed, char symbol){
+        this.implodeAnimationName = implodeAnimationName;
         this.orbSpeed = orbSpeed;
         this.symbol = symbol;
     }
 
-    public Animation getImplodeAnimation(){
-        return implodeAnimation;
+    public AnimationName getImplodeAnimationName(){
+        return implodeAnimationName;
     }
     public double getOrbSpeed(){
         return orbSpeed;

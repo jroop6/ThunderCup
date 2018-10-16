@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import Classes.NetworkCommunication.*;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -24,7 +24,7 @@ import static javafx.scene.layout.VBox.setVgrow;
  * what the host does:
  * 	every frame:
  * 	 gather everyone's messages by calling hostSynchronizer.synchronizingWith(clientSynchronizer) for each clientSynchronizer
- * 	 put all of these messages into the host's messagesOut (located in PlayerData) using changeAdd()
+ * 	 put all of these messages into the host's messagesOut (located in Player) using changeAdd()
  *
  * 	24 times per second:
  * 	 display all messages in messagesOut to the chat
@@ -56,9 +56,9 @@ public class ChatBox extends StackPane {
     private TextField textField;
     private HBox messageEntryContainer;
 
-    // dataChanger is the threadPool that should handle changes to the localPlayerData's SynchronizedDatas. If it is
+    // dataChanger is the threadPool that should handle changes to the localPlayer's SynchronizedDatas. If it is
     // null, then the change will occur on the JavaFX Application Thread.
-    public ChatBox(PlayerData localPlayerData, double minHeight, boolean showBackground){
+    public ChatBox(Player localPlayer, double minHeight, boolean showBackground){
         this.showBackground = showBackground;
         setMinHeight(minHeight);
         setMaxHeight(minHeight);
@@ -72,7 +72,7 @@ public class ChatBox extends StackPane {
         messageScrollPane = new ScrollPane();
         messageContainer = new VBox();
         if(showBackground){
-            messageContainer.setBackground(new Background(new BackgroundImage(Drawing.CHATBOX_SCROLLPANE_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+            messageContainer.setBackground(new Background(new BackgroundImage(DrawingName.CHATBOX_SCROLLPANE_BACKGROUND.getImageView().getImage(),null,null,null,null)));
             messageScrollPane.setFitToWidth(true);  // This ensures that the background spans the entire width of the ScrollPane
             messageScrollPane.setFitToHeight(true); // This ensures that the background spans the entire height of the ScrollPane
         }
@@ -85,7 +85,7 @@ public class ChatBox extends StackPane {
                     r.getChildrenUnmodifiable().stream().filter(n -> n instanceof Region).map(n-> (Region) n).forEach(n -> n.setBackground(Background.EMPTY));
                 }
             });
-            displayMessage(new Message("Press Enter to open Chat interface",localPlayerData.getPlayerID()));
+            displayMessage(new Message("Press Enter to open Chat interface", localPlayer.getPlayerID()));
         }
         messageScrollPane.setContent(messageContainer);
         verticalOrienter.getChildren().add(messageScrollPane);
@@ -97,7 +97,7 @@ public class ChatBox extends StackPane {
         textField = new TextField();
         textField.setPromptText("Enter chat messages here");
         textField.setStyle("-fx-prompt-text-fill: rgba(0,0,0,0.75);");
-        if(showBackground) textField.setBackground(new Background(new BackgroundImage(Drawing.CHATBOX_TEXTFIELD_BACKGROUND.getImageView().getImage(),null,null,null,null)));
+        if(showBackground) textField.setBackground(new Background(new BackgroundImage(DrawingName.CHATBOX_TEXTFIELD_BACKGROUND.getImageView().getImage(),null,null,null,null)));
         else{
             textField.setBackground(new Background(new BackgroundFill(new Color(0,0,0,0.5), CornerRadii.EMPTY,Insets.EMPTY)));
             textField.setStyle("-fx-text-fill: white;");
@@ -136,8 +136,8 @@ public class ChatBox extends StackPane {
                     return;
                 }
             }
-            Message newMessage = new Message ("<" + localPlayerData.getUsername().getData() + "> " + textField.getText(), localPlayerData.getPlayerID());
-            localPlayerData.getMessagesOut().changeAdd(newMessage);
+            Message newMessage = new Message ("<" + localPlayer.getUsername().getData() + "> " + textField.getText(), localPlayer.getPlayerID());
+            localPlayer.getMessagesOut().changeAdd(newMessage);
             textField.setPromptText("");
             textField.clear();
             if(!showBackground) hideTextField();

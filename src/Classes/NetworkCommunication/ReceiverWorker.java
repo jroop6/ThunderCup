@@ -32,7 +32,7 @@ class ReceiverWorker extends Thread{
     }
 
     // The incoming packet may be one of two types of objects: a Packet or a LatencyPacket. Plain old Packets contain
-    // GameData and PlayerData while LatencyPackets are very simple and are used to probe the latency between the host
+    // Player while LatencyPackets are very simple and are used to probe the latency between the host
     // and clients (unsurprisingly).
     @Override
     public void run(){

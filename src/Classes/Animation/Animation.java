@@ -1,88 +1,260 @@
 package Classes.Animation;
 
-public enum Animation {
-    /* CHARACTERS */
-    BLITZ_VICTORY("res/animations/characters/blitz/blitz_spritesheet.png"),
-    BLITZ_CONTENT("res/animations/characters/blitz/blitz_spritesheet.png"),
-    BLITZ_WORRIED("res/animations/characters/blitz/blitz_spritesheet.png"),
-    BLITZ_DEFEAT("res/animations/characters/blitz/blitz_spritesheet.png"),
-    BLITZ_DISCONNECTED("res/animations/characters/blitz/blitz_spritesheet.png"),
+import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.ColorAdjust;
+import javafx.scene.image.ImageView;
+import javafx.scene.transform.Affine;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Scale;
+import javafx.scene.transform.Translate;
 
-    GEARSHIFT_VICTORY("res/animations/characters/gearshift/gearshift_spritesheet.png"),
-    GEARSHIFT_CONTENT("res/animations/characters/gearshift/gearshift_spritesheet.png"),
-    GEARSHIFT_WORRIED("res/animations/characters/gearshift/gearshift_spritesheet.png"),
-    GEARSHIFT_DEFEAT("res/animations/characters/gearshift/gearshift_spritesheet.png"),
-    GEARSHIFT_DISCONNECTED("res/animations/characters/gearshift/gearshift_spritesheet.png"),
+import java.io.Serializable;
+import java.util.Random;
 
-    CLOUDESTINE_VICTORY("res/animations/characters/cloudestine/cloudestine_spritesheet.png"),
-    CLOUDESTINE_CONTENT("res/animations/characters/cloudestine/cloudestine_spritesheet.png"),
-    CLOUDESTINE_WORRIED("res/animations/characters/cloudestine/cloudestine_spritesheet.png"),
-    CLOUDESTINE_DEFEAT("res/animations/characters/cloudestine/cloudestine_spritesheet.png"),
-    CLOUDESTINE_DISCONNECTED("res/animations/characters/cloudestine/cloudestine_spritesheet.png"),
+public class Animation implements Serializable {
+    private AnimationName animationName;
+    private double anchorX = 0.0;
+    private double anchorY = 0.0;
+    private double scale = 1.0;
+    private double rotation = 0.0;
+    private VisibilityOption visibility = VisibilityOption.NORMAL;
+    private PlayOption playOption = PlayOption.LOOP;
+    private StatusOption status = StatusOption.PLAYING;
+    private int frame = 0;
 
-    CHARCOAL_VICTORY("res/animations/characters/charcoal/charcoal_spritesheet.png"),
-    CHARCOAL_CONTENT("res/animations/characters/charcoal/charcoal_spritesheet.png"),
-    CHARCOAL_WORRIED("res/animations/characters/charcoal/charcoal_spritesheet.png"),
-    CHARCOAL_DEFEAT("res/animations/characters/charcoal/charcoal_spritesheet.png"),
-    CHARCOAL_DISCONNECTED("res/animations/characters/charcoal/charcoal_spritesheet.png"),
-
-    FILLY_BOT_EASY_VICTORY("res/animations/characters/botPony/botPonyEasy_spritesheet.png"),
-    FILLY_BOT_EASY_CONTENT("res/animations/characters/botPony/botPonyEasy_spritesheet.png"),
-    FILLY_BOT_EASY_WORRIED("res/animations/characters/botPony/botPonyEasy_spritesheet.png"),
-    FILLY_BOT_EASY_DEFEAT("res/animations/characters/botPony/botPonyEasy_spritesheet.png"),
-    FILLY_BOT_EASY_DISCONNECTED("res/animations/characters/botPony/botPonyEasy_spritesheet.png"),
-
-    FILLY_BOT_MEDIUM_VICTORY("res/animations/characters/botPony/botPonyMedium_spritesheet.png"),
-    FILLY_BOT_MEDIUM_CONTENT("res/animations/characters/botPony/botPonyMedium_spritesheet.png"),
-    FILLY_BOT_MEDIUM_WORRIED("res/animations/characters/botPony/botPonyMedium_spritesheet.png"),
-    FILLY_BOT_MEDIUM_DEFEAT("res/animations/characters/botPony/botPonyMedium_spritesheet.png"),
-    FILLY_BOT_MEDIUM_DISCONNECTED("res/animations/characters/botPony/botPonyMedium_spritesheet.png"),
-
-    FILLY_BOT_HARD_VICTORY("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
-    FILLY_BOT_HARD_CONTENT("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
-    FILLY_BOT_HARD_WORRIED("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
-    FILLY_BOT_HARD_DEFEAT("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
-    FILLY_BOT_HARD_DISCONNECTED("res/animations/characters/botPony/botPonyHard_spritesheet.png"),
-
-    /* CANNONS */
-    BASIC_CANNON_STATIC("res/animations/cannons/BasicCannon_spritesheet.png"),
-    BASIC_CANNON_BACKGROUND("res/animations/cannons/BasicCannonBackground_spritesheet.png"),
-    BASIC_CANNON_FOREGROUND("res/animations/cannons/BasicCannonForeground_spritesheet.png"),
-
-    UNKNOWN_CANNON_STATIC("res/animations/cannons/UnknownCannon_spritesheet.png"),
-    //UNKNOWN_CANNON_BACKGROUND("res/animations/cannons/UnknownCannonBackground_spritesheet.png"),
-    //UNKNOWN_CANNON_FOREGROUND("res/animations/cannons/UnknownCannonForeground_spritesheet.png"),
-
-    BOT_CANNON_STATIC("res/animations/cannons/BotCannon_spritesheet.png"),
-    //BOT_CANNON_BACKGROUND("res/animations/cannons/BotCannonBackground_spritesheet.png"),
-    //BOT_CANNON_FOREGROUND("res/animations/cannons/BotCannonForeground_spritesheet.png"),
-
-    /* ORBS */
-    RED_ORB_IMPLODING("res/images/orbs/highRes/redOrb_spritesheet.png"),
-    GREEN_ORB_IMPLODING("res/images/orbs/highRes/greenOrb_spritesheet.png"),
-    BLUE_ORB_IMPLODING("res/images/orbs/highRes/blueOrb_spritesheet.png"),
-    YELLOW_ORB_IMPLODING("res/images/orbs/highRes/yellowOrb_spritesheet.png"),
-    BLACK_ORB_IMPLODING("res/images/orbs/highRes/blackOrb_spritesheet.png"),
-    WHITE_ORB_IMPLODING("res/images/orbs/highRes/whiteOrb_spritesheet.png"),
-
-    /* MISC */
-    UNKNOWN_CHARACTER("res/animations/characters/unknownCharacter/unknownCharacter_spritesheet.png"),
-    TITLE("res/animations/misc/highRes/title_spritesheet.png"),
-    EXCLAMATION_MARK("res/animations/misc/highRes/exclamationMark_spritesheet.png"),
-    MAGIC_TELEPORTATION("res/animations/misc/highRes/magicTeleportation_spritesheet.png"),
-    WIN_SCREEN("res/animations/misc/highRes/winScreen_spritesheet.png"),
-    LOSE_SCREEN("res/animations/misc/highRes/loseScreen_spritesheet.png"),
-    CLEAR_SCREEN("res/animations/misc/highRes/clearScreen_spritesheet.png"),
-    ELECTRIFICATION_1("res/images/orbs/highRes/OrbElectrification_spritesheet.png"),
-    EXPLOSION_1("res/images/orbs/highRes/OrbExplosion_spritesheet.png");
-
-    private SpriteSheet spriteSheet;
-
-    Animation(String url){
-        spriteSheet = new SpriteSheet(url);
+    public Animation(AnimationName startingAnimationName){
+        animationName = startingAnimationName;
+    }
+    public Animation(AnimationName startingAnimationName, double anchorX, double anchorY, PlayOption initialPlayOption){
+        animationName = startingAnimationName;
+        this.anchorX = anchorX;
+        this.anchorY = anchorY;
+        playOption = initialPlayOption;
+    }
+    public Animation(Animation other){
+        animationName = other.getAnimationName();
+        anchorX = other.getAnchorX();
+        anchorY = other.getAnchorY();
+        scale = other.getScale();
+        rotation = other.getRotation();
+        visibility = other.getVisibility();
+        playOption = other.getPlayOption();
+        status = other.getStatus();
+        frame = other.getFrame();
     }
 
-    public SpriteSheet getSpriteSheet(){
-        return spriteSheet;
+    public AnimationName getAnimationName(){
+        return animationName;
+    }
+    public void setAnimationName(AnimationName newAnimationName){
+        animationName = newAnimationName;
+        frame = 0;
+    }
+
+    public double getAnchorX(){
+        return anchorX;
+    }
+    public double getAnchorY(){
+        return anchorY;
+    }
+    public void relocate(double x, double y){
+        anchorX = x;
+        anchorY = y;
+    }
+
+    public double getScale(){
+        return scale;
+    }
+    public void setScale(double amount){
+        scale = amount;
+    }
+
+    public double getRotation(){
+        return rotation;
+    }
+    public void rotate(double amount){
+        rotation += amount;
+    }
+    public void setRotation(double amount){
+        rotation = amount;
+    }
+
+    public VisibilityOption getVisibility(){
+        return visibility;
+    }
+    public void setVisibility(VisibilityOption visibility){
+        this.visibility = visibility;
+    }
+
+    public PlayOption getPlayOption(){
+        return playOption;
+    }
+    public void setPlayOption(PlayOption playOption){
+        this.playOption = playOption;
+    }
+
+    public StatusOption getStatus(){
+        return status;
+    }
+    public void setStatus(StatusOption status){
+        this.status = status;
+    }
+
+    public int getFrame(){
+        return frame;
+    }
+    private void setFrame(int index){
+        frame = index;
+    }
+    public void setRandomFrame(){
+        frame = (new Random()).nextInt(animationName.getSpriteSheet().getMaxFrameIndex()+1);
+    }
+    private boolean incrementFrame(){
+        return ++frame > animationName.getSpriteSheet().getMaxFrameIndex();
+    }
+    private boolean decrementFrame(){
+        return --frame < 0;
+    }
+    // return true if the animationName is finished.
+    public boolean tick(){
+        boolean finished = false;
+        switch(status){
+            case PLAYING:
+                switch(playOption){
+                    case LOOP:
+                    case PLAY_ONCE_THEN_VANISH:
+                    case PLAY_ONCE_THEN_PAUSE:
+                        finished = incrementFrame();
+                        break;
+                    case REVERSE:
+                        finished = decrementFrame();
+                }
+                break;
+            case PAUSED:
+                break;
+        }
+
+        // note: setFrame MUST be called if finished==true. Otherwise, you'll get an IndexOutOfBounds exception.
+        if(finished){
+            switch (playOption){
+                case LOOP:
+                    setFrame(0);
+                    break;
+                case PLAY_ONCE_THEN_VANISH:
+                    setVisibility(VisibilityOption.INVISIBLE);
+                    setFrame(0); // todo: should I pause the animationName here? (such a status change might be nonobvious to the user...).
+                    break;
+                case PLAY_ONCE_THEN_PAUSE:
+                    setFrame(animationName.getSpriteSheet().getMaxFrameIndex());
+                    setStatus(StatusOption.PAUSED);
+                    finished = false; // We want the last frame to continue to display, so don't report that the animationName is "finished".
+                    break;
+                case REVERSE:
+                    setFrame(animationName.getSpriteSheet().getMaxFrameIndex());
+                    break;
+            }
+        }
+
+        return finished;
+    }
+
+    // This method should only ever be called by the JavaFX application thread.
+    public int drawSelf(GraphicsContext graphicsContext){
+        if (!Platform.isFxApplicationThread()){
+            System.err.println("Warning! A non-JavaFX thread is attempting to call Animation.drawSelf(). " +
+                    "That method updates UI components, so it must be called only from the JavaFX Application thread.");
+            return 1;
+        }
+
+        // Save the existing effects:
+        graphicsContext.save();
+
+        // apply this animationName's visibility effect:
+        switch(visibility){
+            case INVISIBLE:
+                graphicsContext.setGlobalAlpha(0);
+            case NORMAL:
+                graphicsContext.setGlobalAlpha(1);
+                break;
+            case GREYSCALE:
+                graphicsContext.setEffect(new ColorAdjust(0,-1,0,0));
+                break;
+            case GREYSCALE_TRANSPARENT:
+                graphicsContext.setEffect(new ColorAdjust(0,-1,0,0));
+            case TRANSPARENT:
+                graphicsContext.setGlobalAlpha(0.5);
+                break;
+        }
+
+        // Apply translation, rotation, and scale transforms. Note: Order matters! Contrary to logic, translation should occur before rotation:
+        Point2D anchorPoint = animationName.getSpriteSheet().getFrameBound(frame).getAnchorPoint();
+        Affine transform = new Affine();
+        transform.appendTranslation(anchorX-anchorPoint.getX(),anchorY-anchorPoint.getY());
+        transform.appendRotation(rotation, anchorPoint);
+        transform.appendScale(scale,scale,anchorPoint);
+        graphicsContext.setTransform(transform);
+
+        // Draw the sprite:
+        animationName.getSpriteSheet().drawFrame(graphicsContext, frame);
+
+        // Restore the previous effect:
+        graphicsContext.restore();
+
+        return 0;
+    }
+
+    // This method should only ever be called by the JavaFX application thread.
+    // Note: I recommend trying to use drawSelf(GraphicsContext) instead in most cases. Why? You usually only have to
+    // keep track of a single GraphicsContext and pass it to many AnimationDatas. If you used ImageViews, on the other
+    // hand, you would have to keep track of a unique ImageView for each and every instance of Animation. Having
+    // many instances of ImageView also takes more memory than having a single instance of GraphicsContext. Also, this
+    // implementation of drawSelf() is clearly suboptimal, seeing as how it clears all transforms and creates new ones
+    // each frame. A more efficient implementation might cache the transforms somehow. I did not do this because I
+    // wanted this method to take *any* ImageView. Since the ImageView can theoretically change from one frame to the
+    // next, we can't cache pointers to its transforms.
+    public int drawSelf(ImageView imageView){
+        if (!Platform.isFxApplicationThread()){
+            System.err.println("ERROR! A non-JavaFX thread is attempting to call Animation.drawSelf(). " +
+                    "That method updates UI components, so it must be called only from the JavaFX Application thread.");
+            return 1;
+        }
+
+        switch(visibility){
+            case INVISIBLE:
+                imageView.setVisible(false);
+            case NORMAL:
+                imageView.setVisible(true);
+                imageView.setEffect(null);
+                break;
+            case GREYSCALE:
+                imageView.setVisible(true);
+                imageView.setEffect(new ColorAdjust(0,-1,0,0));
+                break;
+            case GREYSCALE_TRANSPARENT:
+                imageView.setEffect(new ColorAdjust(0,-1,0,0));
+            case TRANSPARENT:
+                imageView.setVisible(true);
+                imageView.setOpacity(0.5);
+                break;
+        }
+
+        // Set the viewport to display only the current frame:
+        SpriteSheet.FrameBound frameBound = animationName.getSpriteSheet().getFrameBound(frame);
+        imageView.setImage(animationName.getSpriteSheet());
+        imageView.setViewport(frameBound.getPosAndDim());
+
+        // clear the existing transforms on this object:
+        imageView.getTransforms().clear();
+
+        // Apply translation, rotation, and scale transforms:
+        Point2D anchorPoint = frameBound.getAnchorPoint();
+        Translate translator = new Translate(anchorX-anchorPoint.getX(), anchorY-anchorPoint.getY());
+        Rotate rotater = new Rotate(rotation, anchorPoint.getX(), anchorPoint.getY());
+        Scale scaler = new Scale(scale, scale, anchorPoint.getX(), anchorPoint.getY());
+        imageView.getTransforms().addAll(translator, rotater, scaler);
+
+        return 0;
     }
 }

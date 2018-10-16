@@ -1,6 +1,6 @@
 package Classes;
 
-import Classes.Animation.AnimationData;
+import Classes.Animation.Animation;
 import Classes.Animation.StatusOption;
 import Classes.Animation.VisibilityOption;
 import Classes.Images.CannonType;
@@ -16,49 +16,38 @@ import java.io.Serializable;
 /**
  * For displaying a cannon
  */
-public class CannonData implements Serializable {
+public class Cannon implements Serializable {
 
     private SynchronizedComparable<CannonType> cannonType;
-    private AnimationData backgroundAnimation;
-    private AnimationData movingPartAnimation;
-    private AnimationData foregroundAnimation;
+    private Animation backgroundAnimation;
+    private Animation movingPartAnimation;
+    private Animation foregroundAnimation;
     private CannonType.CannonAnimationState cannonAnimationState;
     private SynchronizedComparable<Double> cannonAngle;
     private final Synchronizer synchronizer;
 
-    public CannonData(CannonType cannonType, long parentID, Synchronizer synchronizer){
+    public Cannon(CannonType cannonType, long parentID, Synchronizer synchronizer){
         this.synchronizer = synchronizer;
         cannonAnimationState = CannonType.CannonAnimationState.AIMING;
-        backgroundAnimation = new AnimationData(cannonType.getBackgroundAnimation(cannonAnimationState));
-        movingPartAnimation = new AnimationData(cannonType.getMovingPartAnimation(cannonAnimationState));
-        foregroundAnimation = new AnimationData(cannonType.getForegroundAnimation(cannonAnimationState));
+        backgroundAnimation = new Animation(cannonType.getBackgroundAnimation(cannonAnimationState));
+        movingPartAnimation = new Animation(cannonType.getMovingPartAnimation(cannonAnimationState));
+        foregroundAnimation = new Animation(cannonType.getForegroundAnimation(cannonAnimationState));
         synchronized (this.synchronizer){
             this.cannonType = new SynchronizedComparable<>("cannonType", cannonType,
                     (CannonType newVal, Mode mode, int i, int j)->{
-                        backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
-                        movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
-                        foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
+                        backgroundAnimation.setAnimationName(newVal.getBackgroundAnimation(cannonAnimationState));
+                        movingPartAnimation.setAnimationName(newVal.getMovingPartAnimation(cannonAnimationState));
+                        foregroundAnimation.setAnimationName(newVal.getForegroundAnimation(cannonAnimationState));
                     },
                     (CannonType newVal, Mode mode, int i, int j)->{
-                        backgroundAnimation.setAnimation(newVal.getBackgroundAnimation(cannonAnimationState));
-                        movingPartAnimation.setAnimation(newVal.getMovingPartAnimation(cannonAnimationState));
-                        foregroundAnimation.setAnimation(newVal.getForegroundAnimation(cannonAnimationState));
+                        backgroundAnimation.setAnimationName(newVal.getBackgroundAnimation(cannonAnimationState));
+                        movingPartAnimation.setAnimationName(newVal.getMovingPartAnimation(cannonAnimationState));
+                        foregroundAnimation.setAnimationName(newVal.getForegroundAnimation(cannonAnimationState));
                     },
                     SynchronizedData.Precedence.CLIENT,parentID,synchronizer,24);
             cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,Integer.MAX_VALUE);
             cannonAngle.setTo(-80.0);
         }
-    }
-
-    public CannonData(CannonData other, long parentID, Synchronizer synchronizer){
-        this.synchronizer = synchronizer;
-        this.cannonAnimationState = other.cannonAnimationState;
-        backgroundAnimation = new AnimationData(other.backgroundAnimation);
-        movingPartAnimation = new AnimationData(other.movingPartAnimation);
-        foregroundAnimation = new AnimationData(other.foregroundAnimation);
-        this.cannonType = new SynchronizedComparable<>("cannonType", other.cannonType.getData(), other.cannonType.getPrecedence(), parentID, synchronizer);
-        cannonAngle = new SynchronizedComparable<>("cannonAngle", -80.0, SynchronizedData.Precedence.CLIENT, parentID, synchronizer);
-        cannonAngle.setTo(other.getCannonAngle().getData());
     }
 
     public SynchronizedComparable<CannonType> getCannonType(){
@@ -67,9 +56,9 @@ public class CannonData implements Serializable {
 
     public void setCannonAnimationState(CannonType.CannonAnimationState cannonAnimationState){
         this.cannonAnimationState = cannonAnimationState;
-        backgroundAnimation.setAnimation(cannonType.getData().getBackgroundAnimation(cannonAnimationState));
-        movingPartAnimation.setAnimation(cannonType.getData().getMovingPartAnimation(cannonAnimationState));
-        foregroundAnimation.setAnimation(cannonType.getData().getForegroundAnimation(cannonAnimationState));
+        backgroundAnimation.setAnimationName(cannonType.getData().getBackgroundAnimation(cannonAnimationState));
+        movingPartAnimation.setAnimationName(cannonType.getData().getMovingPartAnimation(cannonAnimationState));
+        foregroundAnimation.setAnimationName(cannonType.getData().getForegroundAnimation(cannonAnimationState));
         switch(cannonAnimationState){
             case AIMING:
                 backgroundAnimation.setRandomFrame();
@@ -136,5 +125,29 @@ public class CannonData implements Serializable {
         backgroundAnimation.drawSelf(backgroundImageView);
         movingPartAnimation.drawSelf(movingPartImageVew);
         foregroundAnimation.drawSelf(foregroundImageView);
+    }
+
+    public void tick(){
+        synchronized (synchronizer){ // due to setCannonAnimationState(), it is possible for characterAnimationState to change while we're working with it. So, we must synchronize.
+            // determine which animation state we should be in, and increment animationFrame:
+            // todo: review this for correctness. In particular, I've been assuming that the lengths of the firing animations are the same for the background, moving part, and foreground; is this necessarily true?
+            switch (cannonAnimationState){
+                case FIRING:
+                    if(movingPartAnimation.tick()) setCannonAnimationState(CannonType.CannonAnimationState.AIMING);
+                    else {
+                        backgroundAnimation.tick();
+                        foregroundAnimation.tick();
+                    }
+                    break;
+                case DISCONNECTED:
+                case DEFEATED:
+                case VICTORIOUS:
+                case AIMING:
+                    backgroundAnimation.tick();
+                    movingPartAnimation.tick();
+                    foregroundAnimation.tick();
+                    break;
+            }
+        }
     }
 }

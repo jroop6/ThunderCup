@@ -10,31 +10,11 @@ import java.util.Queue;
  * Created by Jonathan Roop on 8/4/2017.
  */
 public class Packet implements Serializable{
-    private Queue<PlayerData> playerDataList = new LinkedList<>();
-    private GameData gameData;
-    private Queue<PlayPanel> playPanelList = new LinkedList<>();
     private Synchronizer synchronizer;
     private boolean connectionRejected = false;
 
-    // Constructor used in LobbyScene
     public Packet(Synchronizer synchronizer){
         this.synchronizer = synchronizer.copyForNetworking();
-    }
-
-    // Constructor used in GameScene, where playPanelData is also relevant.
-    public Packet(PlayerData playerData, GameData gameData, PlayPanel playPanel, Synchronizer synchronizer){
-        this.gameData = gameData;
-        playerDataList.add(playerData);
-        playPanelList.add(playPanel);
-        this.synchronizer = synchronizer.copyForNetworking();
-    }
-
-    public void addPlayerData(PlayerData playerData){
-        playerDataList.add(playerData);
-    }
-
-    public void addPlayPanel(PlayPanel playPanel){
-        playPanelList.add(playPanel);
     }
 
     public void rejectConnection(){
@@ -51,9 +31,6 @@ public class Packet implements Serializable{
 
     public void print(){
         System.out.println("************************");
-        System.out.println("* There are " + playerDataList.size() + " items in playerDataList");
-        System.out.println("* GameData is " + gameData);
-        System.out.println("* There are " + playPanelList.size() + " items in playPanelDataList");
         System.out.println("* Synchronizer is " + synchronizer);
         System.out.println("************************");
     }

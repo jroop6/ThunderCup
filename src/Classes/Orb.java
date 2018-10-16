@@ -12,31 +12,31 @@ import java.io.Serializable;
 import static Classes.GameScene.DATA_FRAME_RATE;
 import static Classes.PlayPanel.ORB_RADIUS;
 
-public class OrbData extends PointInt implements Serializable, Comparable<OrbData>{
+public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     private static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
     private static final double TIME_TO_THUNDER = 1; // how much time it takes for a dropped orb to thunder.
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
-    static final OrbData WALL = new OrbData(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
-    static final OrbData CEILING = new OrbData(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
+    static final Orb WALL = new Orb(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
+    static final Orb CEILING = new Orb(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbType because we only have 1 instance of this
     // orb instead of literally hundreds for all the unusable locations on the orbArray.
-    public static final OrbData NULL = new OrbData(OrbColor.BLACK, -1, -1, OrbAnimationState.STATIC);
+    public static final Orb NULL = new Orb(OrbColor.BLACK, -1, -1, OrbAnimationState.STATIC);
 
     private OrbColor orbColor;
-    private AnimationData orbAnimation; // The animation currently selected for the Orb.
-    private AnimationData orbElectrification; // the animation selected for displaying the electrification animation.
-    private AnimationData orbExplosion; // the animation selected for displaying the burst animation.
+    private Animation orbAnimation; // The animation currently selected for the Orb.
+    private Animation orbElectrification; // the animation selected for displaying the electrification animation.
+    private Animation orbExplosion; // the animation selected for displaying the burst animation.
     private SoundEffect orbThunder; // enum used for displaying thunder animation.
     private OrbAnimationState orbAnimationState;
 
     private double angle; // angle of travel, radians
     private double speed; // current speed, pixels per second
 
-    // A frame count for the "transferring" and "thundering" animations, which are handled in a special way (without using an AnimationData)
+    // A frame count for the "transferring" and "thundering" animations, which are handled in a special way (without using an Animation)
     private int currentFrame = 0;
 
     // Timestamps so that the host and client will know when the orbs were fired:
@@ -46,22 +46,22 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
     // For distinguishing this data from similar data in other PlayPanels.
     private SynchronizedParent synchronizedParent;
 
-    public OrbData(OrbColor orbColor, int iPos, int jPos, OrbAnimationState orbAnimationState){
+    public Orb(OrbColor orbColor, int iPos, int jPos, OrbAnimationState orbAnimationState){
         super(iPos, jPos);
         this.orbColor = orbColor;
-        orbAnimation = new AnimationData(orbColor.getImplodeAnimation());
+        orbAnimation = new Animation(orbColor.getImplodeAnimationName());
         orbAnimation.setStatus(StatusOption.PAUSED);
         setIJ(iPos, jPos);
         setOrbAnimationState(orbAnimationState);
     }
 
     /* Copy Constructor */
-    public OrbData(OrbData other){
+    public Orb(Orb other){
         super(other.i, other.j);
         orbColor = other.orbColor;
-        orbAnimation = new AnimationData(other.orbAnimation);
-        if(other.orbElectrification!=null) orbElectrification = new AnimationData(other.orbElectrification);
-        if(other.orbExplosion!=null) orbExplosion = new AnimationData(other.orbExplosion);
+        orbAnimation = new Animation(other.orbAnimation);
+        if(other.orbElectrification!=null) orbElectrification = new Animation(other.orbElectrification);
+        if(other.orbExplosion!=null) orbExplosion = new Animation(other.orbExplosion);
         orbThunder = other.orbThunder;
         setOrbAnimationState(other.orbAnimationState);
 
@@ -91,7 +91,7 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
         switch(orbAnimationState){
             case BURSTING:
                 // Get a bursting animation Todo: randomize this once I have more than 1 type of animation
-                orbExplosion = new AnimationData(Animation.EXPLOSION_1, orbAnimation.getAnchorX(), orbAnimation.getAnchorY(), PlayOption.PLAY_ONCE_THEN_VANISH);
+                orbExplosion = new Animation(AnimationName.EXPLOSION_1, orbAnimation.getAnchorX(), orbAnimation.getAnchorY(), PlayOption.PLAY_ONCE_THEN_VANISH);
                 break;
             case IMPLODING:
                 orbAnimation.setStatus(StatusOption.PLAYING);
@@ -104,7 +104,7 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
                 break;
             case ELECTRIFYING:
                 // Get an electrification animation Todo: randomize this once I have more than 1 type of animation
-                orbElectrification = new AnimationData(Animation.ELECTRIFICATION_1, orbAnimation.getAnchorX(), orbAnimation.getAnchorY(), PlayOption.PLAY_ONCE_THEN_VANISH);
+                orbElectrification = new Animation(AnimationName.ELECTRIFICATION_1, orbAnimation.getAnchorX(), orbAnimation.getAnchorY(), PlayOption.PLAY_ONCE_THEN_VANISH);
                 break;
             case TRANSFERRING:
                 speed = 0.0;
@@ -130,7 +130,7 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
     }
     public void setOrbColor(OrbColor orbColor){
         this.orbColor = orbColor;
-        orbAnimation.setAnimation(orbColor.getImplodeAnimation());
+        orbAnimation.setAnimationName(orbColor.getImplodeAnimationName());
     }
 
     public double getXPos(){
@@ -196,7 +196,7 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
         return false;
     }
 
-    //todo: incorporate vibrationOffset with the new animation framework (probably just include an offset parameter in AnimationData.drawSelf()).
+    //todo: incorporate vibrationOffset with the new animation framework (probably just include an offset parameter in Animation.drawSelf()).
     public void drawSelf(GraphicsContext orbDrawer, double vibrationOffset){
         if(this == NULL) return; // null orbs are not drawn.
         int err;
@@ -230,20 +230,20 @@ public class OrbData extends PointInt implements Serializable, Comparable<OrbDat
     // Two orbs are considered the same if their positions and angles are nearly the same and they have the same enumeration ordinal.
     @Override
     public boolean equals(Object other){
-        if (!(other instanceof OrbData)) return false;
+        if (!(other instanceof Orb)) return false;
         else{
-            OrbData otherOrbData = (OrbData) other;
+            Orb otherOrb = (Orb) other;
             double tolerance = 1;
-            if(Math.abs(otherOrbData.getXPos()-getXPos())<tolerance
-                    && Math.abs(otherOrbData.getYPos()-getYPos())<tolerance
-                    && otherOrbData.orbColor == orbColor
-                    && Math.abs(otherOrbData.angle-angle)<tolerance/180) return true;
+            if(Math.abs(otherOrb.getXPos()-getXPos())<tolerance
+                    && Math.abs(otherOrb.getYPos()-getYPos())<tolerance
+                    && otherOrb.orbColor == orbColor
+                    && Math.abs(otherOrb.angle-angle)<tolerance/180) return true;
             else return false;
         }
     }
 
     @Override
-    public int compareTo(OrbData other){
+    public int compareTo(Orb other){
         double tolerance = 1;
         if(Math.abs(other.getXPos()-getXPos())<tolerance
                 && other.orbColor == orbColor

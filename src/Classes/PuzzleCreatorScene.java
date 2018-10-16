@@ -1,7 +1,7 @@
 package Classes;
 
 import Classes.Animation.OrbColor;
-import Classes.Images.Drawing;
+import Classes.Images.DrawingName;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -22,17 +22,17 @@ import javafx.scene.transform.Scale;
 import java.util.Optional;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
-import static Classes.OrbData.NULL;
+import static Classes.Orb.NULL;
 import static Classes.PlayPanel.*;
 
 public class PuzzleCreatorScene extends Scene {
 
-    private final OrbData EMPTY = new OrbData(OrbColor.BLACK,-2,-2, OrbData.OrbAnimationState.STATIC);
+    private final Orb EMPTY = new Orb(OrbColor.BLACK,-2,-2, Orb.OrbAnimationState.STATIC);
     private long nextAnimationFrameInstance = 0;
     private boolean initializing = false;
     private Scale scaler = new Scale(1,1);
     private AnimationTimer animationTimer;
-    private OrbData[][] orbArray;
+    private Orb[][] orbArray;
     private Canvas orbCanvas;
 
     PuzzleCreatorScene(int numPlayers){
@@ -40,7 +40,7 @@ public class PuzzleCreatorScene extends Scene {
         AnchorPane rootNode = (AnchorPane)getRoot();
 
         // Give everything a nice background:
-        ImageView nightSky = Drawing.NIGHT_SKY.getImageView();
+        ImageView nightSky = DrawingName.NIGHT_SKY.getImageView();
         rootNode.getChildren().add(nightSky);
         AnchorPane.setBottomAnchor(nightSky,0.0);
         AnchorPane.setTopAnchor(nightSky,0.0);
@@ -60,7 +60,7 @@ public class PuzzleCreatorScene extends Scene {
         hBox.getChildren().add(orbCanvas);
 
         // Initialize the Array:
-        orbArray = new OrbData[ARRAY_HEIGHT+3*numPlayers][ARRAY_WIDTH_PER_CHARACTER*numPlayers];
+        orbArray = new Orb[ARRAY_HEIGHT+3*numPlayers][ARRAY_WIDTH_PER_CHARACTER*numPlayers];
         for(int i=0; i<orbArray.length; ++i){
             for(int j=0; j<orbArray[i].length; j++){
                 if(j%2==i%2) orbArray[i][j] = EMPTY;
@@ -90,7 +90,7 @@ public class PuzzleCreatorScene extends Scene {
                 OrbColor newEnum;
                 if(event.isPrimaryButtonDown()) newEnum = OrbColor.values()[0]; // left-click
                 else newEnum = OrbColor.values()[OrbColor.values().length-1]; // right-click
-                orbArray[iPos][jPos] = new OrbData(newEnum,iPos,jPos, OrbData.OrbAnimationState.STATIC);
+                orbArray[iPos][jPos] = new Orb(newEnum,iPos,jPos, Orb.OrbAnimationState.STATIC);
             }
             else if(orbArray[iPos][jPos] != EMPTY){
                 OrbColor newEnum;

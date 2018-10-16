@@ -97,7 +97,7 @@ public class SpriteSheet extends Image {
     // todo: I think using the Affine transform introduced some lag. Confirm this, and see whether there's a more efficient way to accomplish scale+rotation+translation.
     // Draws the specified frame to the graphicsContext. By default, the frame is drawn in the top-left corner. To apply
     // translation, rotation, and scale, apply an affine transformation to the graphics context before calling this
-    // method. See AnimationData.drawSelf(GraphicsContext) for an example.
+    // method. See Animation.drawSelf(GraphicsContext) for an example.
     public int drawFrame(GraphicsContext graphicsContext, int frameIndex){
         // First, a sanity check
         if(frameIndex >= frameBounds.size()){

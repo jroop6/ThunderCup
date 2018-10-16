@@ -3,7 +3,7 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 import java.util.*;
 
-import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+import static Classes.NetworkCommunication.Player.HOST_ID;
 
 public class SynchronizedList<T extends Comparable<T> & Serializable> extends SynchronizedData<LinkedList<T>> {
 

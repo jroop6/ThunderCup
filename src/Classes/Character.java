@@ -12,28 +12,20 @@ import java.io.Serializable;
 /**
  * For managing the state and display of an animated character
  */
-public class CharacterData implements Serializable {
+public class Character implements Serializable {
     private SynchronizedComparable<CharacterType> characterType; // basically, a collection of all of this character's possible animations.
-    private AnimationData currentAnimation; // The currently playing animation from among the collection.
+    private Animation currentAnimation; // The currently playing animation from among the collection.
     private CharacterType.CharacterAnimationState characterAnimationState; // i.e. Content, Worried, Defeated, etc.
     private final Synchronizer synchronizer;
 
     // Initialize with a content display of the character:
-    public CharacterData(CharacterType characterType, long parentID, Synchronizer synchronizer){
+    public Character(CharacterType characterType, long parentID, Synchronizer synchronizer){
         this.synchronizer = synchronizer;
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
-        currentAnimation = new AnimationData(characterType.getAnimation(characterAnimationState));
+        currentAnimation = new Animation(characterType.getAnimationName(characterAnimationState));
         synchronized (synchronizer){
-            this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), ((newValue,mode,i,j) -> currentAnimation.setAnimation(newValue.getAnimation(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
+            this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimationName(newValue.getAnimationName(characterAnimationState))), ((newValue, mode, i, j) -> currentAnimation.setAnimationName(newValue.getAnimationName(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
         }
-    }
-
-    // Initialize with a content display of the character:
-    public CharacterData(CharacterData other, long parentID, Synchronizer synchronizer){
-        this.synchronizer = synchronizer;
-        characterAnimationState = other.characterAnimationState;
-        currentAnimation = new AnimationData(other.currentAnimation);
-        characterType = new SynchronizedComparable<>("characterType", other.characterType.getData(), other.characterType.getPrecedence(), parentID, synchronizer);
     }
 
     public void relocate(double x, double y){
@@ -51,7 +43,7 @@ public class CharacterData implements Serializable {
     public void setCharacterAnimationState(CharacterType.CharacterAnimationState characterAnimationState){
         this.characterAnimationState = characterAnimationState;
         synchronized (synchronizer){ // make sure no one modifies the data while we're working with it
-            currentAnimation.setAnimation(characterType.getData().getAnimation(characterAnimationState));
+            currentAnimation.setAnimationName(characterType.getData().getAnimationName(characterAnimationState));
             switch(characterAnimationState){
                 case CONTENT:
                 case WORRIED:

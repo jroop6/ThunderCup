@@ -6,35 +6,35 @@ import javafx.scene.image.ImageView;
  * Created by HydrusBeta on 8/1/2017.
  */
 public enum ButtonType {
-    PUZZLE(Drawing.PUZZLE, Drawing.PUZZLE_SEL),
-    TUTORIAL(Drawing.TUTORIAL, Drawing.TUTORIAL_SEL),
-    ADVENTURE(Drawing.ADVENTURE, Drawing.ADVENTURE_SEL),
-    RANDOM_PUZZLE(Drawing.RANDOM_PUZZLE, Drawing.RANDOM_PUZZLE_SEL),
-    MULTIPLAYER(Drawing.MULTIPLAYER, Drawing.MULTIPLAYER_SEL),
-    VS_COMPUTER(Drawing.VS_COMPUTER, Drawing.VS_COMPUTER_SEL),
-    EXIT(Drawing.EXIT, Drawing.EXIT_SEL),
-    MUTE(Drawing.MUTE, Drawing.MUTE_SEL),
-    MUTED(Drawing.MUTED, Drawing.MUTED_SEL),
-    SCROLL(Drawing.SCROLL, Drawing.SCROLL_SEL),
-    ADD_PLAYER(Drawing.ADD_PLAYER, Drawing.ADD_PLAYER_SEL),
-    ADD_BOT(Drawing.ADD_BOT, Drawing.ADD_BOT_SEL),
-    HOST_AND_PORT(Drawing.HOST_AND_PORT, Drawing.HOST_AND_PORT_SEL),
-    START(Drawing.START, Drawing.START_SEL),
-    REJECT(Drawing.REJECT, Drawing.REJECT_SEL),
-    REMOVE_PLAYER(Drawing.REMOVE_PLAYER, Drawing.REMOVE_PLAYER_SEL),
-    USERNAME(Drawing.USERNAME, Drawing.USERNAME_SEL),
-    RETURN_TO_MAIN_MENU_HOST(Drawing.RETURN_TO_MAIN_MENU_HOST, Drawing.RETURN_TO_MAIN_MENU_HOST_SEL),
-    RETURN_TO_MAIN_MENU_CLIENT(Drawing.RETURN_TO_MAIN_MENU_CLIENT, Drawing.RETURN_TO_MAIN_MENU_CLIENT_SEL),
-    CREDITS(Drawing.CREDITS, Drawing.CREDITS_SEL),
-    UNPAUSE(Drawing.UNPAUSE, Drawing.UNPAUSE_SEL),
-    RESIGN(Drawing.RESIGN, Drawing.RESIGN_SEL),
-    PUZZLE_SET_1(Drawing.PUZZLE_SET_1, Drawing.PUZZLE_SET_1_SEL),
-    PUZZLE_SET_2(Drawing.PUZZLE_SET_2, Drawing.PUZZLE_SET_2_SEL);
+    PUZZLE(DrawingName.PUZZLE, DrawingName.PUZZLE_SEL),
+    TUTORIAL(DrawingName.TUTORIAL, DrawingName.TUTORIAL_SEL),
+    ADVENTURE(DrawingName.ADVENTURE, DrawingName.ADVENTURE_SEL),
+    RANDOM_PUZZLE(DrawingName.RANDOM_PUZZLE, DrawingName.RANDOM_PUZZLE_SEL),
+    MULTIPLAYER(DrawingName.MULTIPLAYER, DrawingName.MULTIPLAYER_SEL),
+    VS_COMPUTER(DrawingName.VS_COMPUTER, DrawingName.VS_COMPUTER_SEL),
+    EXIT(DrawingName.EXIT, DrawingName.EXIT_SEL),
+    MUTE(DrawingName.MUTE, DrawingName.MUTE_SEL),
+    MUTED(DrawingName.MUTED, DrawingName.MUTED_SEL),
+    SCROLL(DrawingName.SCROLL, DrawingName.SCROLL_SEL),
+    ADD_PLAYER(DrawingName.ADD_PLAYER, DrawingName.ADD_PLAYER_SEL),
+    ADD_BOT(DrawingName.ADD_BOT, DrawingName.ADD_BOT_SEL),
+    HOST_AND_PORT(DrawingName.HOST_AND_PORT, DrawingName.HOST_AND_PORT_SEL),
+    START(DrawingName.START, DrawingName.START_SEL),
+    REJECT(DrawingName.REJECT, DrawingName.REJECT_SEL),
+    REMOVE_PLAYER(DrawingName.REMOVE_PLAYER, DrawingName.REMOVE_PLAYER_SEL),
+    USERNAME(DrawingName.USERNAME, DrawingName.USERNAME_SEL),
+    RETURN_TO_MAIN_MENU_HOST(DrawingName.RETURN_TO_MAIN_MENU_HOST, DrawingName.RETURN_TO_MAIN_MENU_HOST_SEL),
+    RETURN_TO_MAIN_MENU_CLIENT(DrawingName.RETURN_TO_MAIN_MENU_CLIENT, DrawingName.RETURN_TO_MAIN_MENU_CLIENT_SEL),
+    CREDITS(DrawingName.CREDITS, DrawingName.CREDITS_SEL),
+    UNPAUSE(DrawingName.UNPAUSE, DrawingName.UNPAUSE_SEL),
+    RESIGN(DrawingName.RESIGN, DrawingName.RESIGN_SEL),
+    PUZZLE_SET_1(DrawingName.PUZZLE_SET_1, DrawingName.PUZZLE_SET_1_SEL),
+    PUZZLE_SET_2(DrawingName.PUZZLE_SET_2, DrawingName.PUZZLE_SET_2_SEL);
 
-    private Drawing unselectedDrawing;
-    private Drawing selectedDrawing;
+    private DrawingName unselectedDrawing;
+    private DrawingName selectedDrawing;
 
-    ButtonType(Drawing unselectedDrawing, Drawing selectedDrawing){
+    ButtonType(DrawingName unselectedDrawing, DrawingName selectedDrawing){
         this.unselectedDrawing = unselectedDrawing;
         this.selectedDrawing = selectedDrawing;
     }

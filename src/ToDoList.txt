@@ -3,7 +3,7 @@ re-enable the chat box in GameScene
 PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
 fix multiplayer de-synch problems
 more puzzles!
-character animations
+character animationNames
 TransferInOrbs should be able to kill a player.
 
 -------Bugs-------
@@ -23,7 +23,7 @@ puzzle data should specify how many shots cause a new row to appear.
 implement the Vs Computer game mode
 ability to select bot difficulty
 when a game begins, the program should move the camera so that it is centered on your character and maybe have some visual flourish indicate which character is yours.
-character animations
+character animationNames
 character voices/sound effects
 slightly nicer visuals for the puzzle selector buttons
 more puzzles!
@@ -36,7 +36,7 @@ Instead of each bot having its own thread pool, generate a single pool in GameSc
 There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.
 The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
 	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
-combine implodeAnimation enums into 1 file instead of 3 (exception for orbImages)
+combine implodeAnimationName enums into 1 file instead of 3 (exception for orbImages)
 There are 2 copies of numPlayers - one in PlayPanel and one in PlayPanelData. Reduce it to just 1 instance.
 
 -------polish-------

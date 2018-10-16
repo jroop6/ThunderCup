@@ -1,14 +1,12 @@
 package Classes;
 
-import Classes.OrbData;
-
 public class Collision{
-    public OrbData shooterOrb;
-    public OrbData arrayOrb;
+    public Orb shooterOrb;
+    public Orb arrayOrb;
     public double timeToCollision;
 
     // Constructor
-    public Collision(OrbData shooterOrb, OrbData arrayOrb, double timeToCollision) {
+    public Collision(Orb shooterOrb, Orb arrayOrb, double timeToCollision) {
         this.shooterOrb = shooterOrb;
         this.arrayOrb = arrayOrb;
         this.timeToCollision = timeToCollision;
