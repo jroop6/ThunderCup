@@ -5,10 +5,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static Classes.NetworkCommunication.PlayerData.GAME_ID;
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 
 public class GameData implements Serializable{
     private SynchronizedComparable<Boolean> pause;
-    private Map<Long,Integer> missedPacketsCount = new ConcurrentHashMap<>(); // maps playerIDs to the number of misssed packets for that player.
 
     // Variables related to displaying victory/defeat graphics:
     private boolean victoryPauseStarted = false;
@@ -24,13 +24,12 @@ public class GameData implements Serializable{
 
     // Copy constructor:
     public GameData(GameData other){
-        Synchronizer synchronizer = new Synchronizer();
+        Synchronizer synchronizer = new Synchronizer(HOST_ID);
         pause = new SynchronizedComparable<>("pause", other.pause.getData(), other.pause.getPrecedence(), GAME_ID, synchronizer);
         victoryPauseStarted = other.victoryPauseStarted;
         victoryDisplayStarted = other.victoryDisplayStarted;
         victoryTime = other.victoryTime;
         victoriousTeam = other.victoriousTeam;
-        missedPacketsCount = new ConcurrentHashMap<>(other.getMissedPacketsCount());
     }
 
     /* Setters: These are called when a client simply wants to update locally-stored game information without
@@ -60,23 +59,9 @@ public class GameData implements Serializable{
     public int getVictoriousTeam(){
         return victoriousTeam;
     }
-    public Map<Long,Integer> getMissedPacketsCount(){
-        return missedPacketsCount;
-    }
     public SynchronizedComparable<Boolean> getPause(){
         return pause;
     }
 
-
-    /* MissedPacketsCount manipulators */
-    public int getMissedPacketsCount(long playerID){
-        return missedPacketsCount.get(playerID);
-    }
-    public void incrementMissedPacketsCount(long playerID){
-        missedPacketsCount.replace(playerID,missedPacketsCount.get(playerID)+1);
-    }
-    public void setMissedPacketsCount(long playerID, int newVal){
-        missedPacketsCount.replace(playerID, newVal);
-    }
 
 }

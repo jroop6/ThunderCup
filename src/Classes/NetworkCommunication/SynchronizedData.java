@@ -3,16 +3,17 @@ package Classes.NetworkCommunication;
 import java.io.*;
 
 /**
- * Data is uniquely identified by 2 variables: parentID (a long) and name (a String). parentID might, for example,
- * uniquely identify a player and then name could be something like "username." For data associated with teams, you can
- * use a parentID that is unique to that team. For global game data, you can use a constant field like GAME_ID for the
- * parentID.
+ * Data is uniquely identified by 2 fields: parentID (a long) and name (a String). For example, the parentID might be a
+ * player ID that uniquely identifies a player and the name could be something like "cannonAngle." Hence, we can have
+ * many SynchronizedDatas with the same name, yet we are still able to distinguish which data belongs to which player.
+ * For data belonging to a team and not just a particular player, you can use a team ID for parentID. For global game
+ * data (e.g. pause), you can use a constant field like GAME_ID=0.
  */
 public abstract class SynchronizedData<T extends Serializable> implements Comparable<SynchronizedData<T>>, Serializable {
     // The actual data:
     protected T data;
 
-    // Keys for uniquely identifying this data in a HashMap:
+    // Keys for uniquely identifying this data:
     private final long parentID;
     private final String name;
 

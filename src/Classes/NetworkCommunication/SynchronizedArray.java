@@ -1,7 +1,11 @@
 package Classes.NetworkCommunication;
 
+import org.omg.PortableInterceptor.HOLDING;
+
 import java.io.Serializable;
 import java.util.Arrays;
+
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
 
 public class SynchronizedArray<T extends Comparable<T> & Serializable> extends SynchronizedData<T[][]> {
     public SynchronizedArray(String name, T[][] data, Precedence precedence, long parentID, Synchronizer synchronizer){
@@ -79,7 +83,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
 
 
     public static void main(String[] args){
-        Synchronizer synchronizer = new Synchronizer();
+        Synchronizer synchronizer = new Synchronizer(HOST_ID);
         Integer[] array1 = new Integer[]{1,1};
         Integer[] array2 = new Integer[]{1,1};
         Integer[] array3 = new Integer[]{1,1};

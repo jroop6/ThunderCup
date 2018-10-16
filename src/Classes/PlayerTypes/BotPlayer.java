@@ -45,7 +45,7 @@ public class BotPlayer extends PlayerData{
     }
 
     public BotPlayer(CharacterType characterType, Synchronizer synchronizer){
-        super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, synchronizer);
+        super("fillyBot [" + characterType.getBotDifficulty() +"]", PlayerType.BOT, createID(), synchronizer);
         difficulty = characterData.getCharacterType().getData().getBotDifficulty();
         transitionFrame = difficulty.getThinkingFrames();
     }

@@ -68,8 +68,8 @@ public class PlayerData implements Serializable {
 
     private final Synchronizer synchronizer;
 
-    public PlayerData(String username, PlayerType playerType, long playerID, Synchronizer synchronizer){
-        this.playerID = playerID;
+    public PlayerData(String username, PlayerType playerType, long id, Synchronizer synchronizer){
+        this.playerID = id;
         this.synchronizer = synchronizer;
 
         CharacterType myCharacterEnum;
@@ -173,13 +173,9 @@ public class PlayerData implements Serializable {
         }
     }
 
-    public PlayerData(String username, PlayerType playerType, Synchronizer synchronizer){
-        this(username, playerType, createID(), synchronizer);
-    }
-
     // Copy constructor
     public PlayerData(PlayerData other){
-        synchronizer = new Synchronizer();
+        synchronizer = new Synchronizer(getPlayerID());
         playerID = other.playerID;
         username = new SynchronizedComparable<>("username", other.username.getData(), other.username.getPrecedence(), playerID, synchronizer);
         team = new SynchronizedComparable<>("team",other.team.getData(), other.team.getPrecedence(), playerID, synchronizer);
@@ -211,7 +207,7 @@ public class PlayerData implements Serializable {
 
     // For LOCAL and BOT PlayerTypes:
     // create a (probably) unique player ID
-    private static long createID(){
+    public static long createID(){
         long playerID;
         do{
             playerID = (new Random()).nextLong();

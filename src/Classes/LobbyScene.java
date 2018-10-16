@@ -51,8 +51,7 @@ public class LobbyScene extends Scene {
 
     // Variables related to network communications:
     private boolean isHost; // Are we the host or a client?
-    private final long maxConsecutivePacketsMissed; // If this many packets are missed consecutively from a particular player, alert the user.
-    private Map<Long,Integer> missedPacketsCount = new HashMap<>(); // maps playerIDs to the number of misssed packets for that player.
+    private final long maxConsecutivePacketsMissed = FRAME_RATE * 5; // If this many packets are missed consecutively from a particular player, alert the user.
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent (nanoseconds).
 
     // for misc debugging:
@@ -68,16 +67,15 @@ public class LobbyScene extends Scene {
         // set up connection framework:
         if(isHost){
             connectionManager = new HostConnectionManager(port);
-            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, HOST_ID, connectionManager.getSynchronizer());
+            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
         }
         else{
-            connectionManager = new ClientConnectionManager(host, port);
-            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, connectionManager.getSynchronizer());
+            connectionManager = new ClientConnectionManager(PlayerData.createID(), host, port);
+            localPlayer = new PlayerData(username, PlayerData.PlayerType.LOCAL, connectionManager.getSynchronizer().getId(), connectionManager.getSynchronizer());
         }
         connectionManager.setPlayerID(localPlayer.getPlayerID());
         System.out.println("our ID is " + localPlayer.getPlayerID());
 
-        maxConsecutivePacketsMissed = FRAME_RATE * 5;
         if (!connectionManager.isConnected()){
             SceneManager.switchToMainMenu();
             return;
@@ -100,7 +98,7 @@ public class LobbyScene extends Scene {
             PlayerSlot hostPlayerSlot = new PlayerSlot(localPlayer, true);
             playerSlotContainer.addItem(hostPlayerSlot);
             Button addPlayerBtn = new ThunderButton(ButtonType.ADD_PLAYER,(event)->{
-                playerSlotContainer.addItem(new PlayerSlot(new PlayerData("Open Slot", PlayerData.PlayerType.UNCLAIMED, connectionManager.getSynchronizer()), isHost));
+                playerSlotContainer.addItem(new PlayerSlot(new PlayerData("Open Slot", PlayerData.PlayerType.UNCLAIMED, PlayerData.createID(), connectionManager.getSynchronizer()), isHost));
                 ((HostConnectionManager)connectionManager).addOpenSlot();
             });
             Button addBotBtn = new ThunderButton(ButtonType.ADD_BOT, (event)->{
@@ -115,9 +113,8 @@ public class LobbyScene extends Scene {
         }
         // otherwise, add both a remote player (representing the host) and a localplayer. The hostplayer's data will eventually be updated:
         else{
-            PlayerData hostPlayer = new PlayerData("???", PlayerData.PlayerType.REMOTE_CLIENTVIEW, HOST_ID,connectionManager.getSynchronizer());
+            PlayerData hostPlayer = new PlayerData("???", PlayerData.PlayerType.REMOTE_CLIENTVIEW, HOST_ID, connectionManager.getSynchronizer());
             PlayerSlot hostPlayerSlot = new PlayerSlot(hostPlayer,isHost);
-            missedPacketsCount.put(HOST_ID, 0);
             PlayerSlot localPlayerSlot = new PlayerSlot(localPlayer,isHost);
             playerSlotContainer.addItem(hostPlayerSlot);
             playerSlotContainer.addItem(localPlayerSlot);
@@ -223,7 +220,7 @@ public class LobbyScene extends Scene {
                     if(isHost)deleteRemovedPlayers();
 
                     prepareAndSendPacket();
-                    connectionManager.getSynchronizer().resetChangedData();
+                    //connectionManager.getSynchronizer().resetChangedData();
 
                     // Perform special processing for game data:
                     if(gameCanceled.getData()){
@@ -277,28 +274,19 @@ public class LobbyScene extends Scene {
             Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
             // check to see whether the local player in the received packet exists in our playerSlots list:
-            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
-                long id = entry.getKey();
-                if(id>=0 || id == HOST_ID) continue; // 0 is GAME_ID an anything >0 indicates a team, not a player.
-                if(receivedSynchronizer.get(id,"playerType").getData() != PlayerData.PlayerType.LOCAL) continue;
-                synchronized (localSynchronizer){
-                    if(localSynchronizer.get(id,"username")==null){
-                        // this is a new player, so see if there's an open slot available:
-                        PlayerSlot availableSlot = getUnclaimedSlot();
-                        if(availableSlot!=null){
-                            // De-register the open slot playerdata:
-                            missedPacketsCount.remove(availableSlot.getPlayerData().getPlayerID());
+            long id = receivedSynchronizer.getId();
+            synchronized (localSynchronizer){
+                if(localSynchronizer.get(id,"username")==null){
+                    // this is a new player, so see if there's an open slot available:
+                    PlayerSlot availableSlot = getUnclaimedSlot();
+                    if(availableSlot!=null){
+                        // De-register the open slot playerdata:
+                        localSynchronizer.deRegisterAllWithID(availableSlot.getPlayerData().getPlayerID());
 
-                            // create the player and put him/her in the slot:
-                            String username = (String)receivedSynchronizer.get(id,"username").getData();
-                            PlayerData newRemotePlayer = new PlayerData(username, PlayerData.PlayerType.REMOTE_HOSTVIEW, id, localSynchronizer);
-                            availableSlot.changePlayer(newRemotePlayer, isHost);
-                            missedPacketsCount.put(id, 0);
-                        }
-                    }
-                    else{
-                        // we already know about this player. Since we've received a packet from them, update missedPacketsCount
-                        missedPacketsCount.replace(id, 0);
+                        // create the player and put him/her in the slot:
+                        String username = (String)receivedSynchronizer.get(id,"username").getData();
+                        PlayerData newRemotePlayer = new PlayerData(username, PlayerData.PlayerType.REMOTE_HOSTVIEW, id, localSynchronizer);
+                        availableSlot.changePlayer(newRemotePlayer, isHost);
                     }
                 }
             }
@@ -319,19 +307,18 @@ public class LobbyScene extends Scene {
     }
 
     private void checkForDisconnectedPlayers(){
+        List<Long> disconnectedPlayerIDs = connectionManager.getSynchronizer().getDisconnectedIDs(maxConsecutivePacketsMissed);
+
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots) {
             PlayerData playerData = playerSlot.getPlayerData();
             PlayerData.PlayerType playerType = playerSlot.getPlayerData().getPlayerType().getData();
             if(!(playerType == PlayerData.PlayerType.REMOTE_CLIENTVIEW || playerType == PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
-            if(!isHost && playerData.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
-            Integer missedPackets = missedPacketsCount.get(playerData.getPlayerID());
+            if(!isHost && playerData.getPlayerID()!=HOST_ID) continue; // Clients only keep track of the host's connection to them.
 
-            // increment the missed packets count. The count will be reset whenever the next packet is received:
-            missedPacketsCount.replace(playerData.getPlayerID(), missedPacketsCount.get(playerData.getPlayerID())+1);
-
-            // If the player has been gone for too long, ask the host what to do:
-            if(missedPackets==maxConsecutivePacketsMissed){
+            // If the player has been gone for too long, ask the user what to do:
+            if(disconnectedPlayerIDs.contains(playerData.getPlayerID())){
+                System.out.println("disconnected playerID: " + playerData.getPlayerID() + " who's been gone for " + connectionManager.getSynchronizer().getDisconnectedTime(playerData.getPlayerID()));
                 showConnectionLostDialog(playerData);
             }
         }
@@ -382,7 +369,7 @@ public class LobbyScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            missedPacketsCount.replace(playerdata.getPlayerID(),(int)(maxConsecutivePacketsMissed - FRAME_RATE*10));
+            connectionManager.getSynchronizer().waitForReconnect(playerdata.getPlayerID(),maxConsecutivePacketsMissed - FRAME_RATE*10);
             dialogStage.close();
         });
 
@@ -396,13 +383,7 @@ public class LobbyScene extends Scene {
             if(playerSlot.getPlayerData().getState().getData()== PlayerData.State.DISCONNECTED){
                 if (playerSlot.getPlayerData().getPlayerType().getData()== PlayerData.PlayerType.UNCLAIMED){
                     // An open slot is being removed, so decrement the open slot counter:
-                    System.out.println("just decrementing openSlots");
                     ((HostConnectionManager)connectionManager).removeOpenSlot();
-                }
-                else{
-                    // An actual player is being removed, so remove their missed packets count from the record:
-                    System.out.println("de-registering a player!");
-                    missedPacketsCount.remove(playerSlot.getPlayerData().getPlayerID());
                 }
                 connectionManager.getSynchronizer().deRegisterAllWithID(playerSlot.getPlayerData().getPlayerID());
                 System.out.println("INSIDE HERE!");
@@ -466,9 +447,6 @@ public class LobbyScene extends Scene {
 
             // Synchronize our data with the host:
             localSynchronizer.synchronizeWith(receivedSynchronizer,isHost);
-
-            // Since we've received a packet from the host, reset missedPacketsCount
-            missedPacketsCount.replace(HOST_ID, 0);
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();

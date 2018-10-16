@@ -17,7 +17,8 @@ import java.net.UnknownHostException;
  */
 public class ClientConnectionManager extends ConnectionManager{
 
-    public ClientConnectionManager(String host, int port){
+    public ClientConnectionManager(long id, String host, int port){
+        super(id);
         try{
             Socket clientSideSocket = new Socket(host, port);
             SenderWorker newSenderWorker = new SenderWorker(clientSideSocket);

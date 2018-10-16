@@ -90,7 +90,7 @@ public class MainMenuScene extends Scene {
         ImageView nearCloud = Drawing.NEAR_CLOUD_1.getImageView();
         nearCloud.relocate(7,734);
         ImageView characterView = new ImageView();
-        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID, new Synchronizer());
+        CharacterData characterData = new CharacterData(CharacterType.BLITZ, HOST_ID, new Synchronizer(HOST_ID));
         characterData.relocate(550,850);
         scaledRoot.getChildren().addAll(nearCloud, characterView);
 

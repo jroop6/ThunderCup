@@ -122,7 +122,6 @@ public class GameScene extends Scene {
                 if(localPlayer!=null) System.err.println("Warning! There's more than one localplayer!");
                 localPlayer = player;
             }
-            gameData.getMissedPacketsCount().put(player.getPlayerID(),0);
         }
 
         // Now create one PlayPanel for each team and assign its players:
@@ -321,8 +320,7 @@ public class GameScene extends Scene {
     private class ReceivePacketsTasks implements Callable<Void>{
         @Override
         public Void call(){
-            if(isHost) processPacketsAsHost();
-            else processPacketsAsClient();
+            processPackets();
             return null;
         }
     }
@@ -434,7 +432,7 @@ public class GameScene extends Scene {
         }
     }
 
-    private void processPacketsAsHost(){
+    private void processPackets(){
         Packet packet = connectionManager.retrievePacket();
         Synchronizer localSynchronizer = connectionManager.getSynchronizer();
 
@@ -443,15 +441,6 @@ public class GameScene extends Scene {
             Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
             localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
-
-            // Since we've received a packet from this player, reset missedPacketsCount:
-            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
-                long id = entry.getKey();
-                if(receivedSynchronizer.get(id,"playerType").getData()==PlayerData.PlayerType.LOCAL){
-                    gameData.setMissedPacketsCount(id,0);
-                    break;
-                }
-            }
 
             // Prepare for the next iteration:
             packet = connectionManager.retrievePacket();
@@ -489,36 +478,18 @@ public class GameScene extends Scene {
     }
 
     private void checkForDisconnectedPlayers(){
+        List<Long> disconnectedPlayerIDs = connectionManager.getSynchronizer().getDisconnectedIDs(maxConsecutivePacketsMissed);
+
         for (PlayerData player: players) {
-            if(!(player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_CLIENTVIEW || player.getPlayerType().getData()== PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
-            if(!isHost && player.getPlayerID()!=0) continue; // Clients only keep track of the host's connection to them.
+            PlayerData.PlayerType playerType = player.getPlayerType().getData();
+            if(!(playerType == PlayerData.PlayerType.REMOTE_CLIENTVIEW || playerType == PlayerData.PlayerType.REMOTE_HOSTVIEW)) continue; // Only RemotePlayers are capable of having connection issues, so only check them.
+            if(!isHost && player.getPlayerID()!=HOST_ID) continue; // Clients only keep track of the host's connection to them.
 
-            // increment the missed packets count. The count will be reset whenever the next packet is received:
-            gameData.incrementMissedPacketsCount(player.getPlayerID());
-
-            // If we haven't received a packet from this player for a while, ask the user what to do:
-            Integer missedPackets = gameData.getMissedPacketsCount(player.getPlayerID());
-            if (missedPackets == maxConsecutivePacketsMissed && player.getState().getData() != PlayerData.State.DEFEATED) {
-                Platform.runLater(()->showConnectionLostDialog(player));
+            // If the player has been gone for too long, ask the user what to do:
+            if(disconnectedPlayerIDs.contains(player.getPlayerID())){
+                System.out.println("disconnected playerID: " + player.getPlayerID() + " who's been gone for " + connectionManager.getSynchronizer().getDisconnectedTime(player.getPlayerID()));
+                showConnectionLostDialog(player);
             }
-        }
-    }
-
-    private void processPacketsAsClient() {
-        // Process Packets, one at a time:
-        Packet packet = connectionManager.retrievePacket();
-        Synchronizer localSynchronizer = connectionManager.getSynchronizer();
-        while (packet != null) {
-            Synchronizer receivedSynchronizer = packet.getSynchronizer();
-
-            // Synchronize our data with the host:
-            localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
-
-            // Since we've received a packet from the host, reset missedPacketsCount
-            gameData.setMissedPacketsCount(HOST_ID,0);
-
-            // Prepare for the next iteration:
-            packet = connectionManager.retrievePacket();
         }
     }
 
@@ -585,7 +556,7 @@ public class GameScene extends Scene {
         }));
 
         wait.setOnAction((event) -> {
-            gameData.setMissedPacketsCount(player.getPlayerID(), (int)(maxConsecutivePacketsMissed - DATA_FRAME_RATE *10));
+            connectionManager.getSynchronizer().waitForReconnect(player.getPlayerID(),maxConsecutivePacketsMissed - DATA_FRAME_RATE*10);
             dialogStage.close();
         });
 

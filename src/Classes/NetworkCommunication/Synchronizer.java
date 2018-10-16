@@ -1,6 +1,5 @@
 package Classes.NetworkCommunication;
 
-
 import java.io.Serializable;
 import java.util.*;
 
@@ -11,21 +10,30 @@ import java.util.*;
  * whose ID is 1234, you could use synchronizedDataMap.get(1234).get("username"). For convenience, a special getter of
  * the form get(long id, String varName) is provided.
  *
- * Any data that is changed is
+ * Any data that is changed via methods like changeTo(), changeAdd(), changeModify(), etc. are added to a changedData
+ * list. Immediately after the Synchronizer is sent across the network, the user should clear this list by calling
+ * resetChangedData() so that the change is broadcast only once. Failing to do this won't cause any major problems, but
+ * will result in the receiving end doing more work.
  */
 public class Synchronizer implements Serializable {
     private HashMap<Long, HashMap<String, SynchronizedData>> synchronizedDataMap = new HashMap<>();
     private LinkedList<SynchronizedData> changedData = new LinkedList<>(); // todo: consider making this a Set instead of a list.
-    private Map<Long,Integer> missedPacketsCount;
 
-    public Synchronizer(){
+    private long id; // uniquely identifies this host or client among all the network nodes. Probably best to make id == playerID.
+
+    // missedPacketsCount: The key is a Synchronizer ID. The value is the number of times we've sent a packet without
+    // receiving any packet from that network node. This allows us to detect disconnected players.
+    private HashMap<Long, Long> missedPacketsCount = new HashMap<>();
+
+    public Synchronizer(long id){
+        this.id = id;
     }
 
     // Returns a deep copy of this Synchronizer, minus any nonserializable data (such as lambda expressions).
     // todo: After the new synchronization system is complete, eliminate this method completely. We can simply wrap the prepareAndSendPacket method in synchronized(connectionManaer.getSynchronizer())
     // todo: also, remove copyForNetworking() from SynchronizedData and its derived classes.
     public Synchronizer copyForNetworking(){
-        Synchronizer synchronizerCopy = new Synchronizer();
+        Synchronizer synchronizerCopy = new Synchronizer(id);
 
         synchronized (this){ // we don't want the other data to be modified while we're trying to copy it.
             // Copy the synchronizedDataMap
@@ -54,6 +62,11 @@ public class Synchronizer implements Serializable {
 
     public void resetChangedData(){
         changedData.clear();
+
+        // increment each entry of missedPacketsCount
+        for(Map.Entry<Long, Long> entry : missedPacketsCount.entrySet()){
+            entry.setValue(entry.getValue()+1);
+        }
     }
 
     public void register(SynchronizedData synchronizedData){
@@ -72,7 +85,6 @@ public class Synchronizer implements Serializable {
         }
     }
 
-    // todo: Group data by id somehow instead of putting everything into a single hashmap, to make this operation simpler (as well as the processPacketsAsHost and processPacketsAsClient operations).
     public void deRegisterAllWithID(long id){
         synchronized (this){ // we don't want to delete data while someone else is trying to access it.
             System.out.println("de-registering player with id " + id);
@@ -92,6 +104,9 @@ public class Synchronizer implements Serializable {
                 System.err.println("Warning! While de-registering id " + id + ", no data data was actually found for " +
                         "that ID. Did you call deRegisterAllWithID(id) twice? Or perhaps the data never existed?");
             }
+
+            // remove this id from missedPacketsCount:
+            missedPacketsCount.remove(id);
         }
     }
 
@@ -112,7 +127,6 @@ public class Synchronizer implements Serializable {
 
     // todo: check the type of SynchronizedData (is it a SynchronizedComparable? SynchronizedList?)
     // todo: check the generic type (is it a SynchronizedData<Integer>? SynchronizedData<Boolean>?)
-
     private boolean sanitizeClientData(SynchronizedData hostData, SynchronizedData clientData){
         if(hostData == null){
             System.err.println("Error! A client sent us unrecognized data: (" + clientData.getParentID() + ", "
@@ -205,7 +219,15 @@ public class Synchronizer implements Serializable {
                     }
                 }
             }
+
+            // set the missedPacketsCount to zero, or add this Synchronizer's id to the HashMap if it doesn't exist:
+            missedPacketsCount.putIfAbsent(other.id, 0L);
+            missedPacketsCount.replace(other.id, 0L);
         }
+    }
+
+    public void waitForReconnect(long id, long tolerance){
+        missedPacketsCount.replace(id, -tolerance);
     }
 
 
@@ -229,6 +251,24 @@ public class Synchronizer implements Serializable {
 
     public List<SynchronizedData> getChangedData(){
         return changedData;
+    }
+
+    public long getId(){
+        return id;
+    }
+
+    // returns a list of all Synchronizer IDs that have been inactive for the specified number of frames.
+    public List<Long> getDisconnectedIDs(long cutoff){
+        List<Long> disconnectedIDs = new LinkedList<>();
+        for(Map.Entry<Long, Long> entry : missedPacketsCount.entrySet()){
+            if(entry.getValue()>cutoff) disconnectedIDs.add(entry.getKey());
+        }
+        return disconnectedIDs;
+    }
+
+    // todo: temporary.
+    public long getDisconnectedTime(long playerID){
+        return missedPacketsCount.get(playerID);
     }
 
     // For debugging

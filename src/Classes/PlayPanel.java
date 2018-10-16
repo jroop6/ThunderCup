@@ -206,7 +206,7 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     PlayPanel(PlayPanel other){
-        this.synchronizer = new Synchronizer();
+        this.synchronizer = new Synchronizer(other.synchronizer.getId());
         team = other.team;
         players = new LinkedList<>();
         shotsUntilNewRow = other.shotsUntilNewRow;

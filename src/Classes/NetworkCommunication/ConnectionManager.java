@@ -14,7 +14,11 @@ public abstract class ConnectionManager extends Thread {
     public long latencyTestsPerSecond = 3; // How frequently the host probes the latency of its connected clients.
     Map<Long,Long> latencies = new HashMap<>(); // A continuously-updated record of the latencies between the server and various players.
     protected long playerID; // the ID of the LocalPlayer.
-    protected Synchronizer synchronizer = new Synchronizer(); // A container for all data to be synchronized between client and host.
+    protected Synchronizer synchronizer; // A container for all data to be synchronized between client and host.
+
+    public ConnectionManager(long id){
+        synchronizer = new Synchronizer(id);
+    }
 
     public long getLatencyTestsPerSecond() {
         return latencyTestsPerSecond;

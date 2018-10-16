@@ -3,6 +3,8 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 import java.util.*;
 
+import static Classes.NetworkCommunication.PlayerData.HOST_ID;
+
 public class SynchronizedList<T extends Comparable<T> & Serializable> extends SynchronizedData<LinkedList<T>> {
 
     // SEND_ONCE: Use this option for data you only want to send once over the network. Local data is cleared after the
@@ -177,7 +179,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     }
 
     public static void main(String[] args){
-        Synchronizer synchronizer = new Synchronizer();
+        Synchronizer synchronizer = new Synchronizer(HOST_ID);
         SynchronizedList<String> myList = new SynchronizedList<String>("test", new LinkedList<>(), Precedence.CLIENT, 21, synchronizer);
         myList.setAdd("hello");
         myList.setAdd("yellow");
