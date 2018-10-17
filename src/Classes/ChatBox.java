@@ -118,15 +118,6 @@ public class ChatBox extends StackPane {
         messageEntryContainer.setBorder(new Border(new BorderStroke(Color.BLACK,BorderStrokeStyle.SOLID,new CornerRadii(5.0),new BorderWidths(2.0))));
         verticalOrienter.getChildren().add(messageEntryContainer);
 
-        // Make the scrollpane automatically scroll to the bottom of the messages when a new message is added:
-        messageContainer.boundsInLocalProperty().addListener((ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue)-> {
-            // If the user has manually moved the scroll away from the bottom, he/she is probably trying to read
-            // an old message, so only set the vValue if its scroll pane is already near the bottom:
-            if(messageScrollPane.getVvalue()>0.85 || messageContainer.getChildren().size()<15){
-                messageScrollPane.setVvalue(messageScrollPane.getVmax());
-            }
-        });
-
         // Set the actionListener for the send button:
         sendButton.setOnAction((event)->{
             if(textField.getText().isEmpty()){
@@ -146,6 +137,15 @@ public class ChatBox extends StackPane {
         // Set the actionListener for the pressing the ENTER key:
         textField.setOnAction((event)->{
             sendButton.fire();
+        });
+
+        // Make the scrollpane automatically scroll to the bottom of the messages when a new message is added:
+        messageContainer.boundsInLocalProperty().addListener((ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue)-> {
+            // If the user has manually moved the scroll away from the bottom, he/she is probably trying to read
+            // an old message, so only set the vValue if its scroll pane is already near the bottom:
+            if(messageScrollPane.getVvalue()>0.85 || messageContainer.getChildren().size()<15){
+                messageScrollPane.setVvalue(messageScrollPane.getVmax());
+            }
         });
     }
 

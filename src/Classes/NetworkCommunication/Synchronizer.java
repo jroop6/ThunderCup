@@ -30,7 +30,7 @@ public class Synchronizer implements Serializable {
     }
 
     // Returns a deep copy of this Synchronizer, minus any nonserializable data (such as lambda expressions).
-    // todo: After the new synchronization system is complete, eliminate this method completely. We can simply wrap the prepareAndSendPacket method in synchronized(connectionManaer.getSynchronizer())
+    // todo: After the new synchronization system is complete, eliminate this method completely. We can simply wrap the prepareAndSendPacket method in synchronized(connectionManager.getSynchronizer())
     // todo: also, remove copyForNetworking() from SynchronizedData and its derived classes.
     public Synchronizer copyForNetworking(){
         Synchronizer synchronizerCopy = new Synchronizer(id);

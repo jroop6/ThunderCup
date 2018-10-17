@@ -241,12 +241,6 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     /* Specialized Changers */
-    public void changeAddShootingOrbs(Queue<Orb> newShootingOrbs){
-        //todo: this needs to be synchronized on the synchronizer object
-        shootingOrbs.addAll(newShootingOrbs);
-        shootingOrbsChanged = true;
-        cumulativeShotsFired +=newShootingOrbs.size();
-    }
     public void changeAddTransferOutOrbs(List<Orb> newTransferOrbs){
         for(Orb orb : newTransferOrbs){
             orb.setOrbAnimationState(Orb.OrbAnimationState.TRANSFERRING);
@@ -828,32 +822,6 @@ public class PlayPanel extends Pane implements Serializable {
         }
 
         removeStrayOrbs();
-    }
-
-    void updatePlayer(Player playerData, boolean isHost){
-        //ToDo: put players into a hashmap or put the playerData in a list or something, for easier lookup.
-        //Todo: note: simply adding a getPlayer() method to Player won't work (the reference has been lost over transmission).
-        Player player = players.get(0);
-        for(Player tempPlayer: players){
-            if(tempPlayer.getPlayerID() == playerData.getPlayerID()){
-                player = tempPlayer;
-                break;
-            }
-        }
-
-        if(isHost){
-            /*if(playerData.isFiring()) {
-                changeAddShootingOrbs(playerData.getFiredOrbs()); //updates model
-            }*/
-            player.updateWithChangers(playerData, null); // Relevant changes to playerData include: cannonAngle, defeated status, whether he/she is firing his/her cannon, and changes in BubbleData
-        }
-        else{
-            /*if(playerData.isFiring() && !(player.getPlayerType().getData() == Player.PlayerType.LOCAL)){
-                System.out.println("CLIENT: Another player has fired. Adding their obs to the playpanel");
-                setAddShootingOrbs(playerData.getFiredOrbs()); // updates model
-            }*/
-            player.updateWithSetters(playerData);
-        }
     }
 
     // removes orbs that have wandered off the edges of the canvas. This should only ever happen with dropping orbs, but

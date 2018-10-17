@@ -45,23 +45,24 @@ public class GameScene extends Scene {
     // Fields related to layout:
     private StackPane rootNode;
 
-    // Fields containing data, controllers, or mix of data and JavaFx nodes:
     private Map<Integer, PlayPanel> playPanelMap = new HashMap<>(); // For quick access to a PlayPanel using the team number
     private ChatBox chatBox;
     private Player localPlayer;
     private List<Player> players;
 
     private SynchronizedComparable<Boolean> pause;
+    private SynchronizedComparable<Boolean> gameCanceled;
 
     // Variables related to displaying victory/defeat graphics:
     private boolean victoryPauseStarted = false;
     private boolean victoryDisplayStarted = false;
+    private boolean victoryPauseStarted2 = false;
+    private boolean victoryDisplayStarted2 = false;
     private long victoryTime = 0;
     private int victoriousTeam;
 
-    private SynchronizedComparable<Boolean> gameCanceled;
-
-    Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class); // Sound effects to play this frame.
+    // Sound effects to play this frame.
+    Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
@@ -92,9 +93,6 @@ public class GameScene extends Scene {
     private SendPacketsTasks sendPacketsTasks = new SendPacketsTasks();
     private ReportingTasks reportingTasks = new ReportingTasks();
     private ExecutorService workerThread = Executors.newSingleThreadExecutor();
-
-    private boolean victoryPauseStarted2 = false;
-    private boolean victoryDisplayStarted2 = false;
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
     // todo: don't use indices for the puzzles. Instead, pass a PuzzleSet enum, and have the PuzzleSet store pointers to the various puzzles. Include special enums for random puzzles.

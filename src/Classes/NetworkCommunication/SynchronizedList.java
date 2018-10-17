@@ -10,7 +10,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     // SEND_ONCE: Use this option for data you only want to send once over the network. Local data is cleared after the
     // packet is sent. Example: chat messages.
     // KEEP_SYNCHRONIZED: Use this option for data you want to keep sending back and forth between host and client to
-    // ensure consistency. Example: A player's ammunitionOrbs list.
+    // ensure consistency. Example: AmmunitionOrbs list.
     enum SynchronizationType {SEND_ONCE, KEEP_SYNCHRONIZED}
 
     private SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;

@@ -30,18 +30,15 @@ public class Player implements Serializable {
     protected SynchronizedComparable<Integer> team;
     private SynchronizedComparable<State> state;
     private SynchronizedList<Message> messagesOut;
+    private SynchronizedList<Orb> firedOrbs;
     private transient long latency;
     private List<Orb> ammunitionOrbs = new LinkedList<>();
-    private SynchronizedList<Orb> firedOrbs;
 
     // An enum indicating a special state of player:
     public enum State {NORMAL, DEFEATED, DISCONNECTED, VICTORIOUS}
 
     // An enum indicating whether the player is local, remote, a bot, etc.
     public enum PlayerType{LOCAL, REMOTE_HOSTVIEW, REMOTE_CLIENTVIEW, BOT, UNCLAIMED}
-
-    // Flags indicating changes to player data:
-    private boolean ammunitionOrbsChanged = false;
 
     protected Character character;
     protected Cannon cannon;
@@ -141,10 +138,40 @@ public class Player implements Serializable {
                     SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
             firedOrbs = new SynchronizedList<>("firedOrbs",new LinkedList<>(),
                     (LinkedList<Orb> newVal, Mode mode, int i, int j)->{
-
+                        synchronized (synchronizer){
+                            switch (mode){
+                                case ADD:
+                                    // Add a new ammunition orb to the end of the list
+                                    if(ammunitionOrbs.size()<2){
+                                        OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+                                        ammunitionOrbs.add(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC));
+                                    }
+                                    positionAmmunitionOrbs();
+                                    // Add the firedOrb to the shootingOrbs list as well, in the PlayPanel
+                                    playPanel.setAddShootingOrbs(newVal);
+                                    break;
+                                case REMOVE:
+                                case SET:
+                            }
+                        }
                     },
                     (LinkedList<Orb> newVal, Mode mode, int i, int j)->{
-
+                        synchronized (synchronizer){
+                            switch (mode){
+                                case ADD:
+                                    // Add a new ammunition orb to the end of the list
+                                    if(ammunitionOrbs.size()<2){
+                                        OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
+                                        ammunitionOrbs.add(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC));
+                                    }
+                                    positionAmmunitionOrbs();
+                                    // Add the firedOrb to the shootingOrbs list as well, in the PlayPanel
+                                    playPanel.setAddShootingOrbs(newVal);
+                                    break;
+                                case REMOVE:
+                                case SET:
+                            }
+                        }
                     },
                     SynchronizedData.Precedence.CLIENT,this.playerID,this.synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE, 24);
 
@@ -180,23 +207,6 @@ public class Player implements Serializable {
         this.playPanel = playPanel;
     }
 
-    // todo: this method is copied from PlayPanelData. Can I put this in some utility class or make it static?
-    public List<Orb> deepCopyOrbList(List<Orb> other){
-        List<Orb> copiedList = new LinkedList<>();
-        for(Orb orb : other){
-            copiedList.add(new Orb(orb));
-        }
-        return copiedList;
-    }
-
-    public Queue<Orb> deepCopyOrbQueue(Queue<Orb> other){
-        Queue<Orb> copiedQueue = new LinkedList<>();
-        for(Orb orb : other){
-            copiedQueue.add(new Orb(orb));
-        }
-        return copiedQueue;
-    }
-
     public void setAmmunitionOrbPositions(Point2D ammunitionOrb1Position, Point2D ammunitionOrb2Position){
         this.ammunitionOrb1Position = ammunitionOrb1Position;
         this.ammunitionOrb2Position = ammunitionOrb2Position;
@@ -206,34 +216,9 @@ public class Player implements Serializable {
         return synchronizer;
     }
 
-    /* Changers: These are called when a client wants to notify the host that he/she is actively changing something
-     * (e.g. Changing character, team, username, etc). The host will then notify all clients that the data has changed. */
-
     public void changeLatency(long latency){
         this.latency = latency;
         // no change flag is needed for latency
-    }
-    public void changeAddAmunitionOrb(Orb newOrb){
-        ammunitionOrbs.add(newOrb);
-        ammunitionOrbsChanged = true;
-    }
-    public Orb changeFire(double angle, OrbColor newEnum){
-        synchronized (synchronizer){
-            // Remove the first ammunition orb and fire it
-            Orb firedOrb = ammunitionOrbs.remove(0);
-            firedOrb.setRawTimestamp(System.nanoTime());
-            firedOrb.setAngle(angle);
-            firedOrb.setSpeed(firedOrb.getOrbColor().getOrbSpeed());
-            firedOrbs.changeAdd(firedOrb);
-
-            // Add a new ammunition orb to the end of the list
-            if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC)); // Updates model
-
-            changeAmmunitionFlag(true);
-
-            positionAmmunitionOrbs();
-            return firedOrb;
-        }
     }
 
     public void initializePlayerPos(int i){
@@ -245,19 +230,6 @@ public class Player implements Serializable {
         // update the positions of the next 2 ammunition orbs
         ammunitionOrbs.get(0).relocate(ammunitionOrb1Position.getX(), ammunitionOrb1Position.getY());
         ammunitionOrbs.get(1).relocate(ammunitionOrb2Position.getX(), ammunitionOrb2Position.getY());
-    }
-
-    public void changeAmmunitionFlag(boolean ammunitionOrbsChanged){
-        this.ammunitionOrbsChanged = ammunitionOrbsChanged;
-    }
-
-    public void setFire(OrbColor newEnum){
-        ammunitionOrbs.remove(0);
-
-        // Add a new ammunition orb to the end of the list
-        if(ammunitionOrbs.size()<2) ammunitionOrbs.add(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC)); // Updates model
-
-        positionAmmunitionOrbs();
     }
 
     /* Setters: These are called when a client simply wants to update locally-stored player information without
@@ -272,25 +244,11 @@ public class Player implements Serializable {
         }
     }
 
-    public void resetFlags(){
-        ammunitionOrbsChanged = false;
-    }
-
-    /* Direct Getters: These are called to get the actual player data*/
     public SynchronizedComparable<String> getUsername(){
         return username;
     }
-    public long getPlayerID(){
-        return playerID;
-    }
     public SynchronizedComparable<PlayerType> getPlayerType(){
         return playerType;
-    }
-    public int getPlayerPos() {
-        return playerPos;
-    }
-    public Character getCharacter(){
-        return character;
     }
     public SynchronizedComparable<Integer> getTeam(){
         return team;
@@ -301,61 +259,24 @@ public class Player implements Serializable {
     public SynchronizedComparable<State>  getState(){
         return state;
     }
+    public long getPlayerID(){
+        return playerID;
+    }
+    public int getPlayerPos() {
+        return playerPos;
+    }
+    public Character getCharacter(){
+        return character;
+    }
+    public Cannon getCannon(){
+        return cannon;
+    }
     public long getLatency(){
         return latency;
     }
     public List<Orb> getAmmunition(){
         return ammunitionOrbs;
     }
-    public SynchronizedList<Orb> getFiredOrbs(){
-        return firedOrbs;
-    }
-    public Cannon getCannon(){
-        return cannon;
-    }
-    public PlayPanel getPlayPanel(){
-        return playPanel;
-    }
-
-    public void checkForConsistency(Player other){
-        boolean inconsistent = false;
-
-        // check for consistency in the ammunition Orbs:
-        List<Orb> hostAmmunition = other.getAmmunition();
-        if(ammunitionOrbs.size() != hostAmmunition.size()) inconsistent = true;
-        else{
-            for(int i=0; i<ammunitionOrbs.size(); i++){
-                if(ammunitionOrbs.get(i).getOrbColor() != hostAmmunition.get(i).getOrbColor()) inconsistent = true;
-            }
-        }
-
-        if(inconsistent) inconsistencyCounter++;
-        else inconsistencyCounter = 0;
-
-        if(inconsistencyCounter > NUM_FRAMES_ERROR_TOLERANCE) {
-            System.err.println("Client player is inconsistent with the host! overriding client's data...");
-
-            // Make the ammunition Orbs consistent:
-            setAmmunitionOrbs(hostAmmunition);
-
-            inconsistencyCounter = 0;
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /* More methods from the old Player class*/
-
 
     public void incrementCharacterEnum(){
         synchronized (synchronizer){
@@ -405,29 +326,19 @@ public class Player implements Serializable {
         cannon.getCannonAngle().changeTo(angle);
     }
 
-    private void setFireCannon(){
-        // Check whether this player is allowed to fire:
-        State currentState = state.getData();
-        if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
-        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-        setFire(newShooterOrbEnum);
-        // View is updated in the PlayPanel repaint() method, which paints the first two ammunitionOrbs on the canvas.
-        // Note: The PlayPanel model was already updated via the updatePlayer() method in the PlayPanel class.
-    }
-
     public void changeFireCannon(){
-        // Check whether this player is allowed to fire:
-        State currentState = state.getData();
-        if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
+        synchronized (synchronizer){
+            // Check whether this player is allowed to fire:
+            State currentState = state.getData();
+            if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
 
-        // Remove an orb from ammunitionOrbs and add it to this player's firedOrbs. Also add a new orb to ammunitionOrbs
-        OrbColor newShooterOrbEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-        Orb firedOrb = changeFire(cannon.getCannonAngle().getData()*(Math.PI/180), newShooterOrbEnum);
-
-        // Add the firedOrb to the shootingOrbs list as well, in the PlayPanel
-        Queue<Orb> firedOrbList = new LinkedList<>();
-        firedOrbList.add(firedOrb);
-        playPanel.changeAddShootingOrbs(firedOrbList); // updates PlayPanel model
+            // Remove an orb from ammunitionOrbs and add it to this player's firedOrbs. Also add a new orb to ammunitionOrbs
+            Orb firedOrb = ammunitionOrbs.remove(0);
+            firedOrb.setRawTimestamp(System.nanoTime());
+            firedOrb.setAngle(Math.toRadians(cannon.getCannonAngle().getData()));
+            firedOrb.setSpeed(firedOrb.getOrbColor().getOrbSpeed());
+            firedOrbs.changeAdd(firedOrb);
+        }
     }
 
     public void relocateCannon(double x, double y){
@@ -439,25 +350,6 @@ public class Player implements Serializable {
     public void setScale(double scaleFactor){
         cannon.setScale(scaleFactor);
         character.setScale(scaleFactor);
-    }
-
-    // Called every frame by the host to update a player's data according to a packet received over the network
-    public void updateWithChangers(Player newPlayer, Map<Long, Long> latencies){
-    }
-
-
-    // Called every frame by a client to update a player's data according to a packet received over the network. The
-    // data is *not* updated if the locally-stored flags indicate that the player has manually changed something
-    // since the last packet was sent. This is to prevent the host from overwriting the client's change request with
-    // old data.
-    public void updateWithSetters(Player newPlayer){
-        // players' latencies are always updated:
-        setLatency(newPlayer.getLatency()); // updates model
-
-        // check for consistency between this player's ammunitionOrbs and the host's data for ammunitionOrbs. If they
-        // are different for too long, then override the client's data with the host's data.
-        checkForConsistency(newPlayer);
-
     }
 
     // Attempt to load Orbs from the file first. If the file doesn't exist or if "RANDOM" is specified or if there are
