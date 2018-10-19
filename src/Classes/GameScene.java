@@ -1,5 +1,6 @@
 package Classes;
 
+import Classes.Animation.OrbColor;
 import Classes.Audio.Music;
 import Classes.Audio.SoundEffect;
 import Classes.Audio.SoundManager;
@@ -187,11 +188,14 @@ public class GameScene extends Scene {
                 case U: // A temporary unpause function. ToDo: remove this.
                     pause.changeTo(false);
                     break;
-                /*case F: // For testing. Intentionally de-synchronizes a client's ammunitionOrbs list to see whether it will eventually be overwritten with the host's data:
+                case F: // For testing. Intentionally de-synchronizes a client's ammunitionOrbs list to see whether it will eventually be overwritten with the host's data:
                     localPlayer.desynchronizeAmmunitionOrbs();
-                    break;*/
-                case A: // For testing. Intenionally de-synchronizes a client's orbArray to see whether it will eventually be overwritted with the host's data.
+                    break;
+                case A: // For testing. Intentionally de-synchronizes a client's orbArray to see whether it will eventually be overwritten with the host's data.
                     playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[0][0] = NULL;
+                    break;
+                case T: // For testing. Intentionally de-synchronizes a client's transferInOrbs to see whether it will eventually be overwritten with the host's data.
+                    playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[10][0] = new Orb(OrbColor.BLUE,10,0, Orb.OrbAnimationState.STATIC);
                     break;
             }
         });
@@ -350,7 +354,7 @@ public class GameScene extends Scene {
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
                     long time = System.nanoTime();
-                    playPanel.tick(soundEffectsToPlay);
+                    soundEffectsToPlay.addAll(playPanel.tick());
                     time = System.nanoTime() - time;
                     playPanelTickTime[0]++;
                     playPanelTickTime[1]+=time;
@@ -667,10 +671,10 @@ public class GameScene extends Scene {
             if(!transferOutOrbs.isEmpty()){
                 for(PlayPanel toPlayPanel : playPanelMap.values()){
                     if(fromPlayPanel!=toPlayPanel){
-                        Set<Orb> transferInOrbs = toPlayPanel.getTransferInOrbs();
+                        SynchronizedList<Orb> transferInOrbs = toPlayPanel.getTransferInOrbs();
                         Random randomTransferOrbGenerator = toPlayPanel.getRandomTransferOrbGenerator();
                         Orb[][] orbArray = toPlayPanel.getOrbArray().getData();
-                        toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs,randomTransferOrbGenerator,orbArray);
+                        toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs.getData(),randomTransferOrbGenerator,orbArray);
                     }
                 }
             }

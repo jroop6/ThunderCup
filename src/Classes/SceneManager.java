@@ -16,10 +16,8 @@ import javafx.stage.Stage;
 
 import java.util.*;
 
-
-/*
- The entry point of the application.
- Selects which scenes should go onto the primary stage.
+/**
+ * The entry point of the application. Selects which scenes should go onto the primary stage.
  */
 public class SceneManager extends Application {
 
@@ -113,19 +111,6 @@ public class SceneManager extends Application {
         primaryStage.setFullScreen(isFullScreen);
     }
 
-    static void switchToPuzzleMode(){
-        System.out.println("building puzzle mode...");
-
-        List<Player> playerList = new LinkedList<>();
-        NullConnectionManager nullConnectionManager = new NullConnectionManager();
-        playerList.add(new Player("YOU", Player.PlayerType.LOCAL, Player.HOST_ID, nullConnectionManager.getSynchronizer()));
-
-        // Create the GameScene, passing the PlayPanel to it:
-        GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, 1);
-        setSceneWorkaround(gameScene);
-        SoundManager.playRandomSongs();
-    }
-
     static void switchToPuzzleSelectionMode(){
         System.out.println("entering puzzle selection mode...");
         PuzzleSelectionScene puzzleSelectionScene = new PuzzleSelectionScene();
@@ -147,20 +132,6 @@ public class SceneManager extends Application {
 
     static void startMultiplayerGame(boolean isHost, ConnectionManager connectionManager, List<Player> players){
         GameScene gameScene = new GameScene(isHost, connectionManager, players, LocationType.NIGHTTIME, 1);
-        setSceneWorkaround(gameScene);
-        SoundManager.playRandomSongs();
-    }
-
-    // Todo: multi-cannon mode is currently broken.
-    static void switchTo2PlayerTestMode(){
-        // add two players, controlled by the mouse:
-        NullConnectionManager nullConnectionManager = new NullConnectionManager();
-        List<Player> playerList = new LinkedList<>();
-        playerList.add(new Player("YOU", Player.PlayerType.LOCAL, Player.HOST_ID, nullConnectionManager.getSynchronizer()));
-        playerList.add(new Player("YOU", Player.PlayerType.LOCAL, Player.HOST_ID, nullConnectionManager.getSynchronizer()));
-
-        // Create the GameScene, passing the playerList to it:
-        GameScene gameScene = new GameScene(true, nullConnectionManager , playerList, LocationType.NIGHTTIME, -5);
         setSceneWorkaround(gameScene);
         SoundManager.playRandomSongs();
     }

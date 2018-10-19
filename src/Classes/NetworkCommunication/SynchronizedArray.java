@@ -62,7 +62,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         }
     }
 
-    public void changeModify(T newItem, int iPos, int jPos){
+    public void changeModify(int iPos, int jPos, T newItem){
         synchronized (synchronizer){
             data[iPos][jPos] = newItem;
             if(getExternalChanger()!=null) getExternalChanger().handle(data, Mode.SET, iPos, jPos);
@@ -92,7 +92,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
             for(int i=0; i<newArray.length; i++){
                 T[] row = newArray[i];
                 for(int j=0; j<row.length; j++){
-                    changeModify(newArray[i][j],i,j);
+                    changeModify(i, j, newArray[i][j]);
                 }
             }
         }
@@ -114,8 +114,8 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         synchronizer.printData();
         System.out.println("number of changed datas: " + synchronizer.getChangedData().size());
 
-        myArray.changeModify(5,2,1);
-        myArray.changeModify(5,1,1);
+        myArray.changeModify(2, 1, 5);
+        myArray.changeModify(1, 1, 5);
         synchronizer.printData();
         System.out.println("number of changed datas: " + synchronizer.getChangedData().size());
 
@@ -130,8 +130,5 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         System.out.println("comparing the two arrays: " + myArray.compareTo(myArray2));
         myArray2.setModify(0, 1, 4);
         System.out.println("comparing again: " + myArray.compareTo(myArray2));
-
-
-
     }
 }

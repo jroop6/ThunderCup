@@ -7,13 +7,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 
 import java.io.Serializable;
+import java.util.Random;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
 import static Classes.PlayPanel.ORB_RADIUS;
 
 public class Orb extends PointInt implements Serializable, Comparable<Orb>{
-    private static final double TIME_TO_TRANSFER = 3; // how much time it takes for a transfer orb to materialize.
-    private static final double TIME_TO_THUNDER = 1; // how much time it takes for a dropped orb to thunder.
+    private static final double TIME_TO_TRANSFER = 3; // how many seconds it takes for a transfer orb to materialize.
+    private static final double TIME_TO_THUNDER = 1; // how many seconds it takes for a dropped orb to thunder.
+    private static final double ELECTRIFICATION_PROBABILITY = .004;
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
@@ -31,6 +33,8 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     private Animation orbExplosion; // the animation selected for displaying the burst animation.
     private SoundEffect orbThunder; // enum used for displaying thunder animation.
     private OrbAnimationState orbAnimationState;
+
+    private Random miscRandomGenerator = new Random();
 
     private double angle; // angle of travel, radians
     private double speed; // current speed, pixels per second
@@ -153,6 +157,10 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     public boolean tick(){
         switch(orbAnimationState){
             case STATIC:
+                if(miscRandomGenerator.nextDouble()< ELECTRIFICATION_PROBABILITY){
+                    setOrbAnimationState(Orb.OrbAnimationState.ELECTRIFYING);
+                    return true;
+                }
                 break;
             case DROPPING:
                 break; // note: The Orb's physical location is changed in PlayPanel because we don't know the size of the playpanel here in the Orb class (so we wouldn't know when it goes off the bottom edge of the PlayPanel).

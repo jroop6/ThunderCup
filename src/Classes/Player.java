@@ -183,10 +183,7 @@ public class Player implements Serializable {
                         }
                     },
                     SynchronizedData.Precedence.CLIENT,this.playerID,this.synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE, 24);
-            ammunitionOrbs = new SynchronizedList<>("ammunitionOrbs",new LinkedList<>(),
-                    (LinkedList<Orb> newVal, Mode mode, int i, int j)->{},
-                    (LinkedList<Orb> newVal, Mode mode, int i, int j)->{},
-                    SynchronizedData.Precedence.HOST,this.playerID,this.synchronizer, SynchronizedList.SynchronizationType.KEEP_SYNCHRONIZED, 24);
+            ammunitionOrbs = new SynchronizedList<Orb>("ammunitionOrbs",new LinkedList<>(), SynchronizedData.Precedence.HOST,this.playerID,this.synchronizer, SynchronizedList.SynchronizationType.KEEP_SYNCHRONIZED);
 
             // Adjust precedences on the networked data:
             switch(playerType){

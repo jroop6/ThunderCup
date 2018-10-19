@@ -59,7 +59,7 @@ public class BotPlayer extends Player {
             case THINKING:
                 if(currentFrame == transitionFrame-1){
                     long time = System.nanoTime();
-                    retarget();
+                    target = retarget();
                     if(target<0){
                         time = System.nanoTime() - time;
                         botRetargetTime[0]++;
@@ -134,20 +134,21 @@ public class BotPlayer extends Player {
      *    broadMovementOffset - How far off the bot will be from the target angle at the end of the broad movement phase
      *    fineMovementOffset - How far off the bot will be from the target angle at the end of the fine movement phase
      */
-    private void retarget(){
+    private double retarget(){
         // Create copies of the existing data:
         Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray().getData());
         Orb[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
 
         // New collections that will be affected by side-effects:
-        List<Orb> burstingOrbsCopy = new LinkedList<>();
-        List<Orb> droppingOrbsCopy = new LinkedList<>();
-        Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
-        List<Orb> arrayOrbsToBurst = new LinkedList<>();
         List<Orb> orbsToDrop = new LinkedList<>();
         List<Orb> orbsToTransfer = new LinkedList<>();
         List<Collision> collisions = new LinkedList<>();
         Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
+        List<Orb> arrayOrbsToBurst = new LinkedList<>();
+        Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+
+        List<Orb> burstingOrbsCopy = new LinkedList<>();
+        List<Orb> droppingOrbsCopy = new LinkedList<>();
 
         // Advance all existing shooter orbs, one at a time in order.
         // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
@@ -177,21 +178,11 @@ public class BotPlayer extends Player {
             playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
         }
 
-        // If there are no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
-        boolean empty = true;
-        for (Orb orb : orbArrayCopy[0]){ // only need to check for Orbs along the ceiling
-            if(orb !=NULL){
-                empty = false;
-                break;
-            }
-        }
-        if(empty){
-            target = 1;
-            return;
-        }
-
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
         int lowestRow = playPanel.getLowestOccupiedRow(orbArrayCopy, deathOrbsCopy);
+
+        // If there were no Orbs in the orbArray, then return a positive angle to indicate that the bot should wait.
+        if(lowestRow == -1) return 1;
 
         // ** Let's determine the outcome for a variety of shooting angles ** //
 
@@ -232,9 +223,9 @@ public class BotPlayer extends Player {
         OutcomeBin chosenBin = choiceBins.get(binChoice);
         Outcome choice = chosenBin.selectChoice(difficulty.getStupidity());
 
-        target = choice.angle;
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
+        return choice.angle;
     }
 
     private class HypotheticalOrbSimulator implements Callable<List<Outcome>>{
