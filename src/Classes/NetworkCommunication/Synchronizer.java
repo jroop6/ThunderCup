@@ -201,6 +201,7 @@ public class Synchronizer implements Serializable {
                                 switch(clientData.getPrecedence()){
                                     case HOST:
                                         // The host has precedence and we've been out of sync for too long, so override the locally-held data with what the host says.
+                                        System.err.println("desynchronization detected. Overwriting data with host data.");
                                         clientData.setTo(hostData.data);
                                         break;
                                     case CLIENT:

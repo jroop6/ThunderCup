@@ -13,7 +13,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Optional;
 
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Player.HOST_ID;
 
 
 /**

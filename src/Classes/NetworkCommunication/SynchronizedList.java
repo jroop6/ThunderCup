@@ -3,7 +3,7 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 import java.util.*;
 
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Player.HOST_ID;
 
 public class SynchronizedList<T extends Comparable<T> & Serializable> extends SynchronizedData<LinkedList<T>> {
 
@@ -11,7 +11,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     // packet is sent. Example: chat messages.
     // KEEP_SYNCHRONIZED: Use this option for data you want to keep sending back and forth between host and client to
     // ensure consistency. Example: AmmunitionOrbs list.
-    enum SynchronizationType {SEND_ONCE, KEEP_SYNCHRONIZED}
+    public enum SynchronizationType {SEND_ONCE, KEEP_SYNCHRONIZED}
 
     private SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;
 
@@ -94,6 +94,15 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         }
     }
 
+    public T setRemove(int index){
+        synchronized (synchronizer){
+            T removedData = data.remove(index);
+            LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(removedData));
+            if(getExternalSetter()!=null) getExternalSetter().handle(removedItemInList, Mode.REMOVE, index, index);
+            return removedData;
+        }
+    }
+
     public void setRemoveAll(Collection<T> itemsToRemove){
         synchronized (synchronizer){
             for(T t : itemsToRemove){
@@ -133,6 +142,17 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             data.remove(itemToRemove);
             if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
             getSynchronizer().addToChangedData(this);
+        }
+    }
+
+    public T changeRemove(int index){
+        synchronized (synchronizer){
+            T removedItem = data.get(index);
+            LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(removedItem));
+            data.remove(index);
+            if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
+            getSynchronizer().addToChangedData(this);
+            return removedItem;
         }
     }
 

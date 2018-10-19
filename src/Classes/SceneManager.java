@@ -5,7 +5,6 @@ import Classes.Audio.SoundManager;
 import Classes.Animation.CharacterType;
 import Classes.NetworkCommunication.ConnectionManager;
 import Classes.NetworkCommunication.NullConnectionManager;
-import Classes.NetworkCommunication.Player;
 import Classes.PlayerTypes.BotPlayer;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;

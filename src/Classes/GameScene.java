@@ -29,8 +29,9 @@ import java.util.concurrent.*;
 
 import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
 import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
-import static Classes.NetworkCommunication.Player.GAME_ID;
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Orb.NULL;
+import static Classes.Player.GAME_ID;
+import static Classes.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
@@ -185,6 +186,13 @@ public class GameScene extends Scene {
                     break;
                 case U: // A temporary unpause function. ToDo: remove this.
                     pause.changeTo(false);
+                    break;
+                /*case F: // For testing. Intentionally de-synchronizes a client's ammunitionOrbs list to see whether it will eventually be overwritten with the host's data:
+                    localPlayer.desynchronizeAmmunitionOrbs();
+                    break;*/
+                case A: // For testing. Intenionally de-synchronizes a client's orbArray to see whether it will eventually be overwritted with the host's data.
+                    playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[0][0] = NULL;
+                    break;
             }
         });
 
@@ -296,8 +304,8 @@ public class GameScene extends Scene {
         if(playPanelMap.values().size()>1){
             Set<Integer> liveTeams = new HashSet<>();
             for(Player player : players){
-                Player.State playerState = player.getState().getData();
-                if(playerState!= Player.State.DEFEATED && playerState!= Player.State.DISCONNECTED) liveTeams.add(player.getTeam().getData());
+                Player.PlayerStatus playerPlayerStatus = player.getPlayerStatus().getData();
+                if(playerPlayerStatus != Player.PlayerStatus.DEFEATED && playerPlayerStatus != Player.PlayerStatus.DISCONNECTED) liveTeams.add(player.getTeam().getData());
             }
             if(liveTeams.size()==1){
                 System.out.println("There's only 1 team left. They've won the game!");
@@ -312,7 +320,7 @@ public class GameScene extends Scene {
 
         // In puzzle games, check to see whether the only existing team has lost:
         else{
-            if(players.get(0).getState().getData()== Player.State.DEFEATED) startVictoryPause_Model(-1);
+            if(players.get(0).getPlayerStatus().getData()== Player.PlayerStatus.DEFEATED) startVictoryPause_Model(-1);
         }
 
         // If someone has won, handle the delay before the victory graphics are actually displayed:
@@ -505,7 +513,7 @@ public class GameScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                player.getState().changeTo(Player.State.DEFEATED);
+                player.getPlayerStatus().changeTo(Player.PlayerStatus.DEFEATED);
             }
             dialogStage.close();
         }));
@@ -544,7 +552,7 @@ public class GameScene extends Scene {
             gameCanceled.changeTo(true);
         }
         else{
-            localPlayer.getState().changeTo(Player.State.DISCONNECTED);
+            localPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DISCONNECTED);
         }
         connectionManager.send(new Packet(connectionManager.getSynchronizer()));
 
@@ -661,7 +669,7 @@ public class GameScene extends Scene {
                     if(fromPlayPanel!=toPlayPanel){
                         Set<Orb> transferInOrbs = toPlayPanel.getTransferInOrbs();
                         Random randomTransferOrbGenerator = toPlayPanel.getRandomTransferOrbGenerator();
-                        Orb[][] orbArray = toPlayPanel.getOrbArray();
+                        Orb[][] orbArray = toPlayPanel.getOrbArray().getData();
                         toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs,randomTransferOrbGenerator,orbArray);
                     }
                 }

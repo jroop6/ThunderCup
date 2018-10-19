@@ -2,7 +2,6 @@ package Classes;
 
 import Classes.Animation.*;
 import Classes.Audio.SoundEffect;
-import Classes.NetworkCommunication.SynchronizedParent;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
@@ -42,9 +41,6 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     // Timestamps so that the host and client will know when the orbs were fired:
     private long rawTimestamp; // simply the client's System.nanotime()
     private long timeStamp; // how many nanoseconds have passed since the previous packet was sent from the client.
-
-    // For distinguishing this data from similar data in other PlayPanels.
-    private SynchronizedParent synchronizedParent;
 
     public Orb(OrbColor orbColor, int iPos, int jPos, OrbAnimationState orbAnimationState){
         super(iPos, jPos);

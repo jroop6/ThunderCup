@@ -2,7 +2,6 @@ package Classes;
 
 import Classes.Images.ButtonType;
 import Classes.Images.DrawingName;
-import Classes.NetworkCommunication.Player;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
@@ -175,7 +174,7 @@ public class PlayerSlot extends StackPane{
             removePlayerBtn.setVisible(true);
             removePlayerBtn.setOnAction((event) -> {
                 System.out.println("Clicked Remove Player.");
-                player.getState().changeTo(Player.State.DISCONNECTED);
+                player.getPlayerStatus().changeTo(Player.PlayerStatus.DISCONNECTED);
             });
         }
 

@@ -9,7 +9,7 @@ import java.util.Random;
 
 /**
  * Created by Jonathan D. Roop on 7/21/2017.
- * manages the playing of sound effects and music
+ * Manages the playing of sound effects and music
  * Everything in here is static in order to make accessing the SoundManager from anywhere easy; no instance of
  * SoundManager is needed to call its member functions. (I figure that audio is a very global feature of most programs
  * anyways because you only have 1 set of speakers and you aren't going to be instantiating multiple SoundManagers on

@@ -4,7 +4,7 @@ import Classes.*;
 import Classes.Animation.OrbColor;
 import Classes.Audio.SoundEffect;
 import Classes.Animation.CharacterType;
-import Classes.NetworkCommunication.Player;
+import Classes.Player;
 import Classes.NetworkCommunication.Synchronizer;
 
 import java.util.*;
@@ -51,8 +51,8 @@ public class BotPlayer extends Player {
     }
 
     public void tick(){
-        State currentState = getState().getData();
-        if(currentState==State.DEFEATED || currentState==State.VICTORIOUS) return;
+        PlayerStatus currentPlayerStatus = getPlayerStatus().getData();
+        if(currentPlayerStatus == PlayerStatus.DEFEATED || currentPlayerStatus == PlayerStatus.VICTORIOUS) return;
 
         // Handle the current frame of the current phase:
         switch(currentPhase){
@@ -136,7 +136,7 @@ public class BotPlayer extends Player {
      */
     private void retarget(){
         // Create copies of the existing data:
-        Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray());
+        Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray().getData());
         Orb[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
 
         // New collections that will be affected by side-effects:
@@ -269,7 +269,7 @@ public class BotPlayer extends Player {
                 /*-- Simulate the outcome if we were to fire at this angle --*/
 
                 // Create a hypothetical shooter orb for the simulated shot:
-                OrbColor currentShooterOrbEnum = getAmmunition().get(0).getOrbColor();
+                OrbColor currentShooterOrbEnum = getAmmunition().getData().get(0).getOrbColor();
                 Orb hypotheticalOrb = new Orb(currentShooterOrbEnum,0,0, Orb.OrbAnimationState.STATIC);
                 hypotheticalOrb.relocate(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*getPlayerPos(),CANNON_Y_POS);
                 hypotheticalOrb.setAngle(Math.toRadians(angle));

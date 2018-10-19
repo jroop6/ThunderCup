@@ -22,8 +22,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 
-import static Classes.NetworkCommunication.Player.GAME_ID;
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Player.GAME_ID;
+import static Classes.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setLeftAnchor;
 import static javafx.scene.layout.AnchorPane.setRightAnchor;
 
@@ -363,7 +363,7 @@ public class LobbyScene extends Scene {
                 showGameCanceledDialog();
             }
             else{
-                playerdata.getState().changeTo(Player.State.DISCONNECTED);
+                playerdata.getPlayerStatus().changeTo(Player.PlayerStatus.DISCONNECTED);
             }
             dialogStage.close();
         }));
@@ -380,7 +380,7 @@ public class LobbyScene extends Scene {
     private void deleteRemovedPlayers(){
         List<PlayerSlot> playerSlots = playerSlotContainer.getContents();
         for (PlayerSlot playerSlot: playerSlots){
-            if(playerSlot.getPlayer().getState().getData()== Player.State.DISCONNECTED){
+            if(playerSlot.getPlayer().getPlayerStatus().getData()== Player.PlayerStatus.DISCONNECTED){
                 if (playerSlot.getPlayer().getPlayerType().getData()== Player.PlayerType.UNCLAIMED){
                     // An open slot is being removed, so decrement the open slot counter:
                     ((HostConnectionManager)connectionManager).removeOpenSlot();
@@ -507,7 +507,7 @@ public class LobbyScene extends Scene {
             gameCanceled.changeTo(true);
         }
         else{
-            localPlayer.getState().changeTo(Player.State.DISCONNECTED);
+            localPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DISCONNECTED);
         }
         prepareAndSendPacket();
         // wait a little bit to make sure the packet gets through:

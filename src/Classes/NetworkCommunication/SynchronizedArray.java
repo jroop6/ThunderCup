@@ -1,9 +1,9 @@
 package Classes.NetworkCommunication;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
 
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Player.HOST_ID;
 
 public class SynchronizedArray<T extends Comparable<T> & Serializable> extends SynchronizedData<T[][]> {
     public SynchronizedArray(String name, T[][] data, Precedence precedence, long parentID, Synchronizer synchronizer){
@@ -13,8 +13,12 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
 
     public SynchronizedArray(SynchronizedArray<T> other, Synchronizer synchronizer){
         super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
+        // Note: Doing a deep copy on each individual element has proven to be prohibitively expensive. The entire array
+        // is serialized as one unit instead, now. Eventually, let's just serialize the Synchronizer instance and avoid
+        // calling any copy constructors.
+
         // Create a new T[][] array with deep copies of each array element:
-        T[][] arrayCopy = Arrays.copyOf(other.data,other.data.length); // creates an array of the right height
+        /*T[][] arrayCopy = Arrays.copyOf(other.data,other.data.length); // creates an array of the right height
         for(int i=0; i<other.data.length; i++){
             T[] row = other.data[i];
             T[] rowCopy = Arrays.copyOf(row,row.length); // creates a row of the right width
@@ -23,7 +27,23 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
             }
             arrayCopy[i] = rowCopy;
         }
-        setTo(arrayCopy);
+        setTo(arrayCopy);*/
+
+        try{
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(other.data);
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
+            try{
+                T[][] arrayCopy = (T[][])ois.readObject();
+                setTo(arrayCopy);
+            } catch (ClassNotFoundException e){
+                e.printStackTrace();
+            }
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+
     }
 
     public SynchronizedArray<T> copyForNetworking(Synchronizer synchronizer){
@@ -35,7 +55,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         else return -1;
     }
 
-    public void setModify(T newItem, int iPos, int jPos){
+    public void setModify(int iPos, int jPos, T newItem){
         synchronized (synchronizer){
             data[iPos][jPos] = newItem;
             if(getExternalSetter()!=null) getExternalSetter().handle(data, Mode.SET, iPos, jPos);
@@ -58,7 +78,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
             for(int i=0; i<newArray.length; i++){
                 T[] row = newArray[i];
                 for(int j=0; j<row.length; j++){
-                    setModify(newArray[i][j],i,j);
+                    setModify(i, j, newArray[i][j]);
                 }
             }
         }
@@ -90,7 +110,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
 
         synchronizer.printData();
 
-        myArray.setModify(3,1,1);
+        myArray.setModify(1, 1, 3);
         synchronizer.printData();
         System.out.println("number of changed datas: " + synchronizer.getChangedData().size());
 
@@ -108,7 +128,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         synchronizer.printData();
 
         System.out.println("comparing the two arrays: " + myArray.compareTo(myArray2));
-        myArray2.setModify(4,0,1);
+        myArray2.setModify(0, 1, 4);
         System.out.println("comparing again: " + myArray.compareTo(myArray2));
 
 

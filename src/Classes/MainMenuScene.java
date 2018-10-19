@@ -30,7 +30,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
-import static Classes.NetworkCommunication.Player.HOST_ID;
+import static Classes.Player.HOST_ID;
 
 /**
  * Created by HydrusBeta on 7/23/2017.
