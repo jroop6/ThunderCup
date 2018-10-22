@@ -10,7 +10,6 @@ import Classes.NetworkCommunication.Synchronizer;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static Classes.Orb.NULL;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
@@ -143,7 +142,6 @@ public class BotPlayer extends Player {
         List<Orb> orbsToDrop = new LinkedList<>();
         List<Orb> orbsToTransfer = new LinkedList<>();
         List<Collision> collisions = new LinkedList<>();
-        Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
         List<Orb> arrayOrbsToBurst = new LinkedList<>();
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
@@ -163,7 +161,6 @@ public class BotPlayer extends Player {
 
             // Clear the other lists
             arrayOrbsToBurst.clear();
-            connectedOrbs.clear();
             collisions.clear();
             burstingOrbsCopy.clear();
             droppingOrbsCopy.clear();
@@ -175,7 +172,13 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbColor().getOrbSpeed();
 
-            playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
+            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, arrayOrbsToBurst, maxTime);
+
+            /*// Apply the outcome:
+            shootingOrbCopy.get(0).setAngle(outcome.newShootingOrbAngles.get(0));
+            shootingOrbCopy.get(0).setSpeed(outcome.newShootingOrbSpeeds.get(0));
+            shootingOrbCopy.get(0).relocate(outcome.newShootingOrbPositions.get(0).getX(), outcome.newShootingOrbPositions.get(0).getY());
+            collisions.addAll(outcome.collisions);*/
         }
 
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
@@ -186,7 +189,7 @@ public class BotPlayer extends Player {
 
         // ** Let's determine the outcome for a variety of shooting angles ** //
 
-        LinkedList<Outcome> choices = new LinkedList<>();
+        LinkedList<PossibleChoice> choices = new LinkedList<>();
 
         // Create tasks to be run concurrently:
         List<HypotheticalOrbSimulator> tasks = new LinkedList<>();
@@ -198,7 +201,7 @@ public class BotPlayer extends Player {
         }
 
         // Execute the tasks in a thread pool:
-        List<Future<List<Outcome>>> futures = new LinkedList<>();
+        List<Future<List<PossibleChoice>>> futures = new LinkedList<>();
         try{
             futures = threadPool.invokeAll(tasks);
         } catch(InterruptedException e){
@@ -206,7 +209,7 @@ public class BotPlayer extends Player {
         }
 
         // Consolidate all the results:
-        for(Future<List<Outcome>> future : futures){
+        for(Future<List<PossibleChoice>> future : futures){
             try{
                 choices.addAll(future.get());
             } catch(InterruptedException | ExecutionException e){ // I believe this exception happens if the Callable threw an exception during its execution.
@@ -221,14 +224,14 @@ public class BotPlayer extends Player {
             binChoice = (int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity());
         } while(binChoice>=choiceBins.size());
         OutcomeBin chosenBin = choiceBins.get(binChoice);
-        Outcome choice = chosenBin.selectChoice(difficulty.getStupidity());
+        PossibleChoice choice = chosenBin.selectChoice(difficulty.getStupidity());
 
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         return choice.angle;
     }
 
-    private class HypotheticalOrbSimulator implements Callable<List<Outcome>>{
+    private class HypotheticalOrbSimulator implements Callable<List<PossibleChoice>>{
         Orb[][] orbArrayCopy;
         Orb[] deathOrbsCopy;
         int lowestRow;
@@ -244,12 +247,11 @@ public class BotPlayer extends Player {
         }
 
         @Override
-        public List<Outcome> call(){
-            LinkedList<Outcome> choices = new LinkedList<>();
+        public List<PossibleChoice> call(){
+            LinkedList<PossibleChoice> choices = new LinkedList<>();
             List<Orb> arrayOrbsToBurst = new LinkedList<>();
             List<Orb> orbsToDrop = new LinkedList<>();
             List<Orb> orbsToTransfer = new LinkedList<>();
-            Set<Orb> connectedOrbs = new HashSet<>(); // Orbs connected to the ceiling
             List<Collision> collisions = new LinkedList<>();
             List<Orb> burstingOrbsCopy = new LinkedList<>();
             List<Orb> droppingOrbsCopy = new LinkedList<>();
@@ -276,7 +278,6 @@ public class BotPlayer extends Player {
                 arrayOrbsToBurst.clear();
                 orbsToDrop.clear();
                 orbsToTransfer.clear();
-                connectedOrbs.clear();
                 collisions.clear();
                 burstingOrbsCopy.clear();
                 droppingOrbsCopy.clear();
@@ -288,13 +289,13 @@ public class BotPlayer extends Player {
                 double maxDistance = Math.sqrt(maxDistanceSquared);
                 double maxTime = maxDistance/hypotheticalOrb.getOrbColor().getOrbSpeed();
 
-                playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, connectedOrbs, arrayOrbsToBurst, maxTime);
+                PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, arrayOrbsToBurst, maxTime);
 
                 // Assign a score to the outcome:
-                int score = assignScore(hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
+                int score = assignScore(outcome, hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
 
-                // Add the Outcome to the list of possible choices:
-                choices.add(new Outcome(angle,score));
+                // Add the PossibleChoice to the list of possible choices:
+                choices.add(new PossibleChoice(angle,score));
             }
             return choices;
         }
@@ -304,12 +305,12 @@ public class BotPlayer extends Player {
         return botRetargetTime;
     }
 
-    private LinkedList<OutcomeBin> binSort(List<Outcome> choices){
+    private LinkedList<OutcomeBin> binSort(List<PossibleChoice> choices){
         Map<Integer,OutcomeBin> lookupMap = new HashMap<>();
 
         // Sort the choices into bins:
         OutcomeBin binChoices;
-        for(Outcome choice : choices){
+        for(PossibleChoice choice : choices){
             binChoices = lookupMap.get(choice.score);
             if(binChoices==null) lookupMap.put(choice.score, new OutcomeBin(choice));
             else binChoices.add(choice);
@@ -321,7 +322,7 @@ public class BotPlayer extends Player {
         return bins;
     }
 
-    private int assignScore(Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray, int lowestRow){
+    private int assignScore(PlayPanel.Outcome outcome, Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray, int lowestRow){
         int score = 0;
 
         // transferring Orbs is a very good thing:
@@ -331,7 +332,7 @@ public class BotPlayer extends Player {
         score += 2*arrayOrbsToBurst.size();
 
         // Otherwise, it is good if the orb is placed next to another Orb of the same color:
-        List<PointInt> neighbors = playPanel.getNeighbors(new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
+        List<PointInt> neighbors = playPanel.getNeighbors(outcome.shootingOrbsToSnap, new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
         int matchesFound = 0;
         for(PointInt point : neighbors){
             if(orbArray[point.getI()][point.getJ()].getOrbColor()==hypotheticalOrb.getOrbColor()) ++matchesFound;
@@ -350,10 +351,10 @@ public class BotPlayer extends Player {
         return score;
     }
 
-    private class Outcome{
+    private class PossibleChoice {
         double angle;
         int score;
-        Outcome(double angle, int score){
+        PossibleChoice(double angle, int score){
             this.angle = angle;
             this.score = score;
         }
@@ -363,28 +364,28 @@ public class BotPlayer extends Player {
     }
 
     private class OutcomeBin{
-        List<Outcome> binChoices = new LinkedList<>();
-        OutcomeBin(Outcome choice){
+        List<PossibleChoice> binChoices = new LinkedList<>();
+        OutcomeBin(PossibleChoice choice){
             add(choice);
         }
-        void add(Outcome outcome){
-            binChoices.add(outcome);
+        void add(PossibleChoice possibleChoice){
+            binChoices.add(possibleChoice);
         }
         // for sorting in reverse
         int getNegativeScore(){
             return -binChoices.get(0).score;
         }
 
-        Outcome selectChoice(double stupidity){
+        PossibleChoice selectChoice(double stupidity){
             // First, sort the choices by angle:
-            binChoices.sort(Comparator.comparingDouble(Outcome::getAngle));
+            binChoices.sort(Comparator.comparingDouble(PossibleChoice::getAngle));
 
             // Now put the choices into bins, based on angle:
-            List<List<Outcome>> bins = new LinkedList<>();
-            List<Outcome> currentBin = new LinkedList<>();
+            List<List<PossibleChoice>> bins = new LinkedList<>();
+            List<PossibleChoice> currentBin = new LinkedList<>();
             double previousAngle = 90;
             double adjustedAngleIncrement = ANGLE_INCREMENT*3/2;
-            for(Outcome choice : binChoices){
+            for(PossibleChoice choice : binChoices){
                 if(Math.abs(choice.angle-previousAngle)>adjustedAngleIncrement) {
                     currentBin = new LinkedList<>();
                     bins.add(currentBin);
@@ -394,7 +395,7 @@ public class BotPlayer extends Player {
             }
 
             // Pick one of the bins at random and then pick its middlemost choice:
-            List<Outcome> chosenBin = bins.get(offsetGenerator.nextInt(bins.size()));
+            List<PossibleChoice> chosenBin = bins.get(offsetGenerator.nextInt(bins.size()));
             return chosenBin.get(chosenBin.size()/2);
         }
     }
