@@ -19,8 +19,8 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
-    static final Orb WALL = new Orb(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
-    static final Orb CEILING = new Orb(OrbColor.BLACK,0,0, OrbAnimationState.STATIC);
+    static final Orb WALL = new Orb(OrbColor.RED,0,0, OrbAnimationState.STATIC);
+    static final Orb CEILING = new Orb(OrbColor.YELLOW,0,0, OrbAnimationState.STATIC);
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbType because we only have 1 instance of this
@@ -238,11 +238,10 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
         else{
             Orb otherOrb = (Orb) other;
             double tolerance = 1;
-            if(Math.abs(otherOrb.getXPos()-getXPos())<tolerance
+            return Math.abs(otherOrb.getXPos()-getXPos())<tolerance
                     && Math.abs(otherOrb.getYPos()-getYPos())<tolerance
                     && otherOrb.orbColor == orbColor
-                    && Math.abs(otherOrb.angle-angle)<tolerance/180) return true;
-            else return false;
+                    && Math.abs(otherOrb.angle-angle)<tolerance/180;
         }
     }
 

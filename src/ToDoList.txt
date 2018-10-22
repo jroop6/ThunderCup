@@ -1,43 +1,37 @@
 *******Priority items, copied from below*******
-re-enable the chat box in GameScene
-PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
-fix multiplayer de-synch problems
+Refactor simulateOrbs so that it doesn't make permanent changes to orbArray, shootingOrbs, etc.
+properly synchronize the methods called by playpanel.tick() and botplayer.tick() to prevent ConcurrentModificationExceptions.
 more puzzles!
-character animationNames
 TransferInOrbs should be able to kill a player.
+when another player tries to connect to a game with no open slots, we get the wrong error message
+when orbArray goes out of sync, it is replaced with the host data, but electrified orbs freeze. Investigate this.
+bot players continue to fire after losing.
+if a newly-connected client sends a message, sometimes the host's next message won't be broadcast.
 
 -------Bugs-------
+bot players continue to fire after losing.
+if a newly-connected client sends a message, sometimes the host's next message won't be broadcast.
+firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.
+when orbArray goes out of sync, it is replaced with the host data, but electrified orbs freeze. Investigate this.
+when another player tries to connect to a game with no open slots, we get the wrong error message
+properly synchronize the methods called by playpanel.tick() and botplayer.tick() to prevent ConcurrentModificationExceptions.
 (probable bug, also probably very minor) Does findFloatingOrbs detect floating orbs that are on the deathOrbs array?
-PlayPanels inexplicably expand at the end of a game, but only in the jar version... wut?
-fix multiplayer de-synch problems
-    transferInOrbs eventually go out of synch every time.
-    If the player shoots an extra time at the end of one puzzle, the host will think they fired on the next puzzle.
-    sometimes it seems that the host doesn't pick up that a client has fired.
-chat box sometimes isn't accessible in GameScene... but only sometimes. Wut?
 
 -------important features-------
-re-enable the chat box in GameScene
-improve efficiency for slower computers
 ability to select random puzzles or a specific puzzle in competitive multiplayer mode.
 puzzle data should specify how many shots cause a new row to appear.
-implement the Vs Computer game mode
-ability to select bot difficulty
 when a game begins, the program should move the camera so that it is centered on your character and maybe have some visual flourish indicate which character is yours.
-character animationNames
-character voices/sound effects
+character voices
 slightly nicer visuals for the puzzle selector buttons
 more puzzles!
 Select secondary and tertiary locations for transferInOrbs?
 TransferInOrbs should be able to kill a player.
+Incorporate vibrationOffset with the new animation framework. Probably just include an offset parameter in AnimationData.drawSelf().
 
 -------moderate refactoring-------
-use a NUM_SECONDS_ERROR_TOLERANCE instead of a NUM_FRAMES_ERROR_TOLERANCE since the JavaFX framerate is variable and unpredictable.
+eliminate Packet - make connectionRejected a SynchronizedComparable.
 Instead of each bot having its own thread pool, generate a single pool in GameScene and pass it down to the BotPlayers.
-There are several places where I have createButton methods that are all nearly identical. Consider putting it in a static utility class.
-The entire tick() method of PlayPanel should probably be relocated to PlayPanelData.
-	actually, there are elements that make more sense to be in PlayPanel, such as VisualFlourishes and calls to animationTick. Think about this carefully. 
-combine implodeAnimationName enums into 1 file instead of 3 (exception for orbImages)
-There are 2 copies of numPlayers - one in PlayPanel and one in PlayPanelData. Reduce it to just 1 instance.
+Refactor simulateOrbs so that it doesn't make permanent changes to orbArray, shootingOrbs, etc. Have it return an Outcome object or something to tell you which changes *would* have occurred, and then execute those changes separately.
 
 -------polish-------
 Add a pause *button*
@@ -48,9 +42,11 @@ add a progress bar at the top, indicating how many shots the player has left unt
 Add a new feature/game mode - controlling multiple cannons.
 Make multiplayer games easier for non-techie people to set up.
 Display an error message if java fails to launch with sufficient memory for the game.
+Display an error message if openjfx is not installed (an issue that can occur on Linux)
 center the "Return to Main Menu" button in the PuzzleSelectionScene or make the mute button smaller.
 
 -------cleanup and loose ends-------
+remove the copyForNetworking method and the copy constructors for the various SynchronizedDatas.
 make all audio files .mp3
 replace i++ with ++i in for-loops (does this even make a difference in Java?)
 Make sure the audio credits are complete and correct.

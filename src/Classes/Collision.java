@@ -1,7 +1,7 @@
 package Classes;
 
 public class Collision{
-    public Orb shooterOrb;
+    public Orb shooterOrb; // todo: consider replacing this with the *index* of the shooter Orb in the shootingOrbs list.
     public Orb arrayOrb;
     public double timeToCollision;
 
