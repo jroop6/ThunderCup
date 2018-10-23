@@ -787,35 +787,40 @@ public class PlayPanel extends Pane implements Serializable {
             // find all connected orbs of the same color
             Set<PointInt> connectedPositions = new HashSet<>();
             cumulativeDepthFirstSearch(outcome, pos, orb.getOrbColor(), connectedPositions, orbArray, FilterOption.SAME_COLOR);
-            Set<Orb> connectedArrayOrbs = new HashSet<>();
-            Set<Orb> connectedShootingOrbs = new HashSet<>();
-            for(PointInt position : connectedPositions){
-                if(orbArray[position.i][position.j]!=NULL) connectedArrayOrbs.add(orbArray[position.i][position.j]);
-                else{
-                    for(Map.Entry<Orb, PointInt> entry2 : outcome.shootingOrbsToSnap.entrySet()){
-                        if(entry2.getValue().i==position.i && entry2.getValue().j==position.j){
-                            connectedShootingOrbs.add(entry2.getKey());
+
+            // determine whether there are enough connected Orbs to burst them:
+            if(connectedPositions.size() >= 3){
+                // organize the connected orbs into arrayOrb and shootingOrb Sets:
+                Set<Orb> connectedArrayOrbs = new HashSet<>();
+                Set<Orb> connectedShootingOrbs = new HashSet<>();
+                for(PointInt position : connectedPositions){
+                    if(validArrayCoordinates(position, orbArray) && orbArray[position.i][position.j]!=NULL) connectedArrayOrbs.add(orbArray[position.i][position.j]);
+                    else{
+                        for(Map.Entry<Orb, PointInt> entry2 : outcome.shootingOrbsToSnap.entrySet()){
+                            if(entry2.getValue().i==position.i && entry2.getValue().j==position.j){
+                                connectedShootingOrbs.add(entry2.getKey());
+                                break;
+                            }
                         }
+                        connectedShootingOrbs.add(orb);
+                    }
+                }
+
+                // add the orbs to the appropriate OrbsToBurst Set:
+                outcome.arrayOrbsToBurst.addAll(connectedArrayOrbs);
+                outcome.shootingOrbsToBurst.addAll(connectedShootingOrbs);
+
+                // If there are a sufficient number grouped together, then add a transfer-out Orb of the same color:
+                int numTransferOrbs;
+                if((numTransferOrbs = ((connectedArrayOrbs.size() + connectedShootingOrbs.size())-3)/2) > 0) {
+                    outcome.soundEffectsToPlay.add(SoundEffect.DROP);
+                    Iterator<Orb> orbIterator = connectedArrayOrbs.iterator();
+                    for(int k=0; k<numTransferOrbs; k++){
+                        Orb orbToTransfer = orbIterator.next();
+                        outcome.burstOrbsToTransfer.add(new Orb(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
                     }
                 }
             }
-
-            if((connectedArrayOrbs.size() + connectedShootingOrbs.size()) >= 3){
-                outcome.arrayOrbsToBurst.addAll(connectedArrayOrbs);
-                outcome.shootingOrbsToBurst.addAll(connectedShootingOrbs);
-            }
-
-            // If there are a sufficient number grouped together, then add a transfer-out Orb of the same color:
-            int numTransferOrbs;
-            if((numTransferOrbs = ((connectedArrayOrbs.size() + connectedShootingOrbs.size())-3)/2) > 0) {
-                outcome.soundEffectsToPlay.add(SoundEffect.DROP);
-                Iterator<Orb> orbIterator = connectedArrayOrbs.iterator();
-                for(int k=0; k<numTransferOrbs; k++){
-                    Orb orbToTransfer = orbIterator.next();
-                    outcome.burstOrbsToTransfer.add(new Orb(orbToTransfer)); // add a copy of the orb, so we can change the animationEnum without messing up the original (which still needs to burst).
-                }
-            }
-
         }
     }
 
@@ -833,12 +838,12 @@ public class PlayPanel extends Pane implements Serializable {
         return connectedOrbs;
     }
 
-    // Note to self: This still mostly works even if the orb is on the deathOrbs list. It will find all neightbors of
+    // Note to self: This still mostly works even if the orb is on the deathOrbs list. It will find all neighbors of
     // that deathOrb that are in the orbArray. It will NOT, however, find its neighbors that are also on the deathOrbs array.
     // The returned List does not contain the source object.
-    public <E extends PointInt> List<PointInt> getNeighbors(Map<Orb, PointInt> shootingOrbsToSnap, E source, E[][] array){
-        int i = source.getI();
-        int j = source.getJ();
+    public List<PointInt> getNeighbors(Map<Orb, PointInt> shootingOrbsToSnap, PointInt source, PointInt[][] array){
+        int i = source.i;
+        int j = source.j;
         List<PointInt> neighbors = new LinkedList<>();
 
         //test all possible neighbors for valid coordinates
@@ -865,8 +870,7 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    public void cumulativeDepthFirstSearch(Outcome outcome, PointInt source, OrbColor sourceColor, Set<PointInt> matches, Orb[][] orbArray, FilterOption filter) {
-
+    private void cumulativeDepthFirstSearch(Outcome outcome, PointInt source, OrbColor sourceColor, Set<PointInt> matchesSoFar, Orb[][] orbArray, FilterOption filter) {
         // A boolean orbArray that has the same size as the orbArray, to mark orbs as "examined"
         Boolean[][] examined = new Boolean[orbArray.length][orbArray[0].length];
         for(int i=0; i<orbArray.length; i++){
@@ -880,18 +884,18 @@ public class PlayPanel extends Pane implements Serializable {
 
         // Add the source Orb to the active list and mark it as "examined"
         active.push(source);
-        if(validArrayCoordinates(source, examined)) examined[source.getI()][source.getJ()] = true; // deathOrbs have "invalid" coordinates, so we have to check whether the coordinates are valid.
+        if(validArrayCoordinates(source, examined)) examined[source.i][source.j] = true; // deathOrbs have "invalid" coordinates, so we have to check whether the coordinates are valid.
 
         // Mark everything in the starting set as "examined"
-        for(PointInt orb : matches) examined[orb.getI()][orb.getJ()] = true;
+        for(PointInt match : matchesSoFar) examined[match.i][match.j] = true;
 
         // Do a depth-first search
         while (!active.isEmpty()) {
-            PointInt activeOrb = active.pop();
-            matches.add(activeOrb);
-            List<PointInt> neighbors = getNeighbors(outcome.shootingOrbsToSnap, activeOrb, orbArray); // recall: neighbors does not contain any death Orbs. Only orbArray Orbs.
+            PointInt activeNode = active.pop();
+            matchesSoFar.add(activeNode);
+            List<PointInt> neighbors = getNeighbors(outcome.shootingOrbsToSnap, activeNode, orbArray); // recall: neighbors does not contain any death Orbs. Only orbArray Orbs.
             for (PointInt neighbor : neighbors) {
-                if (!examined[neighbor.getI()][neighbor.getJ()]) {
+                if (!examined[neighbor.i][neighbor.j]) {
                     // apply the filter option
                     boolean passesFilter = false;
                     switch(filter){
@@ -899,12 +903,12 @@ public class PlayPanel extends Pane implements Serializable {
                             passesFilter = true;
                             break;
                         case SAME_COLOR:
-                            if(orbArray[neighbor.getI()][neighbor.getJ()].getOrbColor() == sourceColor) passesFilter = true;
+                            if(orbArray[neighbor.i][neighbor.j].getOrbColor() == sourceColor) passesFilter = true;
                             break;
                     }
                     if(passesFilter){
                         active.add(neighbor);
-                        examined[neighbor.getI()][neighbor.getJ()] = true;
+                        examined[neighbor.i][neighbor.j] = true;
                     }
                 }
             }
@@ -959,16 +963,21 @@ public class PlayPanel extends Pane implements Serializable {
         findPatternCompletions(outcome, orbArray);
 
 
-        // Apply the outcome:
+        
+
+        /* Apply the outcome: */
+        // Advance shooting Orbs:
         int index = 0;
-        for(Orb shootingOrb : shootingOrbs){
+        for(Orb shootingOrb : shootingOrbs){ // todo: this can definitely be made more efficient. Consider iterators.
             shootingOrb.setAngle(outcome.newShootingOrbAngles.get(index));
             shootingOrb.setSpeed(outcome.newShootingOrbSpeeds.get(index));
             shootingOrb.relocate(outcome.newShootingOrbPositions.get(index).getX(), outcome.newShootingOrbPositions.get(index).getY());
             index++;
         }
+        // Snap shooting Orbs that have collided (but NOT the ones that will also burst!!!):
         for(Map.Entry<Orb, PointInt> entry : outcome.shootingOrbsToSnap.entrySet()){
             Orb orb = entry.getKey();
+            if(outcome.shootingOrbsToBurst.contains(orb)) continue; // we don't want to add the Orb to the array if it will also be added to the burstingOrbs list.
             int i = entry.getValue().i;
             int j = entry.getValue().j;
             orb.setIJ(i, j);
@@ -984,11 +993,13 @@ public class PlayPanel extends Pane implements Serializable {
             }
             shootingOrbs.remove(orb);
         }
+        // Burst shooting Orbs and array Orbs:
         if(!outcome.shootingOrbsToBurst.isEmpty() || !outcome.arrayOrbsToBurst.isEmpty()){
             soundEffectsToPlay.add(SoundEffect.EXPLOSION);
             burstShootingOrbs(outcome.shootingOrbsToBurst, shootingOrbs, burstingOrbs);
             burstArrayOrbs(outcome.arrayOrbsToBurst, orbArray, deathOrbs, burstingOrbs);
         }
+        // Misc:
         soundEffectsToPlay.addAll(outcome.soundEffectsToPlay);
         collisions.addAll(outcome.collisions);
         if(orbArray == this.orbArray.getData() && outcome.burstOrbsToTransfer.size()>largestGroupExplosion){
