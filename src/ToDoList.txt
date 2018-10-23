@@ -32,6 +32,7 @@ Incorporate vibrationOffset with the new animation framework. Probably just incl
 eliminate Packet - make connectionRejected a SynchronizedComparable.
 Instead of each bot having its own thread pool, generate a single pool in GameScene and pass it down to the BotPlayers.
 Refactor simulateOrbs so that it doesn't make permanent changes to orbArray, shootingOrbs, etc. Have it return an Outcome object or something to tell you which changes *would* have occurred, and then execute those changes separately.
+getNeighbors returns a list of PointInts by necessity, but other functions expect a list of Orbs so I have to go find the associated Orbs. See whether this conversion can be averted.
 
 -------polish-------
 Add a pause *button*

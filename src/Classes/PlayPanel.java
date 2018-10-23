@@ -841,7 +841,7 @@ public class PlayPanel extends Pane implements Serializable {
     // Note to self: This still mostly works even if the orb is on the deathOrbs list. It will find all neighbors of
     // that deathOrb that are in the orbArray. It will NOT, however, find its neighbors that are also on the deathOrbs array.
     // The returned List does not contain the source object.
-    public List<PointInt> getNeighbors(Map<Orb, PointInt> shootingOrbsToSnap, PointInt source, PointInt[][] array){
+    public List<PointInt> getNeighbors(Map<Orb,PointInt> shootingOrbsToSnap, PointInt source, PointInt[][] array){
         int i = source.i;
         int j = source.j;
         List<PointInt> neighbors = new LinkedList<>();
@@ -961,9 +961,6 @@ public class PlayPanel extends Pane implements Serializable {
 
         // Determine whether any of the snapped orbs cause any orbs to burst:
         findPatternCompletions(outcome, orbArray);
-
-
-        
 
         /* Apply the outcome: */
         // Advance shooting Orbs:
@@ -1335,7 +1332,7 @@ public class PlayPanel extends Pane implements Serializable {
 
         // The new transfer orbs need to be placed appropriately. Find open, connected spots:
         int offset = 0;
-        for(int j=0; j<orbArray[0].length; j++){
+        for(int j=0; j<arrayWidth; j++){
             if(orbArray[0][j]!=NULL){
                 offset = j%2;
                 break;
@@ -1370,9 +1367,13 @@ public class PlayPanel extends Pane implements Serializable {
     public void snapTransferOrbs(Outcome outcome, List<Orb> transferOrbsToSnap, Orb[][] orbArray, Set<SoundEffect> soundEffectsToPlay, List<Animation> visualFlourishes, Collection<Orb> transferInOrbs){
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
-            List<PointInt> neighbors = getNeighbors(new HashMap<>(), orb, orbArray);
-            if((orb.getI()==0 || !Collections.disjoint(neighbors, outcome.connectedOrbs)) && orbArray[orb.getI()][orb.getJ()] == NULL){
-                orbArray[orb.getI()][orb.getJ()] = orb;
+            List<PointInt> neighborPoints = getNeighbors(new HashMap<>(), orb, orbArray);
+            List<Orb> neighbors = new LinkedList<>();
+            for(PointInt point : neighborPoints){
+                neighbors.add(orbArray[point.i][point.j]);
+            }
+            if((orb.i==0 || !Collections.disjoint(neighbors,outcome.connectedOrbs)) && orbArray[orb.i][orb.j]==NULL){
+                orbArray[orb.i][orb.j] = orb;
                 soundEffectsToPlay.add(SoundEffect.MAGIC_TINKLE);
                 visualFlourishes.add(new Animation(AnimationName.MAGIC_TELEPORTATION, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
