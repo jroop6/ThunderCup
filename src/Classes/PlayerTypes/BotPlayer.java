@@ -172,7 +172,7 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbColor().getOrbSpeed();
 
-            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, arrayOrbsToBurst, maxTime);
+            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, collisions, maxTime);
 
             /*// Apply the outcome:
             shootingOrbCopy.get(0).setAngle(outcome.newShootingOrbAngles.get(0));
@@ -289,10 +289,10 @@ public class BotPlayer extends Player {
                 double maxDistance = Math.sqrt(maxDistanceSquared);
                 double maxTime = maxDistance/hypotheticalOrb.getOrbColor().getOrbSpeed();
 
-                PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, orbsToDrop, orbsToTransfer, collisions, arrayOrbsToBurst, maxTime);
+                PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, collisions, maxTime);
 
                 // Assign a score to the outcome:
-                int score = assignScore(outcome, hypotheticalOrb, angle, orbsToTransfer, orbsToDrop, arrayOrbsToBurst, orbArrayCopyTemp, lowestRow);
+                int score = assignScore(outcome, hypotheticalOrb, angle, orbArrayCopyTemp, lowestRow);
 
                 // Add the PossibleChoice to the list of possible choices:
                 choices.add(new PossibleChoice(angle,score));
@@ -322,17 +322,17 @@ public class BotPlayer extends Player {
         return bins;
     }
 
-    private int assignScore(PlayPanel.Outcome outcome, Orb hypotheticalOrb, double angle, List<Orb> orbsToTransfer, List<Orb> orbsToDrop, List<Orb> arrayOrbsToBurst, Orb[][] orbArray, int lowestRow){
+    private int assignScore(PlayPanel.Outcome outcome, Orb hypotheticalOrb, double angle, Orb[][] orbArray, int lowestRow){
         int score = 0;
 
         // transferring Orbs is a very good thing:
-        score += 3*(orbsToTransfer.size() + orbsToDrop.size());
+        score += 3*(outcome.burstOrbsToTransfer.size() + outcome.arrayOrbsToDrop.size());
 
         // bursting Orbs is also great:
-        score += 2*arrayOrbsToBurst.size();
+        score += 2*outcome.arrayOrbsToBurst.size();
 
         // Otherwise, it is good if the orb is placed next to another Orb of the same color:
-        List<PointInt> neighbors = playPanel.getNeighbors(outcome.shootingOrbsToSnap, new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
+        List<PointInt> neighbors = playPanel.getNeighbors(outcome.shootingOrbsToSnap, outcome, new PointInt(hypotheticalOrb.getI(),hypotheticalOrb.getJ()), orbArray);
         int matchesFound = 0;
         for(PointInt point : neighbors){
             if(orbArray[point.getI()][point.getJ()].getOrbColor()==hypotheticalOrb.getOrbColor()) ++matchesFound;
