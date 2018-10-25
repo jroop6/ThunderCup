@@ -577,7 +577,68 @@ public class PlayPanel extends Pane implements Serializable {
         Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
         // Most of the computation work is done in here. All the lists are updated via side-effects:
-        Outcome outcome = simulateOrbs(orbArray.getData(), burstingOrbs, shootingOrbs, droppingOrbs, deathOrbs, soundEffectsToPlay, collisions, 1/(double) DATA_FRAME_RATE);
+        Outcome outcome = simulateOrbs(orbArray.getData(), shootingOrbs, 1/(double) DATA_FRAME_RATE);
+
+
+
+
+        /* Apply the outcome of simulateOrbs: */
+        // Advance shooting Orbs:
+        int index = 0;
+        for(Orb shootingOrb : shootingOrbs){ // todo: this can definitely be made more efficient. Consider iterators.
+            shootingOrb.setAngle(outcome.newShootingOrbAngles.get(index));
+            shootingOrb.setSpeed(outcome.newShootingOrbSpeeds.get(index));
+            shootingOrb.relocate(outcome.newShootingOrbPositions.get(index).getX(), outcome.newShootingOrbPositions.get(index).getY());
+            index++;
+        }
+        // Snap shooting Orbs that have collided (but NOT the ones that will also burst!!!):
+        for(Map.Entry<Orb, PointInt> entry : outcome.shootingOrbsToSnap.entrySet()){
+            Orb orb = entry.getKey();
+            if(outcome.shootingOrbsToBurst.contains(orb)) continue; // we don't want to add the Orb to the array if it will also be added to the burstingOrbs list.
+            int i = entry.getValue().i;
+            int j = entry.getValue().j;
+            orb.setIJ(i, j);
+            if(validArrayCoordinates(i, j, orbArray.getData())) orbArray.setModify(i,j,orb);
+            else if(validDeathOrbsCoordinates(i, j, deathOrbs)) deathOrbs[j] = orb;
+                // If the snap coordinates are somehow off the edge of the array, then just burst the orb. This should
+                // never happen, but... you never know.
+            else{
+                System.err.println("Invalid snap coordinates [" + i + ", " + j + "] detected. Bursting orb.");
+                System.err.println("   shooter orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + " x=" + orb.getXPos() + " y=" + orb.getYPos() + " speed=" + orb.getSpeed());
+                System.err.println("   array orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + "i=" + orb.getI() + " j=" + orb.getJ() + " x=" + orb.getXPos() + " y=" + orb.getYPos());
+                outcome.shootingOrbsToBurst.add(orb);
+            }
+            shootingOrbs.remove(orb);
+        }
+        // Burst shooting Orbs and array Orbs:
+        if(!outcome.shootingOrbsToBurst.isEmpty() || !outcome.arrayOrbsToBurst.isEmpty()){
+            soundEffectsToPlay.add(SoundEffect.EXPLOSION);
+
+            shootingOrbs.removeAll(outcome.shootingOrbsToBurst);
+            burstingOrbs.addAll(outcome.shootingOrbsToBurst);
+            for(Orb orb : outcome.shootingOrbsToBurst) orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
+
+            for(Orb orb : outcome.arrayOrbsToBurst){
+                if(validArrayCoordinates(orb, orbArray.getData())) orbArray.setModify(orb.i,orb.j,NULL);
+                else deathOrbs[orb.getJ()] = NULL;
+                orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
+                burstingOrbs.add(orb);
+            }
+        }
+        // drop floating orbs:
+        for(Orb orb : outcome.arrayOrbsToDrop){
+            droppingOrbs.add(orb);
+            orbArray.setModify(orb.i,orb.j,NULL);
+        }
+        // Misc:
+        soundEffectsToPlay.addAll(outcome.soundEffectsToPlay);
+        collisions.addAll(outcome.collisions);
+        if(outcome.burstOrbsToTransfer.size()>largestGroupExplosion){
+            largestGroupExplosion = outcome.burstOrbsToTransfer.size();
+        }
+        cumulativeOrbsDropped += outcome.arrayOrbsToDrop.size();
+        cumulativeOrbsBurst += outcome.arrayOrbsToBurst.size();
+
 
 
 
@@ -951,14 +1012,14 @@ public class PlayPanel extends Pane implements Serializable {
         }
     }
 
-    public Outcome simulateOrbs(Orb[][] orbArray, List<Orb> burstingOrbs, List<Orb> shootingOrbs, List<Orb> droppingOrbs, Orb[] deathOrbs, Set<SoundEffect> soundEffectsToPlay, List<Collision> collisions, double deltaTime){
+    public Outcome simulateOrbs(Orb[][] orbArray, List<Orb> shootingOrbs, double deltaTime){
         Outcome outcome = new Outcome(shootingOrbs);
 
         // Advance shooting orbs and detect collisions:
         advanceShootingOrbs(outcome, shootingOrbs, orbArray, deltaTime, 0); // Updates model
 
         // Snap any landed shooting orbs into place on the orbArray (or deathOrbs array):
-        snapOrbs(outcome, orbArray, deathOrbs, shootingOrbs);
+        snapOrbs(outcome, orbArray, shootingOrbs);
 
         // Determine whether any of the snapped orbs cause any orbs to burst:
         findPatternCompletions(outcome, orbArray);
@@ -966,56 +1027,6 @@ public class PlayPanel extends Pane implements Serializable {
         // Find floating orbs and drop them:
         findConnectedOrbs(orbArray, outcome); // orbs that are connected to the ceiling.
         findFloatingOrbs(outcome, orbArray);
-
-
-        /* Apply the outcome: */
-        // Advance shooting Orbs:
-        int index = 0;
-        for(Orb shootingOrb : shootingOrbs){ // todo: this can definitely be made more efficient. Consider iterators.
-            shootingOrb.setAngle(outcome.newShootingOrbAngles.get(index));
-            shootingOrb.setSpeed(outcome.newShootingOrbSpeeds.get(index));
-            shootingOrb.relocate(outcome.newShootingOrbPositions.get(index).getX(), outcome.newShootingOrbPositions.get(index).getY());
-            index++;
-        }
-        // Snap shooting Orbs that have collided (but NOT the ones that will also burst!!!):
-        for(Map.Entry<Orb, PointInt> entry : outcome.shootingOrbsToSnap.entrySet()){
-            Orb orb = entry.getKey();
-            if(outcome.shootingOrbsToBurst.contains(orb)) continue; // we don't want to add the Orb to the array if it will also be added to the burstingOrbs list.
-            int i = entry.getValue().i;
-            int j = entry.getValue().j;
-            orb.setIJ(i, j);
-            if(validDeathOrbsCoordinates(i, j, deathOrbs)) deathOrbs[j] = orb;
-            else if(validArrayCoordinates(i, j, orbArray)) orbArray[i][j] = orb;
-                // If the snap coordinates are somehow off the edge of the array, then just burst the orb. This should
-                // never happen, but... you never know.
-            else{
-                System.err.println("Invalid snap coordinates [" + i + ", " + j + "] detected. Bursting orb.");
-                System.err.println("   shooter orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + " x=" + orb.getXPos() + " y=" + orb.getYPos() + " speed=" + orb.getSpeed());
-                System.err.println("   array orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + "i=" + orb.getI() + " j=" + orb.getJ() + " x=" + orb.getXPos() + " y=" + orb.getYPos());
-                outcome.shootingOrbsToBurst.add(orb);
-            }
-            shootingOrbs.remove(orb);
-        }
-        // Burst shooting Orbs and array Orbs:
-        if(!outcome.shootingOrbsToBurst.isEmpty() || !outcome.arrayOrbsToBurst.isEmpty()){
-            soundEffectsToPlay.add(SoundEffect.EXPLOSION);
-            burstShootingOrbs(outcome.shootingOrbsToBurst, shootingOrbs, burstingOrbs);
-            burstArrayOrbs(outcome.arrayOrbsToBurst, orbArray, deathOrbs, burstingOrbs);
-        }
-        // drop floating orbs:
-        dropArrayOrbs(outcome.arrayOrbsToDrop, droppingOrbs, orbArray);
-        // Misc:
-        soundEffectsToPlay.addAll(outcome.soundEffectsToPlay);
-        collisions.addAll(outcome.collisions);
-        if(orbArray == this.orbArray.getData() && outcome.burstOrbsToTransfer.size()>largestGroupExplosion){
-            largestGroupExplosion = outcome.burstOrbsToTransfer.size();
-        }
-        if(droppingOrbs == this.droppingOrbs){ // to prevent a simulated shot from setting these values.
-            cumulativeOrbsDropped += outcome.arrayOrbsToDrop.size();
-        }
-        if(burstingOrbs == this.burstingOrbs){ // to prevent a simulated shot from setting these values.
-            cumulativeOrbsBurst += outcome.arrayOrbsToBurst.size();
-        }
 
         return outcome;
     }
@@ -1041,10 +1052,6 @@ public class PlayPanel extends Pane implements Serializable {
             double angle = outcome.newShootingOrbAngles.get(index);
             double x0 = outcome.newShootingOrbPositions.get(index).getX();
             double y0 = outcome.newShootingOrbPositions.get(index).getY();
-            //double speed = shootingOrb.getSpeed();
-            //double angle = shootingOrb.getAngle();
-            //double x0 = shootingOrb.getXPos(); // x-position of the shooting orb before it is advanced.
-            //double y0 = shootingOrb.getYPos(); // y-position of the shooting orb before it is advanced.
             double distanceToTravel = speed * timeRemainingInFrame;
             double x1P = distanceToTravel * Math.cos(angle); // Theoretical x-position of the shooting orb after it is advanced, relative to x0.
             double y1P = distanceToTravel * Math.sin(angle); // Theoretical y-position of the shooting orb after it is advanced, relative to y0
@@ -1153,7 +1160,6 @@ public class PlayPanel extends Pane implements Serializable {
                 double angle = outcome.newShootingOrbAngles.get(i);
                 double distanceToTravel = outcome.newShootingOrbSpeeds.get(i) * soonestCollisionTime;
                 outcome.newShootingOrbPositions.set(i,outcome.newShootingOrbPositions.get(i).add(distanceToTravel * Math.cos(angle), distanceToTravel * Math.sin(angle)));
-                //shootingOrb.relocate(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle), shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
             }
 
             // If there was a collision with a wall, then just reflect the shooter orb's angle.
@@ -1162,7 +1168,6 @@ public class PlayPanel extends Pane implements Serializable {
                 Orb shooterOrb = soonestCollision.shooterOrb;
                 int i = shootingOrbs.indexOf(shooterOrb);
                 outcome.newShootingOrbAngles.set(i, PI - outcome.newShootingOrbAngles.get(i));
-                //shooterOrb.setAngle(PI - shooterOrb.getAngle());
             }
 
             // If the collision is between two shooter orbs, compute new angles and speeds. If the other shooting orb is
@@ -1175,9 +1180,7 @@ public class PlayPanel extends Pane implements Serializable {
             else if(soonestCollision.arrayOrb == Orb.CEILING){
                 int i = shootingOrbs.indexOf(soonestCollision.shooterOrb);
                 outcome.newShootingOrbSpeeds.set(i, 0.0);
-                //soonestCollision.shooterOrb.setSpeed(0.0);
                 outcome.collisions.add(soonestCollision);
-                //collisions.add(soonestCollision);
             }
 
             // If the collision is between a shooter orb and an array orb, set that orb's speed to zero and add it to
@@ -1185,9 +1188,7 @@ public class PlayPanel extends Pane implements Serializable {
             else {
                 int i = shootingOrbs.indexOf(soonestCollision.shooterOrb);
                 outcome.newShootingOrbSpeeds.set(i, 0.0);
-                //soonestCollision.shooterOrb.setSpeed(0.0);
                 outcome.collisions.add(soonestCollision);
-                //collisions.add(soonestCollision);
             }
 
             // Recursively call this function.
@@ -1208,12 +1209,11 @@ public class PlayPanel extends Pane implements Serializable {
                 double angle = outcome.newShootingOrbAngles.get(i);
                 double distanceToTravel = outcome.newShootingOrbSpeeds.get(i) * timeRemainingInFrame;
                 outcome.newShootingOrbPositions.set(i,outcome.newShootingOrbPositions.get(i).add(distanceToTravel * Math.cos(angle),distanceToTravel * Math.sin(angle)));
-                //shootingOrb.relocate(shootingOrb.getXPos() + distanceToTravel * Math.cos(angle), shootingOrb.getYPos() + distanceToTravel * Math.sin(angle));
             }
         }
     }
 
-    public void snapOrbs(Outcome outcome, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> shootingOrbs){
+    public void snapOrbs(Outcome outcome, Orb[][] orbArray, List<Orb> shootingOrbs){
         for(Collision snap : outcome.collisions){
             int iSnap;
             int jSnap;
@@ -1296,31 +1296,8 @@ public class PlayPanel extends Pane implements Serializable {
 
     /* *********************************************** CHANGERS *********************************************** */
 
-    public void burstShootingOrbs(List<Orb> newBurstingOrbs, List<Orb> shootingOrbs, List<Orb> burstingOrbs){
-        shootingOrbs.removeAll(newBurstingOrbs);
-        burstingOrbs.addAll(newBurstingOrbs);
-        for(Orb orb : newBurstingOrbs){
-            orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
-        }
-    }
+    public void burstArrayOrbs(List<Orb> newBurstingOrbs, SynchronizedArray<Orb> orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
 
-    public void burstArrayOrbs(List<Orb> newBurstingOrbs, Orb[][] orbArray, Orb[] deathOrbs, List<Orb> burstingOrbs){
-        for(Orb orb : newBurstingOrbs){
-            if(validArrayCoordinates(orb, orbArray)){
-                orbArray[orb.i][orb.j] = NULL;
-            }
-            else{ // the Orb is on the deathOrbs array.
-                deathOrbs[orb.getJ()] = NULL;
-            }
-            orb.setOrbAnimationState(Orb.OrbAnimationState.IMPLODING);
-            burstingOrbs.add(orb);
-        }
-    }
-    public void dropArrayOrbs(List<Orb> newDroppingOrbs, List<Orb> droppingOrbs, Orb[][] orbArray){
-        for(Orb orb : newDroppingOrbs){
-            droppingOrbs.add(orb);
-            orbArray[orb.i][orb.j] = NULL;
-        }
     }
 
     public void transferOrbs(List<Orb> transferOutOrbs, Collection<Orb> transferInOrbs, Random randomTransferOrbGenerator, Orb[][] orbArray){
@@ -1387,7 +1364,7 @@ public class PlayPanel extends Pane implements Serializable {
 
     /* *********************************************** BOUNDS CHECKERS *********************************************** */
 
-    public<E> boolean validArrayCoordinates(PointInt testPoint, E[][] array)
+    public static <E> boolean validArrayCoordinates(PointInt testPoint, E[][] array)
     {
         return validArrayCoordinates(testPoint.getI(), testPoint.getJ(), array);
     }
@@ -1399,7 +1376,7 @@ public class PlayPanel extends Pane implements Serializable {
      * @param array Any 2-dimensional array.
      * @return true, if the coordinates are valid, false if they are outside the bounds of the array.
      */
-    private <E> boolean validArrayCoordinates(int i, int j, E[][] array){
+    public static <E> boolean validArrayCoordinates(int i, int j, E[][] array){
         return (i>=0 && i<array.length && j>=0 && j<array[i].length);
     }
 
@@ -1408,7 +1385,7 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     // Overloaded method to avoid the creation of a temporary object.
-    public boolean validDeathOrbsCoordinates(int iCoordinate, int jCoordinate, Orb[] deathOrbsArray){
+    public static boolean validDeathOrbsCoordinates(int iCoordinate, int jCoordinate, Orb[] deathOrbsArray){
         return (iCoordinate==ARRAY_HEIGHT && jCoordinate>=0 && jCoordinate<deathOrbsArray.length);
     }
 

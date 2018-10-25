@@ -10,6 +10,7 @@ import Classes.NetworkCommunication.Synchronizer;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static Classes.Orb.NULL;
 import static Classes.PlayPanel.CANNON_Y_POS;
 import static Classes.PlayPanel.ORB_RADIUS;
 import static Classes.PlayPanel.PLAYPANEL_WIDTH_PER_PLAYER;
@@ -138,16 +139,6 @@ public class BotPlayer extends Player {
         Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray().getData());
         Orb[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
 
-        // New collections that will be affected by side-effects:
-        List<Orb> orbsToDrop = new LinkedList<>();
-        List<Orb> orbsToTransfer = new LinkedList<>();
-        List<Collision> collisions = new LinkedList<>();
-        List<Orb> arrayOrbsToBurst = new LinkedList<>();
-        Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
-
-        List<Orb> burstingOrbsCopy = new LinkedList<>();
-        List<Orb> droppingOrbsCopy = new LinkedList<>();
-
         // Advance all existing shooter orbs, one at a time in order.
         // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
         // be clearing the path for the next orb. If all the shooting orbs are computed simultaneously, this fact
@@ -159,12 +150,6 @@ public class BotPlayer extends Player {
             List<Orb> shootingOrbCopy = new LinkedList<>();
             shootingOrbCopy.add(new Orb(shootingOrb));
 
-            // Clear the other lists
-            arrayOrbsToBurst.clear();
-            collisions.clear();
-            burstingOrbsCopy.clear();
-            droppingOrbsCopy.clear();
-
             // Determine the maximum time over which this shooting Orb could possibly travel:
             double maxYDistance = shootingOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
             double maxXDistance = maxYDistance/Math.tan(Math.toRadians(shootingOrb.getAngle()));
@@ -172,13 +157,45 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbColor().getOrbSpeed();
 
-            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopy, soundEffectsToPlay, collisions, maxTime);
+            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, shootingOrbCopy, maxTime);
 
-            /*// Apply the outcome:
+            /* Apply the outcome of simulateOrbs: */
+            // Advance shooting Orbs:
             shootingOrbCopy.get(0).setAngle(outcome.newShootingOrbAngles.get(0));
             shootingOrbCopy.get(0).setSpeed(outcome.newShootingOrbSpeeds.get(0));
             shootingOrbCopy.get(0).relocate(outcome.newShootingOrbPositions.get(0).getX(), outcome.newShootingOrbPositions.get(0).getY());
-            collisions.addAll(outcome.collisions);*/
+            // Snap shooting Orbs that have collided (but NOT the ones that will also burst!!!):
+            for(Map.Entry<Orb, PointInt> entry : outcome.shootingOrbsToSnap.entrySet()){
+                Orb orb = entry.getKey();
+                if(outcome.shootingOrbsToBurst.contains(orb)) continue; // we don't want to add the Orb to the array if it will also be added to the burstingOrbs list.
+                int i = entry.getValue().getI();
+                int j = entry.getValue().getJ();
+                orb.setIJ(i, j);
+                if(PlayPanel.validArrayCoordinates(i, j, orbArrayCopy)) orbArrayCopy[i][j] = orb;
+                else if(PlayPanel.validDeathOrbsCoordinates(i, j, deathOrbsCopy)) deathOrbsCopy[j] = orb;
+                    // If the snap coordinates are somehow off the edge of the array, then just burst the orb. This should
+                    // never happen, but... you never know.
+                else{
+                    System.err.println("Invalid snap coordinates [" + i + ", " + j + "] detected. Bursting orb.");
+                    System.err.println("   shooter orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + " x=" + orb.getXPos() + " y=" + orb.getYPos() + " speed=" + orb.getSpeed());
+                    System.err.println("   array orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + "i=" + orb.getI() + " j=" + orb.getJ() + " x=" + orb.getXPos() + " y=" + orb.getYPos());
+                    outcome.shootingOrbsToBurst.add(orb);
+                }
+                shootingOrbCopy.remove(orb);
+            }
+            // Burst shooting Orbs and array Orbs:
+            if(!outcome.shootingOrbsToBurst.isEmpty() || !outcome.arrayOrbsToBurst.isEmpty()){
+                shootingOrbCopy.removeAll(outcome.shootingOrbsToBurst);
+
+                for(Orb orb : outcome.arrayOrbsToBurst){
+                    if(PlayPanel.validArrayCoordinates(orb, orbArrayCopy)) orbArrayCopy[orb.getI()][orb.getJ()] = NULL;
+                    else deathOrbsCopy[orb.getJ()] = NULL;
+                }
+            }
+            // drop floating orbs:
+            for(Orb orb : outcome.arrayOrbsToDrop){
+                orbArrayCopy[orb.getI()][orb.getJ()] = NULL;
+            }
         }
 
         // Find the lowest occupied row on the array and save that value. This is used later in the assignScore method.
@@ -193,7 +210,7 @@ public class BotPlayer extends Player {
 
         // Create tasks to be run concurrently:
         List<HypotheticalOrbSimulator> tasks = new LinkedList<>();
-        double angleDivision = (-135-(-40))/numThreads;
+        double angleDivision = (-135.0-(-40.0))/numThreads;
         for(int i=0; i<numThreads; i++){
             double startAngle = -40 + angleDivision*i;
             double endAngle = startAngle + angleDivision;
@@ -249,13 +266,6 @@ public class BotPlayer extends Player {
         @Override
         public List<PossibleChoice> call(){
             LinkedList<PossibleChoice> choices = new LinkedList<>();
-            List<Orb> arrayOrbsToBurst = new LinkedList<>();
-            List<Orb> orbsToDrop = new LinkedList<>();
-            List<Orb> orbsToTransfer = new LinkedList<>();
-            List<Collision> collisions = new LinkedList<>();
-            List<Orb> burstingOrbsCopy = new LinkedList<>();
-            List<Orb> droppingOrbsCopy = new LinkedList<>();
-            Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
             for(double angle = startAngle; angle>endAngle; angle-=ANGLE_INCREMENT){
                 if (Math.abs(angle + 90)<0.0001) angle+=0.001; // todo: if the angle is exactly -90, then weird things happen. Look into this and fix it.
 
@@ -270,18 +280,6 @@ public class BotPlayer extends Player {
                 List<Orb> shootingOrbCopy = new LinkedList<>();
                 shootingOrbCopy.add(hypotheticalOrb);
 
-                // Create copies of the simulated orbArray and deathOrbs:
-                Orb[][] orbArrayCopyTemp = playPanel.deepCopyOrbArray(orbArrayCopy);
-                Orb[] deathOrbsCopyTemp = playPanel.deepCopyOrbArray(deathOrbsCopy);
-
-                // clear the other lists
-                arrayOrbsToBurst.clear();
-                orbsToDrop.clear();
-                orbsToTransfer.clear();
-                collisions.clear();
-                burstingOrbsCopy.clear();
-                droppingOrbsCopy.clear();
-
                 // Determine the maximum time over which the hypothetical Orb could possibly travel:
                 double maxYDistance = hypotheticalOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
                 double maxXDistance = maxYDistance/Math.tan(Math.toRadians(angle));
@@ -289,10 +287,11 @@ public class BotPlayer extends Player {
                 double maxDistance = Math.sqrt(maxDistanceSquared);
                 double maxTime = maxDistance/hypotheticalOrb.getOrbColor().getOrbSpeed();
 
-                PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopyTemp, burstingOrbsCopy, shootingOrbCopy, droppingOrbsCopy, deathOrbsCopyTemp, soundEffectsToPlay, collisions, maxTime);
+                // Simulate the shot:
+                PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, shootingOrbCopy, maxTime);
 
                 // Assign a score to the outcome:
-                int score = assignScore(outcome, hypotheticalOrb, angle, orbArrayCopyTemp, lowestRow);
+                int score = assignScore(outcome, hypotheticalOrb, angle, orbArrayCopy, lowestRow);
 
                 // Add the PossibleChoice to the list of possible choices:
                 choices.add(new PossibleChoice(angle,score));

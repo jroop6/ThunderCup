@@ -142,7 +142,7 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     public double getAngle(){
         return angle;
     }
-    double getSpeed(){
+    public double getSpeed(){
         return speed;
     }
     public OrbAnimationState getOrbAnimationState(){
