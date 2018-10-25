@@ -592,9 +592,9 @@ public class PlayPanel extends Pane implements Serializable {
             for(Orb orb : outcome.arrayOrbsToDrop){
                 visualFlourishes.add(new Animation(AnimationName.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
             }
-            /*for(Orb orb : outcome.burstOrbsToTransfer){
+            for(Orb orb : outcome.burstOrbsToTransfer){
                 visualFlourishes.add(new Animation(AnimationName.EXCLAMATION_MARK, orb.getXPos(), orb.getYPos(), PlayOption.PLAY_ONCE_THEN_VANISH));
-            }*/
+            }
             changeAddTransferOutOrbs(outcome.burstOrbsToTransfer);
         }
 
@@ -785,7 +785,6 @@ public class PlayPanel extends Pane implements Serializable {
                                 break;
                             }
                         }
-                        //connectedShootingOrbs.add(orb);
                     }
                 }
 
@@ -865,14 +864,9 @@ public class PlayPanel extends Pane implements Serializable {
         for(int i=0; i<ARRAY_HEIGHT; i++){
             for(int j=0; j<orbArray[i].length; j++){
                 Orb arrayOrb = orbArray[i][j];
-                if(arrayOrb!=NULL && !outcome.connectedOrbs.contains(new PointInt(arrayOrb.i, arrayOrb.j))){
+                if(arrayOrb!=NULL && !outcome.arrayOrbsToBurst.contains(arrayOrb) && !outcome.connectedOrbs.contains(new PointInt(arrayOrb.i, arrayOrb.j))){
                     outcome.arrayOrbsToDrop.add(arrayOrb);
                 }
-            }
-        }
-        if(outcome.arrayOrbsToDrop.size()>0){
-            for(Orb orb : outcome.arrayOrbsToDrop){
-                System.err.println("orb: i="+orb.i + " j=" + orb.j);
             }
         }
     }
@@ -915,8 +909,8 @@ public class PlayPanel extends Pane implements Serializable {
                     }
                     if(passesFilter){
                         active.add(neighbor);
-                        examined[neighbor.i][neighbor.j] = true;
                     }
+                    examined[neighbor.i][neighbor.j] = true;
                 }
             }
         }
@@ -1371,9 +1365,9 @@ public class PlayPanel extends Pane implements Serializable {
         for(Orb orb : transferOrbsToSnap){
             // only those orbs that would be connected to the ceiling should materialize:
             List<PointInt> neighborPoints = getNeighbors(new HashMap<>(), outcome, orb, orbArray);
-            List<Orb> neighbors = new LinkedList<>();
+            List<PointInt> neighbors = new LinkedList<>();
             for(PointInt point : neighborPoints){
-                neighbors.add(orbArray[point.i][point.j]);
+                neighbors.add(new PointInt(point.i, point.j));
             }
             if((orb.i==0 || !Collections.disjoint(neighbors,outcome.connectedOrbs)) && orbArray[orb.i][orb.j]==NULL){
                 orbArray[orb.i][orb.j] = orb;
