@@ -136,8 +136,14 @@ public class BotPlayer extends Player {
      */
     private double retarget(){
         // Create copies of the existing data:
-        Orb[][] orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray().getData());
-        Orb[] deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
+        Orb[][] orbArrayCopy;
+        Orb[] deathOrbsCopy;
+        List<Orb> shootingOrbsCopy;
+        //synchronized (getSynchronizer()){ // For now, retarget() and PlayPanel.tick() are called by the same thread, so synchronization is unnecessary. If I decide to put those tasks on different threads, however, synchronization will be needed here.
+            orbArrayCopy = playPanel.deepCopyOrbArray(playPanel.getOrbArray().getData());
+            deathOrbsCopy = playPanel.deepCopyOrbArray(playPanel.getDeathOrbs());
+            shootingOrbsCopy = playPanel.deepCopyOrbList(playPanel.getShootingOrbs());
+        //}
 
         // Advance all existing shooter orbs, one at a time in order.
         // Note: They're done one at a time instead of all at once because a previously fired orb might supposed to
@@ -145,10 +151,9 @@ public class BotPlayer extends Player {
         // won't be simulated, and the 2nd shooting orb will get blocked in its simulation. This still isn't perfect
         // (for example, a more recently-fired shot might actually reach its target before a previous shot) but should
         // be pretty good.
-        for(Orb shootingOrb : playPanel.getShootingOrbs()){
-            // Create a temporary shootingOrbs list that contains a copy of only one of the current shooting orbs:
-            List<Orb> shootingOrbCopy = new LinkedList<>();
-            shootingOrbCopy.add(new Orb(shootingOrb));
+        for(Orb shootingOrb : shootingOrbsCopy){
+            // Create a temporary shootingOrbs list that contains only one of the current shooting orbs:
+            List<Orb> singletonShootingOrb = Collections.singletonList(shootingOrb);
 
             // Determine the maximum time over which this shooting Orb could possibly travel:
             double maxYDistance = shootingOrb.getYPos(); // it's actually a little less than this, but I want to overestimate a little anyways.
@@ -157,13 +162,9 @@ public class BotPlayer extends Player {
             double maxDistance = Math.sqrt(maxDistanceSquared);
             double maxTime = maxDistance/shootingOrb.getOrbColor().getOrbSpeed();
 
-            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, shootingOrbCopy, maxTime);
+            PlayPanel.Outcome outcome = playPanel.simulateOrbs(orbArrayCopy, singletonShootingOrb, maxTime);
 
             /* Apply the outcome of simulateOrbs: */
-            // Advance shooting Orbs:
-            shootingOrbCopy.get(0).setAngle(outcome.newShootingOrbAngles.get(0));
-            shootingOrbCopy.get(0).setSpeed(outcome.newShootingOrbSpeeds.get(0));
-            shootingOrbCopy.get(0).relocate(outcome.newShootingOrbPositions.get(0).getX(), outcome.newShootingOrbPositions.get(0).getY());
             // Snap shooting Orbs that have collided (but NOT the ones that will also burst!!!):
             for(Map.Entry<Orb, PointInt> entry : outcome.shootingOrbsToSnap.entrySet()){
                 Orb orb = entry.getKey();
@@ -176,17 +177,13 @@ public class BotPlayer extends Player {
                     // If the snap coordinates are somehow off the edge of the array, then just burst the orb. This should
                     // never happen, but... you never know.
                 else{
-                    System.err.println("Invalid snap coordinates [" + i + ", " + j + "] detected. Bursting orb.");
+                    System.err.println("Invalid snap coordinates [" + i + ", " + j + "] detected during BotPlayer.retarget().");
                     System.err.println("   shooter orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + " x=" + orb.getXPos() + " y=" + orb.getYPos() + " speed=" + orb.getSpeed());
                     System.err.println("   array orb info: " + orb.getOrbColor() + " " + orb.getOrbAnimationState() + "i=" + orb.getI() + " j=" + orb.getJ() + " x=" + orb.getXPos() + " y=" + orb.getYPos());
-                    outcome.shootingOrbsToBurst.add(orb);
                 }
-                shootingOrbCopy.remove(orb);
             }
-            // Burst shooting Orbs and array Orbs:
-            if(!outcome.shootingOrbsToBurst.isEmpty() || !outcome.arrayOrbsToBurst.isEmpty()){
-                shootingOrbCopy.removeAll(outcome.shootingOrbsToBurst);
-
+            // Burst array Orbs:
+            if(!outcome.arrayOrbsToBurst.isEmpty()){
                 for(Orb orb : outcome.arrayOrbsToBurst){
                     if(PlayPanel.validArrayCoordinates(orb, orbArrayCopy)) orbArrayCopy[orb.getI()][orb.getJ()] = NULL;
                     else deathOrbsCopy[orb.getJ()] = NULL;
@@ -241,7 +238,7 @@ public class BotPlayer extends Player {
             binChoice = (int)Math.round(offsetGenerator.nextDouble()*difficulty.getStupidity());
         } while(binChoice>=choiceBins.size());
         OutcomeBin chosenBin = choiceBins.get(binChoice);
-        PossibleChoice choice = chosenBin.selectChoice(difficulty.getStupidity());
+        PossibleChoice choice = chosenBin.selectChoice();
 
         broadMovementOffset = difficulty.getBroadMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
         fineMovementOffset = difficulty.getFineMovementOffset()*(2*offsetGenerator.nextDouble()-1.0);
@@ -293,7 +290,7 @@ public class BotPlayer extends Player {
                 // Assign a score to the outcome:
                 int score = assignScore(outcome, hypotheticalOrb, angle, orbArrayCopy, lowestRow);
 
-                // Add the PossibleChoice to the list of possible choices:
+                // Add the angle and its score to the list of possible choices:
                 choices.add(new PossibleChoice(angle,score));
             }
             return choices;
@@ -375,7 +372,7 @@ public class BotPlayer extends Player {
             return -binChoices.get(0).score;
         }
 
-        PossibleChoice selectChoice(double stupidity){
+        PossibleChoice selectChoice(){
             // First, sort the choices by angle:
             binChoices.sort(Comparator.comparingDouble(PossibleChoice::getAngle));
 

@@ -354,7 +354,10 @@ public class GameScene extends Scene {
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
                     long time = System.nanoTime();
-                    soundEffectsToPlay.addAll(playPanel.tick());
+                    PlayPanel.Outcome outcome = playPanel.tick();
+                    synchronized (connectionManager.getSynchronizer()){ // The applicationThread plays the sounds and clears this list.
+                        soundEffectsToPlay.addAll(outcome.soundEffectsToPlay);
+                    }
                     time = System.nanoTime() - time;
                     playPanelTickTime[0]++;
                     playPanelTickTime[1]+=time;

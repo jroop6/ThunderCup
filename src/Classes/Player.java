@@ -237,9 +237,11 @@ public class Player implements Serializable {
 
     // set the positions of the 1st and second shooting orbs for this player
     public void positionAmmunitionOrbs(){
-        // update the positions of the next 2 ammunition orbs
-        ammunitionOrbs.getData().get(0).relocate(ammunitionOrb1Position.getX(), ammunitionOrb1Position.getY());
-        ammunitionOrbs.getData().get(1).relocate(ammunitionOrb2Position.getX(), ammunitionOrb2Position.getY());
+        synchronized (synchronizer){ // The application thread might be in the middle of drawing the ammunition orbs.
+            // update the positions of the next 2 ammunition orbs
+            ammunitionOrbs.getData().get(0).relocate(ammunitionOrb1Position.getX(), ammunitionOrb1Position.getY());
+            ammunitionOrbs.getData().get(1).relocate(ammunitionOrb2Position.getX(), ammunitionOrb2Position.getY());
+        }
     }
 
     /* Setters: These are called when a client simply wants to update locally-stored player information without

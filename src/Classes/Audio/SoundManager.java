@@ -80,9 +80,7 @@ public class SoundManager {
         MediaPlayer newSoundEffect = soundEffect.getMediaPlayer();
         if(muted) return null;
         currentSoundEffects.add(newSoundEffect);
-        newSoundEffect.setOnEndOfMedia(()->{
-            currentSoundEffects.remove(newSoundEffect);
-        });
+        newSoundEffect.setOnEndOfMedia(()->currentSoundEffects.remove(newSoundEffect));
         newSoundEffect.setVolume(SOUND_EFFECTS_VOLUME);
         newSoundEffect.play();
         return newSoundEffect;
