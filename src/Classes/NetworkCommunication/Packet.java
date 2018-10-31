@@ -14,7 +14,7 @@ public class Packet implements Serializable{
     private boolean connectionRejected = false;
 
     public Packet(Synchronizer synchronizer){
-        this.synchronizer = synchronizer.copyForNetworking();
+        if(synchronizer!=null) this.synchronizer = synchronizer.copyForNetworking();
     }
 
     public void rejectConnection(){

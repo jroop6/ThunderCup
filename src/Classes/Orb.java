@@ -19,13 +19,13 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
 
     // Special orbs that are used to identify walls and the ceiling as collision objects. Used in collision
     // detection logic within the PlayPanel class.
-    static final Orb WALL = new Orb(OrbColor.RED,0,0, OrbAnimationState.STATIC);
-    static final Orb CEILING = new Orb(OrbColor.YELLOW,0,0, OrbAnimationState.STATIC);
+    static final Orb WALL = new Orb(OrbColor.RED,-1,-1, OrbAnimationState.STATIC);
+    static final Orb CEILING = new Orb(OrbColor.YELLOW,-1,-1, OrbAnimationState.STATIC);
 
     // Special orb that indicates an unoccupied space on the orb array
     // Note to self: This is better memory-wise than creating an NULL OrbType because we only have 1 instance of this
     // orb instead of literally hundreds for all the unusable locations on the orbArray.
-    public static final Orb NULL = new Orb(OrbColor.BLACK, -1, -1, OrbAnimationState.STATIC);
+    public static final Orb NULL = new Orb(OrbColor.BLACK, -2, -2, OrbAnimationState.STATIC);
 
     private OrbColor orbColor;
     private Animation orbAnimation; // The animation currently selected for the Orb.
@@ -202,7 +202,7 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
 
     //todo: incorporate vibrationOffset with the new animation framework (probably just include an offset parameter in Animation.drawSelf()).
     public void drawSelf(GraphicsContext orbDrawer, double vibrationOffset){
-        if(this == NULL) return; // null orbs are not drawn.
+        if(this.equals(NULL)) return; // NULL orbs are not drawn.
         int err;
         switch(orbAnimationState){
             case STATIC:
@@ -231,27 +231,44 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
         }
     }
 
-    // Two orbs are considered the same if their positions and angles are nearly the same and they have the same enumeration ordinal.
     @Override
     public boolean equals(Object other){
+        Orb otherOrb;
         if (!(other instanceof Orb)) return false;
-        else{
-            Orb otherOrb = (Orb) other;
+        else otherOrb = (Orb) other;
+
+        if(i==-2){ // This orb is a NULL orb
+            return otherOrb.i==-2;
+        }
+        else if(i==-1){ // This orb is a shooting Orb
             double tolerance = 1;
-            return Math.abs(otherOrb.getXPos()-getXPos())<tolerance
-                    && Math.abs(otherOrb.getYPos()-getYPos())<tolerance
+            return otherOrb.i==-1
                     && otherOrb.orbColor == orbColor
-                    && Math.abs(otherOrb.angle-angle)<tolerance/180;
+                    /*&& Math.abs(otherOrb.getXPos()-getXPos())<tolerance
+                    && Math.abs(otherOrb.getYPos()-getYPos())<tolerance*/
+                    && Math.abs(Math.toDegrees(otherOrb.angle-angle))<tolerance;
+        }
+        else{ // The orbs are array Orbs, so we don't need to check locations. Note: the (i,j) coordinates don't need to be checked because equals() is only ever called on an arrayOrb by deepEquals(), which is already going element-by-element.
+            return otherOrb.i >= 0
+                    && otherOrb.orbColor == orbColor;
         }
     }
 
     @Override
     public int compareTo(Orb other){
-        double tolerance = 1;
-        if(Math.abs(other.getXPos()-getXPos())<tolerance
-                && other.orbColor == orbColor
-                && Math.abs(other.angle-angle)<tolerance/180) return 0;
-        else return -1;
+        if(i==-1){ // This orb is a shooting Orb
+            double tolerance = 1;
+            if(other.i==-1
+                    && other.orbColor == orbColor
+                    /*&& Math.abs(other.getXPos()-getXPos())<tolerance
+                    && Math.abs(other.getYPos()-getYPos())<tolerance*/
+                    && Math.abs(Math.toDegrees(other.angle-angle))<tolerance) return 0;
+            else return -1;
+        }
+        else{ // The orbs are array Orbs, so we don't need to check locations. Note: the (i,j) coordinates don't need to be checked because equals() is only ever called by deepEquals(), which is already going element-by-element.
+            if(other.i!=-1 && other.orbColor == orbColor) return 0;
+            else return -1;
+        }
     }
 
     // The hashCode is the sum of two cantor pairings.

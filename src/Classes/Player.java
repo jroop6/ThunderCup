@@ -23,7 +23,7 @@ public class Player implements Serializable {
 
     private final Synchronizer synchronizer;
     private SynchronizedComparable<PlayerType> playerType;
-    protected SynchronizedComparable<String> username;
+    private SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
     private SynchronizedComparable<PlayerStatus> playerStatus;
     private SynchronizedList<Message> messagesOut;
@@ -133,7 +133,8 @@ public class Player implements Serializable {
                                     // Note to self: Don't move this code into changeFireCannon(). Other players need to perform these same steps during the call to synchronizeWith()
 
                                     // first, a quick sanity check:
-                                    if(!newVal.get(0).equals(ammunitionOrbs.getData().get(0))) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
+                                    // todo: It is possible for packets to arrive out of order, triggering this error message. A rigorous fix would require either time-stamping the Orbs or associating a unique identifier with each shootingOrb.
+                                    if(newVal.get(0).getOrbColor()!=(ammunitionOrbs.getData().get(0)).getOrbColor()) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
 
                                     // Remove the fired Orb from the ammunitionOrbs list and place it in the shootingOrbs list:
                                     Orb firedOrb = ammunitionOrbs.setRemove(0);
@@ -145,7 +146,7 @@ public class Player implements Serializable {
                                     // Add a new Orb to the end of the ammunitionOrbs list
                                     if(ammunitionOrbs.getData().size()<2){
                                         OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-                                        ammunitionOrbs.setAdd(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC));
+                                        ammunitionOrbs.setAdd(new Orb(newEnum,-1,-1, Orb.OrbAnimationState.STATIC));
                                     }
                                     positionAmmunitionOrbs();
                                     break;
@@ -161,7 +162,7 @@ public class Player implements Serializable {
                                     // Note to self: Don't move this code into changeFireCannon(). Other players need to perform these same steps during the call to synchronizeWith()
 
                                     // first, a quick sanity check:
-                                    if(!newVal.get(0).equals(ammunitionOrbs.getData().get(0))) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
+                                    if(newVal.get(0).getOrbColor()!=(ammunitionOrbs.getData().get(0)).getOrbColor()) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
 
                                     // Remove the fired Orb from the ammunitionOrbs list and place it in the shootingOrbs list:
                                     Orb firedOrb = ammunitionOrbs.setRemove(0);
@@ -173,7 +174,7 @@ public class Player implements Serializable {
                                     // Add a new Orb to the end of the ammunitionOrbs list
                                     if(ammunitionOrbs.getData().size()<2){
                                         OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-                                        ammunitionOrbs.setAdd(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC));
+                                        ammunitionOrbs.setAdd(new Orb(newEnum,-1,-1, Orb.OrbAnimationState.STATIC));
                                     }
                                     positionAmmunitionOrbs();
                                     break;
@@ -345,7 +346,7 @@ public class Player implements Serializable {
             ammunitionOrbs.getData().remove(0);
             if(ammunitionOrbs.getData().size()<2){
                 OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-                ammunitionOrbs.setAdd(new Orb(newEnum,0,0, Orb.OrbAnimationState.STATIC));
+                ammunitionOrbs.setAdd(new Orb(newEnum,-1,-1, Orb.OrbAnimationState.STATIC));
             }
             positionAmmunitionOrbs();
         }
@@ -390,7 +391,7 @@ public class Player implements Serializable {
                         System.err.println("Unparseable character \"" + nextOrbSymbol + "\" in ammunitionOrbs file. Skipping that one...");
                         continue;
                     }
-                    ammunitionOrbs.add(new Orb(orbEnum,0,0, Orb.OrbAnimationState.STATIC));
+                    ammunitionOrbs.add(new Orb(orbEnum,-1,-1, Orb.OrbAnimationState.STATIC));
                 }
             } catch(IOException e){
                 e.printStackTrace();
@@ -401,8 +402,7 @@ public class Player implements Serializable {
             System.out.println();
             int randomOrdinal = ammunitionGenerator.nextInt(OrbColor.values().length);
             OrbColor orbImage = OrbColor.values()[randomOrdinal];
-            ammunitionOrbs.add(new Orb(orbImage,0,0, Orb.OrbAnimationState.STATIC)); // Updates model
-            // Note: view gets updated 24 times per second in the repaint() method of the PlayPanel.
+            ammunitionOrbs.add(new Orb(orbImage,-1,-1, Orb.OrbAnimationState.STATIC));
         }
     }
 

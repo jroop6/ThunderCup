@@ -197,6 +197,8 @@ public class GameScene extends Scene {
                 case T: // For testing. Intentionally de-synchronizes a client's transferInOrbs to see whether it will eventually be overwritten with the host's data.
                     playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[10][0] = new Orb(OrbColor.BLUE,10,0, Orb.OrbAnimationState.STATIC);
                     break;
+                case R:
+                    playPanelMap.get(localPlayer.team.getData()).printOrbArray();
             }
         });
 
@@ -677,7 +679,8 @@ public class GameScene extends Scene {
                         SynchronizedList<Orb> transferInOrbs = toPlayPanel.getTransferInOrbs();
                         Random randomTransferOrbGenerator = toPlayPanel.getRandomTransferOrbGenerator();
                         Orb[][] orbArray = toPlayPanel.getOrbArray().getData();
-                        toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs.getData(),randomTransferOrbGenerator,orbArray);
+                        Orb[] deathOrbs = toPlayPanel.getDeathOrbs();
+                        toPlayPanel.transferOrbs(transferOutOrbs,transferInOrbs.getData(),randomTransferOrbGenerator,orbArray,deathOrbs);
                     }
                 }
             }

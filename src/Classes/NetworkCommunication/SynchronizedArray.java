@@ -71,7 +71,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
     }
 
     @Override
-    // note: newList must have the same dimensions as data.
+    // note: newArray must have the same dimensions as data.
     public void setTo(T[][] newArray){
         synchronized (synchronizer){
             if(data==null) data = newArray; // To avoid a NullPointerException during instantiation of this class.
@@ -85,7 +85,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
     }
 
     @Override
-    // note: newList must have the same dimensions as data.
+    // note: newArray must have the same dimensions as data.
     public void changeTo(T[][] newArray){
         synchronized(synchronizer){
             if(data==null) data = newArray; // To avoid a NullPointerException.

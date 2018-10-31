@@ -27,7 +27,7 @@ import static Classes.PlayPanel.*;
 
 public class PuzzleCreatorScene extends Scene {
 
-    private final Orb EMPTY = new Orb(OrbColor.BLACK,-2,-2, Orb.OrbAnimationState.STATIC);
+    private final Orb EMPTY = new Orb(OrbColor.BLACK,-1,-1, Orb.OrbAnimationState.STATIC);
     private long nextAnimationFrameInstance = 0;
     private boolean initializing = false;
     private Scale scaler = new Scale(1,1);
@@ -111,7 +111,7 @@ public class PuzzleCreatorScene extends Scene {
             String puzzle = "***PUZZLE***\n";
             for(int i=0; i<=maxRow; i++){
                 for(int j=0; j<orbArray[i].length; j++){
-                    if(orbArray[i][j]==NULL || orbArray[i][j]==EMPTY) puzzle += ' ';
+                    if(orbArray[i][j].equals(NULL) || orbArray[i][j]==EMPTY) puzzle += ' ';
                     else puzzle += orbArray[i][j].getOrbColor().getSymbol();
                 }
                 puzzle += '\n';
@@ -192,7 +192,7 @@ public class PuzzleCreatorScene extends Scene {
         int maxRow = 0;
         for (int i = 0; i < ARRAY_HEIGHT; i++) {
             for (int j = 0; j < orbArray[i].length; j++) {
-                if(orbArray[i][j] != NULL && orbArray[i][j] != EMPTY) {
+                if(!orbArray[i][j].equals(NULL) && orbArray[i][j] != EMPTY) {
                     maxRow = i;
                     break;
                 }

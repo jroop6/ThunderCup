@@ -22,7 +22,7 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     private Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
-    protected Synchronizer synchronizer;
+    protected final Synchronizer synchronizer;
     private Precedence precedence;
     private int syncTolerance;
     private int framesOutOfSync = 0;

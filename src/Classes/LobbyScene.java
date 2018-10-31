@@ -220,7 +220,7 @@ public class LobbyScene extends Scene {
                     if(isHost)deleteRemovedPlayers();
 
                     prepareAndSendPacket();
-                    //connectionManager.getSynchronizer().resetChangedData();
+                    connectionManager.getSynchronizer().resetChangedData();
 
                     // Perform special processing for game data:
                     if(gameCanceled.getData()){
@@ -280,9 +280,6 @@ public class LobbyScene extends Scene {
                     // this is a new player, so see if there's an open slot available:
                     PlayerSlot availableSlot = getUnclaimedSlot();
                     if(availableSlot!=null){
-                        // De-register the open slot playerdata:
-                        localSynchronizer.deRegisterAllWithID(availableSlot.getPlayer().getPlayerID());
-
                         // create the player and put him/her in the slot:
                         String username = (String)receivedSynchronizer.get(id,"username").getData();
                         Player newRemotePlayer = new Player(username, Player.PlayerType.REMOTE_HOSTVIEW, id, localSynchronizer);
