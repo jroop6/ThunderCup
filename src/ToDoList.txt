@@ -1,6 +1,4 @@
 *******Priority items, copied from below*******
-Refactor simulateOrbs so that it doesn't make permanent changes to orbArray, shootingOrbs, etc.
-properly synchronize the methods called by playpanel.tick() and botplayer.tick() to prevent ConcurrentModificationExceptions.
 more puzzles!
 TransferInOrbs should be able to kill a player.
 when another player tries to connect to a game with no open slots, we get the wrong error message

@@ -31,6 +31,7 @@ import java.util.concurrent.*;
 import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
 import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
 import static Classes.Orb.NULL;
+import static Classes.PlayPanel.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.Player.GAME_ID;
 import static Classes.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
@@ -195,7 +196,13 @@ public class GameScene extends Scene {
                     playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[0][0] = NULL;
                     break;
                 case T: // For testing. Intentionally de-synchronizes a client's transferInOrbs to see whether it will eventually be overwritten with the host's data.
-                    playPanelMap.get(localPlayer.team.getData()).getOrbArray().getData()[10][0] = new Orb(OrbColor.BLUE,10,0, Orb.OrbAnimationState.STATIC);
+                    playPanelMap.get(localPlayer.team.getData()).getOrbArray().setModify(10,0, new Orb(OrbColor.BLUE,10,0, Orb.OrbAnimationState.STATIC));
+                    /*for (int j=0; j<ARRAY_WIDTH_PER_CHARACTER*1; j+=2){
+                        playPanelMap.get(localPlayer.team.getData()).getOrbArray().setModify(10,j, new Orb(OrbColor.BLUE,10,j, Orb.OrbAnimationState.STATIC));
+                    }
+                    for (int j=0; j<ARRAY_WIDTH_PER_CHARACTER*1; j+=2){
+                        playPanelMap.get(localPlayer.team.getData()).getOrbArray().setModify(10,j, new Orb(OrbColor.BLUE,10,j, Orb.OrbAnimationState.STATIC))
+                    }*/
                     break;
                 case R:
                     playPanelMap.get(localPlayer.team.getData()).printOrbArray();

@@ -39,6 +39,8 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     private double angle; // angle of travel, radians
     private double speed; // current speed, pixels per second
 
+    private int distinguishingInt; // For distinguishing this Orb from other shooting Orbs of the same color.
+
     // A frame count for the "transferring" and "thundering" animations, which are handled in a special way (without using an Animation)
     private int currentFrame = 0;
 
@@ -132,6 +134,9 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
         this.orbColor = orbColor;
         orbAnimation.setAnimationName(orbColor.getImplodeAnimationName());
     }
+    public void setDistinguishingInt(int newVal){
+        distinguishingInt = newVal;
+    }
 
     public double getXPos(){
         return orbAnimation.getAnchorX();
@@ -150,6 +155,9 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
     }
     public OrbColor getOrbColor(){
         return orbColor;
+    }
+    public int getDistinguishingInt(){
+        return distinguishingInt;
     }
 
     // called 24 times per second.
@@ -246,11 +254,13 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
                     && otherOrb.orbColor == orbColor
                     /*&& Math.abs(otherOrb.getXPos()-getXPos())<tolerance
                     && Math.abs(otherOrb.getYPos()-getYPos())<tolerance*/
-                    && Math.abs(Math.toDegrees(otherOrb.angle-angle))<tolerance;
+                    && Math.abs(Math.toDegrees(otherOrb.angle-angle))<tolerance // todo: is checking the angle necessary any more?
+                    && otherOrb.distinguishingInt == distinguishingInt;
         }
-        else{ // The orbs are array Orbs, so we don't need to check locations. Note: the (i,j) coordinates don't need to be checked because equals() is only ever called on an arrayOrb by deepEquals(), which is already going element-by-element.
-            return otherOrb.i >= 0
-                    && otherOrb.orbColor == orbColor;
+        else{ // This orb is an array Orb
+            return otherOrb.i == i
+                    && otherOrb.j == j
+                    && otherOrb.orbColor == orbColor; // todo: is checking for color consistency necessary?
         }
     }
 
@@ -265,8 +275,8 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
                     && Math.abs(Math.toDegrees(other.angle-angle))<tolerance) return 0;
             else return -1;
         }
-        else{ // The orbs are array Orbs, so we don't need to check locations. Note: the (i,j) coordinates don't need to be checked because equals() is only ever called by deepEquals(), which is already going element-by-element.
-            if(other.i!=-1 && other.orbColor == orbColor) return 0;
+        else{ // This orb is an array Orb
+            if(other.i == i && other.j == j && other.orbColor == orbColor) return 0;
             else return -1;
         }
     }

@@ -201,8 +201,16 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     /* Setters: These are called by clients when they are updating their data according to data from the host*/
-    //ToDo: Do I really need these, or should I just use the copy constructor?
     public void setAddShootingOrb(Orb newShootingOrb){
+        // To distinguish same-colored shooting Orbs from one another, attach a little extra int:
+        int distinguishingInt = 0;
+        for(Orb shootingOrb : shootingOrbs){
+            if(shootingOrb.getOrbColor()==newShootingOrb.getOrbColor() && shootingOrb.getDistinguishingInt()>distinguishingInt){
+                distinguishingInt = shootingOrb.getDistinguishingInt();
+            }
+        }
+        distinguishingInt++;
+        newShootingOrb.setDistinguishingInt(distinguishingInt);
         shootingOrbs.add(newShootingOrb);
         cumulativeShotsFired ++;
     }
@@ -644,7 +652,7 @@ public class PlayPanel extends Pane implements Serializable {
             }
         }
 
-        synchronized(synchronizer){ // The application thread might be in the middle of drawing visual flourishes, bursting Orbs, array Orbs, thunder Orbs, dropping Orbs, or transferring Orbs.
+        synchronized(synchronizer){ // The application thread might be in the middle of drawing visual flourishes, bursting Orbs, array Orbs, thunder Orbs, dropping Orbs, transferring Orbs, shootingOrbs, or ammunition Orbs.
             // Advance the animation frame of the existing visual flourishes:
             visualFlourishes.removeIf(visualFlourish -> visualFlourish.tick());
 
@@ -687,29 +695,30 @@ public class PlayPanel extends Pane implements Serializable {
             // Advance the existing transfer-in Orbs, adding visual flourishes if they're done:
             List<Orb> transferOrbsToSnap = advanceTransferringOrbs();
             snapTransferOrbs(outcome, transferOrbsToSnap, orbArray, deathOrbs, outcome.soundEffectsToPlay, visualFlourishes, transferInOrbs);
-        }
 
-        // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
-        if(isPuzzleCleared(orbArray.getData())){
-            shootingOrbs.clear();
-            if(puzzleUrl.substring(0,6).equals("RANDOM")){ // this was a random puzzle. Declare victory
-                teamState.changeTo(TeamState.VICTORIOUS);
-            }
-            else{ // This was a pre-built puzzle. Load the next one, if there is one.
-                int currentIndex = Integer.parseInt(puzzleUrl.substring(puzzleUrl.length()-2));
-                puzzleUrl = String.format("%s%02d",puzzleUrl.substring(0,puzzleUrl.length()-2),currentIndex+1);
-                if(!initializeOrbArray(puzzleUrl)){ // There was no next puzzle. Declare victory.
+            // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
+            if(isPuzzleCleared(orbArray.getData())){
+                shootingOrbs.clear();
+                if(puzzleUrl.substring(0,6).equals("RANDOM")){ // this was a random puzzle. Declare victory
                     teamState.changeTo(TeamState.VICTORIOUS);
                 }
-                else{
-                    for(int i=0; i<players.size(); i++){
-                        Player player = players.get(i);
-                        player.readAmmunitionOrbs(puzzleUrl, seed);
-                        player.positionAmmunitionOrbs();
+                else{ // This was a pre-built puzzle. Load the next one, if there is one.
+                    int currentIndex = Integer.parseInt(puzzleUrl.substring(puzzleUrl.length()-2));
+                    puzzleUrl = String.format("%s%02d",puzzleUrl.substring(0,puzzleUrl.length()-2),currentIndex+1);
+                    if(!initializeOrbArray(puzzleUrl)){ // There was no next puzzle. Declare victory.
+                        teamState.changeTo(TeamState.VICTORIOUS);
+                    }
+                    else{
+                        for(int i=0; i<players.size(); i++){
+                            Player player = players.get(i);
+                            player.readAmmunitionOrbs(puzzleUrl, seed);
+                            player.positionAmmunitionOrbs();
+                        }
                     }
                 }
             }
         }
+
 
         // reset shotsUntilNewRow
         if(shotsUntilNewRow<=0) shotsUntilNewRow = SHOTS_BETWEEN_DROPS*players.size() + shotsUntilNewRow;
@@ -724,16 +733,20 @@ public class PlayPanel extends Pane implements Serializable {
 
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!isDeathOrbsEmpty()){
-            for(Player defeatedPlayer : players){
-                defeatedPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DEFEATED);
+            synchronized (synchronizer){ // The application might be in the middle of drawing the characters.
+                for(Player defeatedPlayer : players){
+                    defeatedPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DEFEATED);
+                }
             }
         }
 
         // update each player's animation state:
         int lowestRow = getLowestOccupiedRow(orbArray.getData(), deathOrbs);
-        for(Player player : players){
-            if (player instanceof BotPlayer) continue; // we've already ticked() the BotPlayers.
-            player.tick(lowestRow);
+        synchronized (synchronizer){ // The application might be in the middle of drawing the characters, and tick() can change characterAnimation.
+            for(Player player : players) {
+                if (player instanceof BotPlayer) continue; // we've already ticked() the BotPlayers.
+                player.tick(lowestRow);
+            }
         }
 
         removeStrayOrbs();
@@ -1199,10 +1212,10 @@ public class PlayPanel extends Pane implements Serializable {
         findPatternCompletions(outcome, orbArray, deathOrbs);
 
         // Drop floating orbs
-        //if(!outcome.arrayOrbsToBurst.isEmpty()){ // floating orbs are possible only if array orbs have burst.
         findConnectedOrbs(outcome, orbArray, deathOrbs);
-        findFloatingOrbs(outcome, orbArray, deathOrbs);
-        //}
+        if(!outcome.arrayOrbsToBurst.isEmpty()){ // floating orbs are possible only if array orbs have burst.
+            findFloatingOrbs(outcome, orbArray, deathOrbs);
+        }
 
         return outcome;
     }
