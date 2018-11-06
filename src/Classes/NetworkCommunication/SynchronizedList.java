@@ -15,9 +15,9 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
 
     SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;
 
-    public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Setable<LinkedList<T>> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, SynchronizationType synchronizationType, int syncTolerance){
+    public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Precedence precedence, long parentID, Synchronizer synchronizer, SynchronizationType synchronizationType, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
-        registerExternalSetters(setInterface, changeInterface);
+        registerExternalSetter(setInterface);
         this.synchronizationType = synchronizationType;
         this.data = new LinkedList<>();
         setTo(data);
@@ -103,7 +103,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             data.add(newItem);
             int index = data.indexOf(newItem);
             LinkedList<T> newItemInList = new LinkedList<>(Collections.singletonList(newItem));
-            if(getExternalChanger()!=null) getExternalChanger().handle(newItemInList, Mode.ADD, index, index);
+            if(getExternalSetter()!=null) getExternalSetter().handle(newItemInList, Mode.ADD, index, index);
             getSynchronizer().addToChangedData(this);
         }
     }
@@ -121,7 +121,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             int index = data.indexOf(itemToRemove);
             LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(itemToRemove));
             data.remove(itemToRemove);
-            if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
+            if(getExternalSetter()!=null) getExternalSetter().handle(removedItemInList, Mode.REMOVE, index, index);
             getSynchronizer().addToChangedData(this);
         }
     }
@@ -131,7 +131,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
             T removedItem = data.get(index);
             LinkedList<T> removedItemInList = new LinkedList<>(Collections.singleton(removedItem));
             data.remove(index);
-            if(getExternalChanger()!=null) getExternalChanger().handle(removedItemInList, Mode.REMOVE, index, index);
+            if(getExternalSetter()!=null) getExternalSetter().handle(removedItemInList, Mode.REMOVE, index, index);
             getSynchronizer().addToChangedData(this);
             return removedItem;
         }

@@ -19,7 +19,6 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
 
     // these functional interfaces provide additional code that is executed whenever this data is set or changed.
     private transient Setable<T> externalSetter;
-    private transient Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
     protected final Synchronizer synchronizer;
@@ -36,31 +35,29 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
         this.name = name;
         this.parentID = parentID;
         this.externalSetter = null;
-        this.externalChanger = null;
         this.precedence = precedence;
         this.syncTolerance = syncTolerance;
         synchronizer.register(this);
         this.synchronizer = synchronizer;
     }
 
-    public void registerExternalSetters(Setable<T> externalSetter, Setable<T> externalChanger){
+    void registerExternalSetter(Setable<T> externalSetter){
 	    this.externalSetter = externalSetter;
-	    this.externalChanger = externalChanger;
     }
 
-    public void incrementFramesOutOfSync(){
+    void incrementFramesOutOfSync(){
 	    framesOutOfSync++;
     }
 
-    public boolean isOutOfSync(){
+    boolean isOutOfSync(){
 	    return framesOutOfSync > syncTolerance;
     }
 
-    public void resetFramesOutOfSync(){
+    void resetFramesOutOfSync(){
 	    framesOutOfSync = 0;
     }
 
-    public long getParentID(){
+    long getParentID(){
 	    return parentID;
     }
     public String getName(){
@@ -82,16 +79,10 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     public void setPrecedence(Precedence newPrecedence){
 	    precedence = newPrecedence;
     }
-    public Setable<T> getExternalSetter(){
+    Setable<T> getExternalSetter(){
 	    return externalSetter;
-    }
-    public Setable<T> getExternalChanger(){
-	    return externalChanger;
     }
     public Synchronizer getSynchronizer(){
 	    return synchronizer;
-    }
-    public int getSynchTolerance(){
-        return syncTolerance;
     }
 }

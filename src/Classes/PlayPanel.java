@@ -155,23 +155,6 @@ public class PlayPanel extends Pane implements Serializable {
                         player.getPlayerStatus().setTo(newPlayerStatus);
                     }
                 },
-                (TeamState newVal, Mode mode, int i, int j) ->{
-                    Player.PlayerStatus newPlayerStatus;
-                    switch(newVal){
-                        case VICTORIOUS:
-                            newPlayerStatus = Player.PlayerStatus.VICTORIOUS;
-                            break;
-                        case DEFEATED:
-                            newPlayerStatus = Player.PlayerStatus.DEFEATED;
-                            break;
-                        default:
-                            newPlayerStatus = Player.PlayerStatus.NORMAL;
-                            break;
-                    }
-                    for(Player player : players){
-                        player.getPlayerStatus().setTo(newPlayerStatus);
-                    }
-                },
                 SynchronizedData.Precedence.HOST,team,synchronizer,0);
 
         // If this playpanel contains the localPlayer and we're not the host, change precedence to CLIENT:

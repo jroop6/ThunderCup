@@ -39,13 +39,8 @@ public class Cannon implements Serializable {
                         movingPartAnimation.setAnimationName(newVal.getMovingPartAnimation(cannonAnimationState));
                         foregroundAnimation.setAnimationName(newVal.getForegroundAnimation(cannonAnimationState));
                     },
-                    (CannonType newVal, Mode mode, int i, int j)->{
-                        backgroundAnimation.setAnimationName(newVal.getBackgroundAnimation(cannonAnimationState));
-                        movingPartAnimation.setAnimationName(newVal.getMovingPartAnimation(cannonAnimationState));
-                        foregroundAnimation.setAnimationName(newVal.getForegroundAnimation(cannonAnimationState));
-                    },
                     SynchronizedData.Precedence.CLIENT,parentID,synchronizer,24);
-            cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), (Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,Integer.MAX_VALUE);
+            cannonAngle = new SynchronizedComparable<>("cannonAngle",-80.0,(Double newVal, Mode mode, int i, int j)->movingPartAnimation.setRotation(newVal), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,Integer.MAX_VALUE);
             cannonAngle.setTo(-80.0);
         }
     }

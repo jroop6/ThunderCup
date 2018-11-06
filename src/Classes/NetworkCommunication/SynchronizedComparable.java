@@ -3,9 +3,9 @@ package Classes.NetworkCommunication;
 import java.io.*;
 
 public class SynchronizedComparable<T extends Comparable<T> & Serializable> extends SynchronizedData<T>{
-    public SynchronizedComparable(String name, T data, Setable<T> setInterface, Setable<T> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
+    public SynchronizedComparable(String name, T data, Setable<T> setInterface, Precedence precedence, long parentID, Synchronizer synchronizer, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
-        registerExternalSetters(setInterface, changeInterface);
+        registerExternalSetter(setInterface);
         setTo(data);
     }
 
@@ -22,7 +22,7 @@ public class SynchronizedComparable<T extends Comparable<T> & Serializable> exte
     @Override
     public void changeTo(T newValue){
         synchronized(synchronizer){
-            if(getExternalChanger()!=null) getExternalChanger().handle(newValue, Mode.SET, 0, 0);
+            if(getExternalSetter()!=null) getExternalSetter().handle(newValue, Mode.SET, 0, 0);
             data = newValue;
             getSynchronizer().addToChangedData(this);
         }

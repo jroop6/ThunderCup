@@ -31,7 +31,6 @@ import java.util.concurrent.*;
 import static Classes.Animation.CharacterType.CharacterAnimationState.DEFEATED;
 import static Classes.Animation.CharacterType.CharacterAnimationState.VICTORIOUS;
 import static Classes.Orb.NULL;
-import static Classes.PlayPanel.ARRAY_WIDTH_PER_CHARACTER;
 import static Classes.Player.GAME_ID;
 import static Classes.Player.HOST_ID;
 import static javafx.scene.layout.AnchorPane.setBottomAnchor;
@@ -65,13 +64,13 @@ public class GameScene extends Scene {
     private int victoriousTeam;
 
     // Sound effects to play this frame.
-    Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
+    private Set<SoundEffect> soundEffectsToPlay = EnumSet.noneOf(SoundEffect.class);
 
     // Variables related to animation and timing:
     private AnimationTimer animationTimer;
     private boolean initializing = true;
     public static final int DATA_FRAME_RATE = 24;
-    public static final int VISUAL_FRAME_RATE = 60;
+    private static final int VISUAL_FRAME_RATE = 60;
     private long nextDataUpdateInstance = 0; // Time at which The next animation frame will be computed.
     private long nextAnimationFrameInstance = 0; // Time at which all visuals will be repainted(nanoseconds)
 
@@ -79,7 +78,6 @@ public class GameScene extends Scene {
     private ConnectionManager connectionManager;
     private boolean isHost;
     private long nextLatencyTest = 0; // The time at which the next latency probe will be sent out (nanoseconds).
-    private long nextSendInstance = 0; // The time at which the next packet will be sent (nanoseconds).
     private final long maxConsecutivePacketsMissed; // If this many packets are missed consecutively from a particular player, alert the user.
 
     // for misc debugging:
@@ -224,7 +222,6 @@ public class GameScene extends Scene {
                     nextAnimationFrameInstance = now;
                     nextDataUpdateInstance = now;
                     nextLatencyTest = now;
-                    nextSendInstance = now;
                     nextReport = now;
 
                     initializing = false;
@@ -380,17 +377,6 @@ public class GameScene extends Scene {
             // Check for victory conditions:
             checkForVictory_Model();
             return null;
-        }
-    }
-
-    private class FrameResult{
-        Set<SoundEffect> soundEffectsToPlay;
-        List<PlayPanel> playPanelListCopy;
-        List<Player> playerListCopy;
-        FrameResult(Set<SoundEffect> soundEffectsToPlay, List<PlayPanel> playPanelList, List<Player> playerList){
-            this.soundEffectsToPlay = soundEffectsToPlay;
-            playPanelListCopy = playPanelList;
-            playerListCopy = playerList;
         }
     }
 
@@ -555,15 +541,14 @@ public class GameScene extends Scene {
     }
 
     private void displayPauseMenu(){
-        if(rootNode.getChildren().contains(pauseOverlay)); // game is already paused, so do nothing.
-        else rootNode.getChildren().addAll(pauseOverlay, pauseMenu);
+        if(!rootNode.getChildren().contains(pauseOverlay)) rootNode.getChildren().addAll(pauseOverlay, pauseMenu);
     }
 
     private void removePauseMenu(){
         rootNode.getChildren().removeAll(pauseOverlay, pauseMenu);
     }
 
-    public void cleanUp(){
+    void cleanUp(){
         // Tell the other players that we're leaving:
         if(isHost){
             gameCanceled.changeTo(true);

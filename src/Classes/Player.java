@@ -104,26 +104,6 @@ public class Player implements Serializable {
                                 break;
                         }
                     },
-                    (PlayerStatus newVal, Mode mode, int i, int j)->{
-                        switch (newVal) {
-                            case NORMAL:
-                                character.setCharacterAnimationState(CharacterType.CharacterAnimationState.CONTENT);
-                                cannon.setCannonAnimationState(CannonType.CannonAnimationState.AIMING);
-                                break;
-                            case DISCONNECTED:
-                                character.setCharacterAnimationState(CharacterType.CharacterAnimationState.DISCONNECTED);
-                                cannon.setCannonAnimationState(CannonType.CannonAnimationState.DISCONNECTED);
-                                break;
-                            case DEFEATED:
-                                character.setCharacterAnimationState(CharacterType.CharacterAnimationState.DEFEATED);
-                                cannon.setCannonAnimationState(CannonType.CannonAnimationState.DEFEATED);
-                                break;
-                            case VICTORIOUS:
-                                character.setCharacterAnimationState(CharacterType.CharacterAnimationState.VICTORIOUS);
-                                cannon.setCannonAnimationState(CannonType.CannonAnimationState.VICTORIOUS);
-                                break;
-                        }
-                    },
                     SynchronizedData.Precedence.CLIENT, playerID, synchronizer, 0);
             firedOrbs = new SynchronizedList<>("firedOrbs",new LinkedList<>(),
                     (LinkedList<Orb> newVal, Mode mode, int i, int j)->{
@@ -134,34 +114,6 @@ public class Player implements Serializable {
 
                                     // first, a quick sanity check:
                                     // todo: It is possible for packets to arrive out of order, triggering this error message. A rigorous fix would require either time-stamping the Orbs or associating a unique identifier with each shootingOrb.
-                                    if(newVal.get(0).getOrbColor()!=(ammunitionOrbs.getData().get(0)).getOrbColor()) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
-
-                                    // Remove the fired Orb from the ammunitionOrbs list and place it in the shootingOrbs list:
-                                    Orb firedOrb = ammunitionOrbs.setRemove(0);
-                                    firedOrb.setRawTimestamp(System.nanoTime());
-                                    firedOrb.setAngle(Math.toRadians(cannon.getCannonAngle().getData()));
-                                    firedOrb.setSpeed(firedOrb.getOrbColor().getOrbSpeed());
-                                    playPanel.setAddShootingOrb(firedOrb);
-
-                                    // Add a new Orb to the end of the ammunitionOrbs list
-                                    if(ammunitionOrbs.getData().size()<2){
-                                        OrbColor newEnum = playPanel.getNextShooterOrbEnum(ammunitionGenerator.nextDouble());
-                                        ammunitionOrbs.setAdd(new Orb(newEnum,-1,-1, Orb.OrbAnimationState.STATIC));
-                                    }
-                                    positionAmmunitionOrbs();
-                                    break;
-                                case REMOVE:
-                                case SET:
-                            }
-                        }
-                    },
-                    (LinkedList<Orb> newVal, Mode mode, int i, int j)->{
-                        synchronized (synchronizer){
-                            switch (mode){
-                                case ADD:
-                                    // Note to self: Don't move this code into changeFireCannon(). Other players need to perform these same steps during the call to synchronizeWith()
-
-                                    // first, a quick sanity check:
                                     if(newVal.get(0).getOrbColor()!=(ammunitionOrbs.getData().get(0)).getOrbColor()) System.err.println("firedOrb is inconsistent with 1st ammunitionOrb. Investigate this.");
 
                                     // Remove the fired Orb from the ammunitionOrbs list and place it in the shootingOrbs list:

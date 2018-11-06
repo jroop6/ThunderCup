@@ -26,7 +26,7 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
     public void changeModify(int iPos, int jPos, T newItem){
         synchronized (synchronizer){
             data[iPos][jPos] = newItem;
-            if(getExternalChanger()!=null) getExternalChanger().handle(data, Mode.SET, iPos, jPos);
+            if(getExternalSetter()!=null) getExternalSetter().handle(data, Mode.SET, iPos, jPos);
             getSynchronizer().addToChangedData(this);
         }
     }

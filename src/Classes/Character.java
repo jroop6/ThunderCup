@@ -24,7 +24,7 @@ public class Character implements Serializable {
         characterAnimationState = CharacterType.CharacterAnimationState.CONTENT;
         currentAnimation = new Animation(characterType.getAnimationName(characterAnimationState));
         synchronized (synchronizer){
-            this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimationName(newValue.getAnimationName(characterAnimationState))), ((newValue, mode, i, j) -> currentAnimation.setAnimationName(newValue.getAnimationName(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
+            this.characterType = new SynchronizedComparable<>("characterType", characterType, ((newValue,mode,i,j) -> currentAnimation.setAnimationName(newValue.getAnimationName(characterAnimationState))), SynchronizedData.Precedence.CLIENT,parentID,synchronizer,5);
         }
     }
 
