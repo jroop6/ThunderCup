@@ -14,15 +14,6 @@ public class SynchronizedComparable<T extends Comparable<T> & Serializable> exte
         setTo(data);
     }
 
-    public SynchronizedComparable(SynchronizedComparable<T> other, Synchronizer synchronizer){
-        super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
-        setTo(deepCopyDataElement(other.data));
-    }
-
-    public SynchronizedComparable<T> copyForNetworking(Synchronizer synchronizer){
-        return new SynchronizedComparable<>(this, synchronizer);
-    }
-
     @Override
     public int compareTo(SynchronizedData<T> other){
         return data.compareTo(other.data);

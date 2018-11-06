@@ -579,7 +579,7 @@ public class PlayPanel extends Pane implements Serializable {
     }
 
     // called 24 times per second to update all animations and Orb positions for the next animation frame.
-    public Outcome tick(){
+    public Outcome tick(boolean isHost){
         // Most of the computation work is done in here:
         Outcome outcome = simulateOrbs(orbArray.getData(), deathOrbs, shootingOrbs, 1/(double) DATA_FRAME_RATE);
 
@@ -700,13 +700,15 @@ public class PlayPanel extends Pane implements Serializable {
             if(isPuzzleCleared(orbArray.getData())){
                 shootingOrbs.clear();
                 if(puzzleUrl.substring(0,6).equals("RANDOM")){ // this was a random puzzle. Declare victory
-                    teamState.changeTo(TeamState.VICTORIOUS);
+                    if(isHost) teamState.changeTo(TeamState.VICTORIOUS);
+                    else teamState.setTo(TeamState.VICTORIOUS);
                 }
                 else{ // This was a pre-built puzzle. Load the next one, if there is one.
                     int currentIndex = Integer.parseInt(puzzleUrl.substring(puzzleUrl.length()-2));
                     puzzleUrl = String.format("%s%02d",puzzleUrl.substring(0,puzzleUrl.length()-2),currentIndex+1);
                     if(!initializeOrbArray(puzzleUrl)){ // There was no next puzzle. Declare victory.
-                        teamState.changeTo(TeamState.VICTORIOUS);
+                        if(isHost) teamState.changeTo(TeamState.VICTORIOUS);
+                        else teamState.setTo(TeamState.VICTORIOUS);
                     }
                     else{
                         for(int i=0; i<players.size(); i++){
@@ -734,9 +736,8 @@ public class PlayPanel extends Pane implements Serializable {
         // check to see whether this team has lost due to uncleared deathOrbs:
         if(!isDeathOrbsEmpty()){
             synchronized (synchronizer){ // The application might be in the middle of drawing the characters.
-                for(Player defeatedPlayer : players){
-                    defeatedPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DEFEATED);
-                }
+                if(isHost) teamState.changeTo(TeamState.DEFEATED);
+                else teamState.setTo(TeamState.DEFEATED);
             }
         }
 

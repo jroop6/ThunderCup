@@ -13,7 +13,7 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
     // ensure consistency. Example: AmmunitionOrbs list.
     public enum SynchronizationType {SEND_ONCE, KEEP_SYNCHRONIZED}
 
-    private SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;
+    SynchronizationType synchronizationType = SynchronizationType.KEEP_SYNCHRONIZED;
 
     public SynchronizedList(String name, LinkedList<T> data, Setable<LinkedList<T>> setInterface, Setable<LinkedList<T>> changeInterface, Precedence precedence, long parentID, Synchronizer synchronizer, SynchronizationType synchronizationType, int syncTolerance){
         super(name, parentID, synchronizer, precedence, syncTolerance);
@@ -34,25 +34,6 @@ public class SynchronizedList<T extends Comparable<T> & Serializable> extends Sy
         this.synchronizationType = synchronizationType;
         this.data = new LinkedList<>();
         setTo(data);
-    }
-
-    public SynchronizedList(SynchronizedList<T> other, Synchronizer synchronizer){
-        super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
-        // Perform a deep copy of each element in the List of data:
-        LinkedList<T> otherDataListCopy = new LinkedList<>();
-        for(T element : other.getData()){
-            T elementCopy = deepCopyDataElement(element);
-            otherDataListCopy.add(elementCopy);
-        }
-        this.synchronizationType = other.synchronizationType;
-        this.data = new LinkedList<>();
-        setTo(otherDataListCopy);
-    }
-
-    public SynchronizedList<T> copyForNetworking(Synchronizer synchronizer){
-        SynchronizedList<T> copy = new SynchronizedList<>(this, synchronizer);
-        if(synchronizationType==SynchronizationType.SEND_ONCE) setClear();
-        return copy;
     }
 
     // this kinda sorta returns the "edit distance" between the two lists.

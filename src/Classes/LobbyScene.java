@@ -491,8 +491,9 @@ public class LobbyScene extends Scene {
     }
 
     private void prepareAndSendPacket(){
-        Packet outPacket = new Packet(connectionManager.getSynchronizer());
-        connectionManager.send(outPacket);
+        //Packet outPacket = new Packet(connectionManager.getSynchronizer());
+        connectionManager.send(new Packet(connectionManager.getSynchronizer()));
+        connectionManager.getSynchronizer().clearSendOnceData();
     }
 
     public boolean isConnected(){

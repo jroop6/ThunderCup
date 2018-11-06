@@ -363,7 +363,7 @@ public class GameScene extends Scene {
                 // update each PlayPanel:
                 for(PlayPanel playPanel: playPanelMap.values()){
                     long time = System.nanoTime();
-                    PlayPanel.Outcome outcome = playPanel.tick();
+                    PlayPanel.Outcome outcome = playPanel.tick(isHost);
                     synchronized (connectionManager.getSynchronizer()){ // The applicationThread plays the sounds and clears this list.
                         soundEffectsToPlay.addAll(outcome.soundEffectsToPlay);
                     }
@@ -412,6 +412,7 @@ public class GameScene extends Scene {
 
             // Process outgoing Packets
             connectionManager.send(new Packet(connectionManager.getSynchronizer()));
+            connectionManager.getSynchronizer().clearSendOnceData();
 
             checkForDisconnectedPlayers();
 

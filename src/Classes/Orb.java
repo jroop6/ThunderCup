@@ -272,7 +272,8 @@ public class Orb extends PointInt implements Serializable, Comparable<Orb>{
                     && other.orbColor == orbColor
                     /*&& Math.abs(other.getXPos()-getXPos())<tolerance
                     && Math.abs(other.getYPos()-getYPos())<tolerance*/
-                    && Math.abs(Math.toDegrees(other.angle-angle))<tolerance) return 0;
+                    && Math.abs(Math.toDegrees(other.angle-angle))<tolerance // todo: is checking the angle necessary any more?
+                    && other.distinguishingInt == distinguishingInt) return 0;
             else return -1;
         }
         else{ // This orb is an array Orb

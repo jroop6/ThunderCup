@@ -11,45 +11,6 @@ public class SynchronizedArray<T extends Comparable<T> & Serializable> extends S
         setTo(data);
     }
 
-    public SynchronizedArray(SynchronizedArray<T> other, Synchronizer synchronizer){
-        super(other.getName(), other.getParentID(), synchronizer, other.getPrecedence(), other.getSynchTolerance());
-        // Note: Doing a deep copy on each individual element has proven to be prohibitively expensive. The entire array
-        // is serialized as one unit instead, now. Eventually, let's just serialize the Synchronizer instance and avoid
-        // calling any copy constructors.
-
-        // Create a new T[][] array with deep copies of each array element:
-        /*T[][] arrayCopy = Arrays.copyOf(other.data,other.data.length); // creates an array of the right height
-        for(int i=0; i<other.data.length; i++){
-            T[] row = other.data[i];
-            T[] rowCopy = Arrays.copyOf(row,row.length); // creates a row of the right width
-            for(int j=0; j<row.length; j++){
-                rowCopy[j] = deepCopyDataElement(row[j]); // deeply copies an element
-            }
-            arrayCopy[i] = rowCopy;
-        }
-        setTo(arrayCopy);*/
-
-        try{
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(other.data);
-            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
-            try{
-                T[][] arrayCopy = (T[][])ois.readObject();
-                setTo(arrayCopy);
-            } catch (ClassNotFoundException e){
-                e.printStackTrace();
-            }
-        } catch(IOException e){
-            e.printStackTrace();
-        }
-
-    }
-
-    public SynchronizedArray<T> copyForNetworking(Synchronizer synchronizer){
-        return new SynchronizedArray<>(this, synchronizer);
-    }
-
     public int compareTo(SynchronizedData<T[][]> other){
         if(Arrays.deepEquals(data,other.data)) return 0;
         else return -1;

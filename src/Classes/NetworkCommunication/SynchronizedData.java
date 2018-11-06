@@ -18,8 +18,8 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     private final String name;
 
     // these functional interfaces provide additional code that is executed whenever this data is set or changed.
-    private Setable<T> externalSetter;
-    private Setable<T> externalChanger;
+    private transient Setable<T> externalSetter;
+    private transient Setable<T> externalChanger;
 
     // for managing synchronization between host and client:
     protected final Synchronizer synchronizer;
@@ -76,9 +76,6 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     // setTo is called by the machine that does NOT have precedence:
     abstract public void setTo(T newValue);
 
-    // returns a deep copy of this SynchronizedData, minus any non-serializable data such as lambda expressions.
-    abstract public SynchronizedData<T> copyForNetworking(Synchronizer synchronizer);
-
     public Precedence getPrecedence(){
         return precedence;
     }
@@ -96,22 +93,5 @@ public abstract class SynchronizedData<T extends Serializable> implements Compar
     }
     public int getSynchTolerance(){
         return syncTolerance;
-    }
-
-    public <E> E deepCopyDataElement(E dataToCopy){
-        try{
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(dataToCopy);
-            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
-            try{
-                return (E)ois.readObject();
-            } catch (ClassNotFoundException e){
-                e.printStackTrace();
-            }
-        } catch(IOException e){
-            e.printStackTrace();
-        }
-        return null;
     }
 }

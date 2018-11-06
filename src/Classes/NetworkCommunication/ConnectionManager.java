@@ -1,5 +1,6 @@
 package Classes.NetworkCommunication;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -44,10 +45,19 @@ public abstract class ConnectionManager extends Thread {
     }
 
     // Note: A Client will only have 1 senderWorker.
-    // Before sending, outPacket is to be built in either the GameScene or LobbyScene.
     public void send(Object object){
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] serializedPacket = new byte[1];
+        try{
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(object);
+            serializedPacket = baos.toByteArray();
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+
         for (SenderWorker senderWorker : senderWorkers) {
-            senderWorker.send(object);
+            senderWorker.send(serializedPacket);
         }
     }
 

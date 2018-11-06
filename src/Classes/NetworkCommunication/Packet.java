@@ -1,10 +1,8 @@
 package Classes.NetworkCommunication;
 
-import Classes.PlayPanel;
-
 import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.Queue;
+
+import static Classes.Player.GAME_ID;
 
 /**
  * Created by Jonathan Roop on 8/4/2017.
@@ -12,9 +10,11 @@ import java.util.Queue;
 public class Packet implements Serializable{
     private Synchronizer synchronizer;
     private boolean connectionRejected = false;
+    private int i=0;
 
     public Packet(Synchronizer synchronizer){
-        if(synchronizer!=null) this.synchronizer = synchronizer.copyForNetworking();
+        //if(synchronizer!=null) this.synchronizer = synchronizer.copyForNetworking();
+        if(synchronizer!=null) this.synchronizer = synchronizer;
     }
 
     public void rejectConnection(){

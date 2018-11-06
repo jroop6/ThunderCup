@@ -3,6 +3,8 @@ package Classes.NetworkCommunication;
 import java.io.Serializable;
 import java.util.*;
 
+import static Classes.NetworkCommunication.SynchronizedList.SynchronizationType.SEND_ONCE;
+
 /**
  * A container for all the data that must be kept synchronized between host and client. All the data is held in a
  * 2-level HashMap structure. The first level organizes data by an ID value (such as playerID) and the second level
@@ -27,37 +29,6 @@ public class Synchronizer implements Serializable {
 
     public Synchronizer(long id){
         this.id = id;
-    }
-
-    // Returns a deep copy of this Synchronizer, minus any nonserializable data (such as lambda expressions).
-    // todo: After the new synchronization system is complete, eliminate this method completely. We can simply wrap the prepareAndSendPacket method in synchronized(connectionManager.getSynchronizer())
-    // todo: also, remove copyForNetworking() from SynchronizedData and its derived classes.
-    public Synchronizer copyForNetworking(){
-        Synchronizer synchronizerCopy = new Synchronizer(id);
-
-        synchronized (this){ // we don't want the other data to be modified while we're trying to copy it.
-            // Copy the synchronizedDataMap
-            for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : synchronizedDataMap.entrySet()){
-                HashMap<String, SynchronizedData> mapCopy = new HashMap<>();
-                synchronizerCopy.synchronizedDataMap.put(entry.getKey(), mapCopy);
-                for(SynchronizedData synchronizedData : entry.getValue().values()){
-                    SynchronizedData synchronizedDataCopy = synchronizedData.copyForNetworking(synchronizerCopy);
-                    mapCopy.put(synchronizedDataCopy.getName(), synchronizedDataCopy);
-                }
-            }
-            // Copy the changedData List
-            for(SynchronizedData synchronizedData : changedData){
-                SynchronizedData synchronizedDataCopy = synchronizerCopy.get(synchronizedData.getParentID(),synchronizedData.getName());
-                // A quick sanity check to help detect problems in the future:
-                if(synchronizedDataCopy==null){
-                    System.err.println("Error in Synchronizer copy constructor! The data (" +
-                            synchronizedData.getParentID() + ", " + synchronizedData.getName() + ") exists in the " +
-                            "changedData list, but not in the synchronizedDataMap. This should not be possible.");
-                }
-                synchronizerCopy.changedData.add(synchronizedDataCopy);
-            }
-        }
-        return synchronizerCopy;
     }
 
     public void resetChangedData(){
@@ -265,6 +236,16 @@ public class Synchronizer implements Serializable {
             if(entry.getValue()>cutoff) disconnectedIDs.add(entry.getKey());
         }
         return disconnectedIDs;
+    }
+
+    public void clearSendOnceData(){
+        for (HashMap<String, SynchronizedData> hashMap : synchronizedDataMap.values()){
+            for(SynchronizedData synchronizedData : hashMap.values()){
+                if(synchronizedData instanceof SynchronizedList && ((SynchronizedList) synchronizedData).synchronizationType==SEND_ONCE){
+                    ((SynchronizedList) synchronizedData).setClear();
+                }
+            }
+        }
     }
 
     // For debugging
