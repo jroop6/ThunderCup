@@ -27,7 +27,7 @@ public class PuzzleSelectionScene extends Scene {
         ScrollableView<Button> puzzleButtonContainer = new ScrollableView<>(scrollableViewBackground,new Rectangle(0.0,0.0,Color.TRANSPARENT));
         rootNode.getChildren().add(puzzleButtonContainer);
         for(PuzzleSet puzzleSet : PuzzleSet.values()){
-            ThunderButton btn = new ThunderButton(puzzleSet.getButtonType(), (event)->SceneManager.switchToPuzzleMode(puzzleSet.getPuzzleGroupIndex()));
+            ThunderButton btn = new ThunderButton(puzzleSet.getButtonType(), (event)->SceneManager.switchToPuzzleMode(puzzleSet.getPuzzleGroupIndex(),1));
             puzzleButtonContainer.addItem(btn);
         }
 

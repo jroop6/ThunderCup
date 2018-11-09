@@ -97,7 +97,7 @@ public class GameScene extends Scene {
 
     // a negative value for puzzleGroupIndex indicates that a RANDOM puzzle with -puzzleGroupIndex rows should be created.
     // todo: don't use indices for the puzzles. Instead, pass a PuzzleSet enum, and have the PuzzleSet store pointers to the various puzzles. Include special enums for random puzzles.
-    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroupIndex){
+    public GameScene(boolean isHost, ConnectionManager connectionManager, List<Player> players, LocationType locationType, int puzzleGroup, int puzzleIndex){
         super(new StackPane());
         rootNode = (StackPane) getRoot();
         this.isHost = isHost;
@@ -132,11 +132,7 @@ public class GameScene extends Scene {
         // Now create one PlayPanel for each team and assign its players:
         for (List<Player> playerList: teams.values()){
             int team = playerList.get(0).getTeam().getData();
-            String puzzleURL;
-            if(puzzleGroupIndex<0) puzzleURL = "RANDOM_" + (-puzzleGroupIndex);
-            else puzzleURL = String.format("res/data/puzzles/puzzle_%02d_%02d_01", playerList.size(), puzzleGroupIndex);
-            System.out.println("puzzle url: " + puzzleURL);
-            PlayPanel newPlayPanel = new PlayPanel(team, playerList, SEED, puzzleURL, connectionManager.getSynchronizer(), LocationType.NIGHTTIME);
+            PlayPanel newPlayPanel = new PlayPanel(team, playerList, SEED, puzzleGroup, puzzleIndex, connectionManager.getSynchronizer(), LocationType.NIGHTTIME);
             playPanelMap.put(team,newPlayPanel);
         }
 
@@ -204,6 +200,12 @@ public class GameScene extends Scene {
                     break;
                 case R:
                     playPanelMap.get(localPlayer.team.getData()).printOrbArray();
+                    break;
+                case S: // For testing. solves the puzzle instantly.
+                    SynchronizedArray<Orb> orbArray = playPanelMap.get(localPlayer.team.getData()).getOrbArray();
+                    for(int j=0; j<orbArray.getData()[0].length; j++){
+                        orbArray.setModify(0,j,NULL);
+                    }
             }
         });
 

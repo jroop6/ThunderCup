@@ -11,6 +11,8 @@ import javafx.scene.image.ImageView;
 import java.io.*;
 import java.util.*;
 
+import static Classes.PlayPanel.PUZZLE_URL_PREFIX;
+
 public class Player implements Serializable {
     public static final long HOST_ID = -1L;
     public static final long GAME_ID = 0L;
@@ -317,12 +319,14 @@ public class Player implements Serializable {
 
     // Attempt to load Orbs from the file first. If the file doesn't exist or if "RANDOM" is specified or if there are
     // only a few orbs in the file, then add random Orbs to the ammunition until we have 10.
-    public void readAmmunitionOrbs(String filename, int seed){
+    public void readAmmunitionOrbs(int numPlayers, int puzzleGroup, int puzzleIndex, int seed){
         this.seed = seed;
         if(ammunitionGenerator==null) ammunitionGenerator = new Random(seed);
         List<Orb> ammunitionOrbs = getAmmunition().getData();
         ammunitionOrbs.clear();
-        if(!filename.substring(0,6).equals("RANDOM")){
+        if(puzzleGroup > 0){
+            String filename = String.format("%spuzzle_%02d_%02d_%02d", PUZZLE_URL_PREFIX, numPlayers, puzzleGroup, puzzleIndex);
+            System.out.println("puzzle filename: " + filename);
             InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
             BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 

@@ -30,6 +30,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static Classes.GameScene.DATA_FRAME_RATE;
+import static Classes.PlayPanel.RANDOM_PUZZLE;
 import static Classes.Player.HOST_ID;
 
 /**
@@ -106,7 +107,7 @@ public class MainMenuScene extends Scene {
         ThunderButton randomPuzzleModeButton = new ThunderButton(ButtonType.RANDOM_PUZZLE, (event) -> {
             System.out.println("clicked random puzzle mode");
             animationTimer.stop();
-            SceneManager.switchToPuzzleMode(-5);
+            SceneManager.switchToPuzzleMode(RANDOM_PUZZLE, 5);
         });
         ThunderButton multiplayerModeButton = new ThunderButton(ButtonType.MULTIPLAYER, (event) -> {
             System.out.println("clicked multiplayer mode");

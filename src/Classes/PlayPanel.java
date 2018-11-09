@@ -49,6 +49,10 @@ public class PlayPanel extends Pane implements Serializable {
     public static final int ARRAY_WIDTH_PER_CHARACTER = 30; // The number of orb columns per player
     public static final int SHOTS_BETWEEN_DROPS = 15*ARRAY_WIDTH_PER_CHARACTER; // After the player shoots this many times, a new row of orbs appears at the top.
 
+    // Misc constants
+    public static final int RANDOM_PUZZLE = 0;
+    public static final String PUZZLE_URL_PREFIX = "res/data/puzzles/";
+
     // JavaFX nodes
     private Rectangle liveBoundary;
     private Canvas orbCanvas;
@@ -88,15 +92,18 @@ public class PlayPanel extends Pane implements Serializable {
     // For generating the puzzle and ammunition, and determining where transfer orbs appear:
     private Random randomPuzzleGenerator;
     private Random randomTransferOrbGenerator;
-    private String puzzleUrl;
+    private int puzzleGroup;
+    private SynchronizedComparable<Integer> puzzleIndex;
 
-    PlayPanel(int team, List<Player> players, int seed, String puzzleUrl, Synchronizer synchronizer, LocationType locationType){
+    PlayPanel(int team, List<Player> players, int seed, int puzzleGroup, int initialPuzzleIndex, Synchronizer synchronizer, LocationType locationType){
         // The size of the PlayPanel is determined by the liveBoundary rectangle.
         arrayWidth = ARRAY_WIDTH_PER_CHARACTER*players.size();
         liveBoundary = new Rectangle(PLAYPANEL_WIDTH_PER_PLAYER*players.size() + ORB_RADIUS, PLAYPANEL_HEIGHT, Color.TRANSPARENT);
         getChildren().add(liveBoundary);
         this.synchronizer = synchronizer;
+        this.team = team;
         this.seed = seed;
+        this.puzzleGroup = puzzleGroup;
 
         // The Orbs are placed on a Canvas. Initialize the Canvas:
         orbCanvas = new Canvas();
@@ -104,6 +111,8 @@ public class PlayPanel extends Pane implements Serializable {
         orbCanvas.setHeight(PLAYPANEL_HEIGHT);
         orbDrawer = orbCanvas.getGraphicsContext2D();
         getChildren().add(orbCanvas);
+        this.puzzleIndex = new SynchronizedComparable<>("puzzleIndex", initialPuzzleIndex, SynchronizedData.Precedence.HOST, this.team, this.synchronizer);
+
 
         // Add and initialize players to the PlayPanel:
         DrawingName foregroundCloudsEnum = locationType.getForegroundCloudsEnum();
@@ -125,18 +134,16 @@ public class PlayPanel extends Pane implements Serializable {
 
             // initialize the positions of the 1st two shooting orbs:
             player.initializePlayerPos(i);
-            player.readAmmunitionOrbs(puzzleUrl, seed);
+            player.readAmmunitionOrbs(players.size(), this.puzzleGroup, this.puzzleIndex.getData(), seed);
             Point2D ammunitionOrb1Pos = new Point2D(ORB_RADIUS + PLAYPANEL_WIDTH_PER_PLAYER/2 + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS);
             Point2D ammunitionOrb2Pos = new Point2D(CANNON_X_POS + player.getCannon().getCannonType().getData().getAmmunitionRelativeX() + PLAYPANEL_WIDTH_PER_PLAYER*i, CANNON_Y_POS + player.getCannon().getCannonType().getData().getAmmunitionRelativeY());
             player.setAmmunitionOrbPositions(ammunitionOrb1Pos, ammunitionOrb2Pos);
             player.positionAmmunitionOrbs();
         }
 
-        this.team = team;
         this.players = players;
         randomTransferOrbGenerator = new Random(seed);
         this.randomPuzzleGenerator = new Random(seed);
-        this.puzzleUrl = puzzleUrl;
         this.teamState = new SynchronizedComparable<>("teamState", TeamState.NORMAL,
                 (TeamState newVal, Mode mode, int i, int j) ->{
                     Player.PlayerStatus newPlayerStatus;
@@ -166,7 +173,7 @@ public class PlayPanel extends Pane implements Serializable {
 
         orbArray = new SynchronizedArray<>("orbArray",new Orb[ARRAY_HEIGHT][arrayWidth], SynchronizedData.Precedence.HOST, team, synchronizer);
         transferInOrbs = new SynchronizedList<Orb>("transferInOrbs", new LinkedList<>(), SynchronizedData.Precedence.HOST, team, synchronizer);
-        initializeOrbArray(this.puzzleUrl);
+        initializeOrbArray(players.size(), this.puzzleGroup, this.puzzleIndex.getData());
 
         deathOrbs = new Orb[arrayWidth];
         Arrays.fill(deathOrbs,NULL);
@@ -412,26 +419,28 @@ public class PlayPanel extends Pane implements Serializable {
 
 
     /*
-     * Puzzles are organized into groups. Naming convention for puzzles:
-     *    puzzle_XX_YY_ZZ, where XX = number of players on the playpanel, YY = group index, and ZZ = individual index. Examples:
+     * All puzzle data is stored in the folder res/data/puzzles/. Puzzles are organized into groups, and each puzzle in
+     * a group has a uniquely identifying index. Naming convention:
+     *    puzzle_XX_YY_ZZ, where XX = number of players on the PlayPanel, YY = group index, and ZZ = individual index.
+     * Examples:
      *    puzzle_01_01_01 - single-player PlayPanel, puzzle 1-1
      *    puzzle_01_01_02 - single-player PlayPanel, puzzle 1-2
      *    puzzle_03_01_01 - three-player PlayPanel, puzzle 1-1
      * After the puzzle, shooter orbs are specified for each player on a separate line.
      *
-     * Alternatively, a random puzzle can be specified with the "url" RANDOM_#, where # = the desired number of rows in the puzzle. Examples:
-     *    RANDOM_5 - a random puzzle with 5 rows
-     *    RANDOM_17 - a random puzzle with 17 rows
+     * Alternatively, a random puzzle can be specified by passing a puzzle group of 0 (==RANDOM_PUZZLE). The puzzle
+     * index then gives the desired number of rows in the puzzle. Examples:
+     *    puzzleGroup = RANDOM_PUZZLE, puzzleIndex = 5 - a random puzzle with 5 rows
+     *    puzzleGroup = RANDOM_PUZZLE, puzzleIndex = 17 - a random puzzle with 17 rows
      */
-    public boolean initializeOrbArray(String puzzleUrl){
-        if(puzzleUrl.substring(0,6).equals("RANDOM")){
-            int rows = Integer.parseInt(puzzleUrl.substring(7));
-            if(rows>19) rows = 19;
+    public boolean initializeOrbArray(int numPlayers, int puzzleGroup, int puzzleIndex){
+        if(puzzleGroup==RANDOM_PUZZLE){
+            if(puzzleIndex>ARRAY_HEIGHT-1) puzzleIndex = ARRAY_HEIGHT-1; // Max rows in random puzzle
             int orbEnumBound = OrbColor.values().length;
             OrbColor[] orbImages = OrbColor.values();
 
             synchronized (synchronizer){ // The application thread might be in the middle of drawing the orb array when the next puzzle in a set is loaded.
-                for(int i=0; i<rows; ++i){
+                for(int i=0; i<puzzleIndex; ++i){
                     for(int j=0; j<arrayWidth; j++){
                         if(j%2==i%2){
                             int randomOrdinal = randomPuzzleGenerator.nextInt(orbEnumBound);
@@ -441,7 +450,7 @@ public class PlayPanel extends Pane implements Serializable {
                         else orbArray.setModify(i, j, NULL);
                     }
                 }
-                for(int i=rows; i<ARRAY_HEIGHT; i++){
+                for(int i=puzzleIndex; i<ARRAY_HEIGHT; i++){
                     for(int j=0; j<arrayWidth; j++){
                         orbArray.setModify(i, j, NULL);
                     }
@@ -449,14 +458,16 @@ public class PlayPanel extends Pane implements Serializable {
             }
         }
         else{
+            String filename = String.format("%spuzzle_%02d_%02d_%02d", PUZZLE_URL_PREFIX, numPlayers, puzzleGroup, puzzleIndex);
+            System.out.println("puzzle filename (initializeOrbArray): " + filename);
             String line;
             try{
-                InputStream stream = getClass().getClassLoader().getResourceAsStream(puzzleUrl);
+                InputStream stream = getClass().getClassLoader().getResourceAsStream(filename);
                 if(stream == null) return false;
                 BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 
-                // Discard the first line, which is just there for human-readability
-                while(!(line = reader.readLine()).equals("***PUZZLE***"));
+                // Discard the first line, which is just there for human readability
+                while(!(reader.readLine()).equals("***PUZZLE***"));
 
                 int i;
                 int j;
@@ -682,21 +693,21 @@ public class PlayPanel extends Pane implements Serializable {
             // If there are no orbs connected to the ceiling, then this team has finished the puzzle. Move on to the next one or declare victory
             if(isPuzzleCleared(orbArray.getData())){
                 shootingOrbs.clear();
-                if(puzzleUrl.substring(0,6).equals("RANDOM")){ // this was a random puzzle. Declare victory
+                if(puzzleGroup == RANDOM_PUZZLE){
                     if(isHost) teamState.changeTo(TeamState.VICTORIOUS);
                     else teamState.setTo(TeamState.VICTORIOUS);
                 }
                 else{ // This was a pre-built puzzle. Load the next one, if there is one.
-                    int currentIndex = Integer.parseInt(puzzleUrl.substring(puzzleUrl.length()-2));
-                    puzzleUrl = String.format("%s%02d",puzzleUrl.substring(0,puzzleUrl.length()-2),currentIndex+1);
-                    if(!initializeOrbArray(puzzleUrl)){ // There was no next puzzle. Declare victory.
+                    if(isHost) puzzleIndex.changeTo(puzzleIndex.getData()+1);
+                    else puzzleIndex.setTo(puzzleIndex.getData()+1);
+                    if(!initializeOrbArray(players.size(), puzzleGroup, puzzleIndex.getData())){ // There was no next puzzle. Declare victory.
                         if(isHost) teamState.changeTo(TeamState.VICTORIOUS);
                         else teamState.setTo(TeamState.VICTORIOUS);
                     }
                     else{
                         for(int i=0; i<players.size(); i++){
                             Player player = players.get(i);
-                            player.readAmmunitionOrbs(puzzleUrl, seed);
+                            player.readAmmunitionOrbs(players.size(), puzzleGroup, puzzleIndex.getData(), seed);
                             player.positionAmmunitionOrbs();
                         }
                     }
