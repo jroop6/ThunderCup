@@ -12,6 +12,8 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import static Classes.Player.HOST_ID;
+
 /**
  * Initiates 1 connection with the host computer
  */
@@ -53,7 +55,6 @@ public class ClientConnectionManager extends ConnectionManager{
     // Waits for and examines the first packet received from the Host. If it contains a rejection notice, then inform
     // the client that they were not able to join the game.
     public boolean getConfirmation(String host, int port){
-        System.out.println("checking confirmation");
         Alert connectingDialog = createConnectingDialog(host, port);
         connectingDialog.initOwner(SceneManager.getPrimaryStage());
         connectingDialog.show();
@@ -64,9 +65,9 @@ public class ClientConnectionManager extends ConnectionManager{
             } catch (InterruptedException e){
                 e.printStackTrace();
             }
-            Packet packet = retrievePacket();
+            Synchronizer packet = retrievePacket();
             if(packet!=null){
-                if(packet.isConnectionRejected()){
+                if((Boolean)packet.get(HOST_ID,"connectionRejected").getData()){
                     connectingDialog.setResult(ButtonType.CLOSE);
                     displayRejectionNotice();
                     return false; // Host rejected the player from the game!

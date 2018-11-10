@@ -5,6 +5,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -128,17 +129,27 @@ public class HostConnectionManager extends ConnectionManager{
     }
 
     private void rejectPlayer(Socket hostSideSocket){
-        // Create a temporary objectOutputStream to send the client the rejection notice:
-        ObjectOutputStream tempOutputStream;
         try{
-            tempOutputStream = new ObjectOutputStream(hostSideSocket.getOutputStream());
+            // Create a temporary objectOutputStream to send the client the rejection notice:
+            ObjectOutputStream tempOutputStream = new ObjectOutputStream(hostSideSocket.getOutputStream());
 
-            // Create said rejection notice:
-            Packet tempServerPacket = new Packet(null);
-            tempServerPacket.rejectConnection();
+            // Create said rejection notice. Note: We never established a playerID, so just use HOST_ID:
+            Synchronizer synchronizer = new Synchronizer(HOST_ID);
+            new SynchronizedComparable<>("connectionRejected",true, SynchronizedData.Precedence.HOST, HOST_ID, synchronizer);
+
+            // Convert the Synchronizer to a Byte Array (ReceiverWorkers assume the object is a byte array).
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] serializedPacket = new byte[1];
+            try{
+                ObjectOutputStream oos = new ObjectOutputStream(baos);
+                oos.writeObject(synchronizer);
+                serializedPacket = baos.toByteArray();
+            } catch(IOException e){
+                e.printStackTrace();
+            }
 
             // Send the rejection notice
-            tempOutputStream.writeObject(tempServerPacket);
+            tempOutputStream.writeObject(serializedPacket);
             tempOutputStream.flush();
             tempOutputStream.reset();
         } catch (IOException e){

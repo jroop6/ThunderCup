@@ -266,13 +266,11 @@ public class LobbyScene extends Scene {
     }
 
     private void processPacketsAsHost(){
-        Packet packet = connectionManager.retrievePacket();
+        Synchronizer receivedSynchronizer = connectionManager.retrievePacket();
         Synchronizer localSynchronizer = connectionManager.getSynchronizer();
 
         // Process Packets one at a time:
-        while(packet!=null){
-            Synchronizer receivedSynchronizer = packet.getSynchronizer();
-
+        while(receivedSynchronizer!=null){
             // check to see whether the local player in the received packet exists in our playerSlots list:
             long id = receivedSynchronizer.getId();
             synchronized (localSynchronizer){
@@ -287,12 +285,11 @@ public class LobbyScene extends Scene {
                     }
                 }
             }
-
             // Synchronize the Data:
-            localSynchronizer.synchronizeWith(packet.getSynchronizer(),isHost);
+            localSynchronizer.synchronizeWith(receivedSynchronizer,isHost);
 
             // Prepare for the next iteration:
-            packet = connectionManager.retrievePacket();
+            receivedSynchronizer = connectionManager.retrievePacket();
         }
     }
 
@@ -391,11 +388,10 @@ public class LobbyScene extends Scene {
 
     private void processPacketsAsClient(){
         // Process Packets, one at a time:
-        Packet packet = connectionManager.retrievePacket();
+        Synchronizer receivedSynchronizer = connectionManager.retrievePacket();
         Synchronizer localSynchronizer = connectionManager.getSynchronizer();
-        while(packet!=null){
-            Synchronizer receivedSynchronizer = packet.getSynchronizer();
 
+        while(receivedSynchronizer!=null){
             // Look for new players in the received Synchronizer:
             for(Map.Entry<Long, HashMap<String, SynchronizedData>> entry : receivedSynchronizer.getAll().entrySet()){
                 long id = entry.getKey();
@@ -446,7 +442,7 @@ public class LobbyScene extends Scene {
             localSynchronizer.synchronizeWith(receivedSynchronizer,isHost);
 
             // Prepare for the next iteration:
-            packet = connectionManager.retrievePacket();
+            receivedSynchronizer = connectionManager.retrievePacket();
         }
     }
 
@@ -491,8 +487,7 @@ public class LobbyScene extends Scene {
     }
 
     private void prepareAndSendPacket(){
-        //Packet outPacket = new Packet(connectionManager.getSynchronizer());
-        connectionManager.send(new Packet(connectionManager.getSynchronizer()));
+        connectionManager.send(connectionManager.getSynchronizer());
         connectionManager.getSynchronizer().clearSendOnceData();
     }
 

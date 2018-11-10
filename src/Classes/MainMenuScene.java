@@ -34,7 +34,7 @@ import static Classes.PlayPanel.RANDOM_PUZZLE;
 import static Classes.Player.HOST_ID;
 
 /**
- * Created by HydrusBeta on 7/23/2017.
+ * Created by Jonathan Roop on 7/23/2017.
  */
 public class MainMenuScene extends Scene {
 

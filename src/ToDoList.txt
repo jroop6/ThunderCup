@@ -1,10 +1,8 @@
 *******Priority items, copied from below*******
 more puzzles!
 TransferInOrbs should be able to kill a player.
-when another player tries to connect to a game with no open slots, we get the wrong error message
 when orbArray goes out of sync, it is replaced with the host data, but electrified orbs freeze. Investigate this.
 bot players continue to fire after losing.
-if a newly-connected client sends a message, sometimes the host's next message won't be broadcast.
 
 -------Bugs-------
 bot players continue to fire after losing.

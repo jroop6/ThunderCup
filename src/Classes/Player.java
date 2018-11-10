@@ -24,6 +24,7 @@ public class Player implements Serializable {
     private Point2D ammunitionOrb2Position;
 
     private final Synchronizer synchronizer;
+    private final SynchronizedComparable<Boolean> connectionRejected;
     private SynchronizedComparable<PlayerType> playerType;
     private SynchronizedComparable<String> username;
     protected SynchronizedComparable<Integer> team;
@@ -75,6 +76,7 @@ public class Player implements Serializable {
         }
 
         synchronized (this.synchronizer){
+            connectionRejected = new SynchronizedComparable<>("connectionRejected", false, SynchronizedData.Precedence.HOST, this.playerID, synchronizer);
             this.username = new SynchronizedComparable<>("username", username, SynchronizedData.Precedence.CLIENT, this.playerID, synchronizer);
             this.playerType = new SynchronizedComparable<>("playerType", playerType, SynchronizedData.Precedence.INFORMATIONAL, this.playerID, synchronizer);
             messagesOut = new SynchronizedList<Message>("messagesOut", new LinkedList<>(), SynchronizedData.Precedence.CLIENT, playerID, synchronizer, SynchronizedList.SynchronizationType.SEND_ONCE);

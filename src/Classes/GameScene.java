@@ -399,7 +399,7 @@ public class GameScene extends Scene {
             }
 
             // Process outgoing Packets
-            connectionManager.send(new Packet(connectionManager.getSynchronizer()));
+            connectionManager.send(connectionManager.getSynchronizer());
             connectionManager.getSynchronizer().clearSendOnceData();
 
             checkForDisconnectedPlayers();
@@ -447,17 +447,15 @@ public class GameScene extends Scene {
     }
 
     private void processPackets(){
-        Packet packet = connectionManager.retrievePacket();
+        Synchronizer receivedSynchronizer = connectionManager.retrievePacket();
         Synchronizer localSynchronizer = connectionManager.getSynchronizer();
 
         // Process Packets one at a time:
-        while(packet!=null){
-            Synchronizer receivedSynchronizer = packet.getSynchronizer();
-
+        while(receivedSynchronizer!=null){
             localSynchronizer.synchronizeWith(receivedSynchronizer, isHost);
 
             // Prepare for the next iteration:
-            packet = connectionManager.retrievePacket();
+            receivedSynchronizer = connectionManager.retrievePacket();
         }
     }
 
@@ -558,7 +556,7 @@ public class GameScene extends Scene {
         else{
             localPlayer.getPlayerStatus().changeTo(Player.PlayerStatus.DISCONNECTED);
         }
-        connectionManager.send(new Packet(connectionManager.getSynchronizer()));
+        connectionManager.send(connectionManager.getSynchronizer());
 
         // wait a little bit to make sure the packet gets through:
         // todo: replace this with a blocking send() method of some sort?

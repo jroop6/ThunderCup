@@ -5,14 +5,15 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /**
- * Created by HydrusBeta on 8/4/2017.
- */ // Dedicated thread that sends packets
+ * Created by Jonathan Roop on 8/4/2017.
+ * Dedicated thread for sending packets
+ */
 public class SenderWorker extends Thread{
 
-    Socket socket;
-    ObjectOutputStream outputStream;
-    boolean shuttingDown = false;
-    Object outPacket;
+    private Socket socket;
+    private ObjectOutputStream outputStream;
+    private boolean shuttingDown = false;
+    private Object outPacket;
 
     public SenderWorker(Socket socket){
         this.socket = socket;

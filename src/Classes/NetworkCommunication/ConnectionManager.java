@@ -8,7 +8,7 @@ import java.util.*;
  */
 public abstract class ConnectionManager extends Thread {
     protected boolean isConnected = false;
-    Queue<Packet> inPackets = new LinkedList<>();
+    Queue<Synchronizer> inPackets = new LinkedList<>();
     List<SenderWorker> senderWorkers = new LinkedList<>();
     List<ReceiverWorker> receiverWorkers = new LinkedList<>();
     protected static final int DEFAULT_PORT = 5000;
@@ -40,7 +40,7 @@ public abstract class ConnectionManager extends Thread {
         this.playerID = playerID;
     }
 
-    public synchronized Packet retrievePacket(){
+    public synchronized Synchronizer retrievePacket(){
         return inPackets.poll();
     }
 
@@ -66,7 +66,7 @@ public abstract class ConnectionManager extends Thread {
     }
 
     // ReceiverWorkers can add packets to the inPackets List using the following method:
-    public synchronized void addPacket(Packet inPacket){
+    public synchronized void addPacket(Synchronizer inPacket){
         inPackets.add(inPacket);
     }
 

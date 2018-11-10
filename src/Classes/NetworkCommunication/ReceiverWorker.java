@@ -33,18 +33,17 @@ class ReceiverWorker extends Thread{
 
     }
 
-    // The incoming packet may be one of two types of objects: a Packet or a LatencyPacket. Plain old Packets contain
-    // a Synchronizer object while LatencyPackets are very simple and are used to probe the latency between the host
-    // and clients (unsurprisingly).
+    // The incoming packet may be one of two types of objects: a Synchronizer or a LatencyPacket. LatencyPackets are
+    // very simple and are used to probe the latency between the host and clients (unsurprisingly).
     @Override
     public void run(){
         while(!shuttingDown){
             try{
                 byte[] byteArrayIn = (byte[]) objectInputStream.readObject();
                 Object objectIn = new ObjectInputStream(new ByteArrayInputStream(byteArrayIn)).readObject();
-                if(objectIn instanceof Packet) master.addPacket((Packet) objectIn);
+                if(objectIn instanceof Synchronizer) master.addPacket((Synchronizer) objectIn);
                 else if (objectIn instanceof LatencyPacket){
-                    if(isHost) master.updateLatencies((LatencyPacket)objectIn); // update the host's latency data.
+                    if(isHost) master.updateLatencies((LatencyPacket) objectIn); // update the host's latency data.
                     else{
                         ((LatencyPacket) objectIn).setPlayerID(master.getPlayerID());
                         master.send(objectIn); // clients immediately return the packet.
